@@ -1,6 +1,7 @@
-import React from 'react';
-import { Music, X, Play, Zap, Clock, FileAudio, TrendingUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Music, X, Play, Pause, Zap, Clock, FileAudio, TrendingUp } from 'lucide-react';
 import { UploadResult } from '../lib/storage';
+import { audioPlayer } from '../lib/audioPlayer';
 
 interface SongDetailModalProps {
   song: UploadResult;
@@ -9,6 +10,34 @@ interface SongDetailModalProps {
 }
 
 const SongDetailModal: React.FC<SongDetailModalProps> = ({ song, onClose, onCreateTransition }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  useEffect(() => {
+    const checkPlayingState = () => {
+      setIsPlaying(audioPlayer.isPlaying() && audioPlayer.getCurrentUrl() === song.url);
+    };
+
+    const interval = setInterval(checkPlayingState, 100);
+    return () => {
+      clearInterval(interval);
+    };
+  }, [song.url]);
+
+  useEffect(() => {
+    return () => {
+      audioPlayer.stop();
+    };
+  }, []);
+
+  const handlePlayPause = () => {
+    if (isPlaying) {
+      audioPlayer.pause();
+      setIsPlaying(false);
+    } else {
+      audioPlayer.play(song.url);
+      setIsPlaying(true);
+    }
+  };
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
@@ -160,6 +189,22 @@ const SongDetailModal: React.FC<SongDetailModalProps> = ({ song, onClose, onCrea
 
             {/* Action buttons */}
             <div className="flex space-x-4 pt-4">
+              <button
+                onClick={handlePlayPause}
+                className="px-8 py-4 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded-xl font-bold text-lg transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02] flex items-center justify-center space-x-3"
+              >
+                {isPlaying ? (
+                  <>
+                    <Pause size={24} />
+                    <span>Pause</span>
+                  </>
+                ) : (
+                  <>
+                    <Play size={24} />
+                    <span>Play</span>
+                  </>
+                )}
+              </button>
               <button
                 onClick={() => onCreateTransition(song)}
                 className="flex-1 group relative px-6 py-4 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-xl font-bold text-lg transition-all duration-300 shadow-2xl shadow-cyan-500/40 hover:shadow-cyan-400/60 hover:scale-[1.02] overflow-hidden"
