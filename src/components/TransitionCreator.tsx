@@ -44,7 +44,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
     try {
       const [songsData, templatesData] = await Promise.all([
         storageService.getUserUploads(user.id),
-        databaseService.listTemplates()
+        databaseService.getTemplates()
       ]);
       const readySongs = songsData.filter(s => s.status === 'ready');
       console.log('[TransitionCreator] Loaded data:', {
