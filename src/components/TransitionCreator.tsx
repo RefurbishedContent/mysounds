@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Music, Play, Save, ArrowLeft, Sparkles, Check, ChevronRight } from 'lucide-react';
+import { Music, Play, Save, ArrowLeft, Sparkles, Check, ChevronRight, Search, Filter, X, SlidersHorizontal } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { storageService, UploadResult } from '../lib/storage';
 import { databaseService, TemplateData } from '../lib/database';
@@ -24,6 +24,10 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateData | null>(null);
   const [transitionName, setTransitionName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [bpmFilter, setBpmFilter] = useState<'all' | 'slow' | 'medium' | 'fast'>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'recent' | 'bpm'>('recent');
 
   useEffect(() => {
     loadData();
@@ -38,13 +42,49 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
         storageService.getUserUploads(user.id),
         databaseService.listTemplates()
       ]);
-      setSongs(songsData.filter(s => s.status === 'ready'));
+      const readySongs = songsData.filter(s => s.status === 'ready');
+      console.log('Loaded songs:', readySongs.length, readySongs);
+      setSongs(readySongs);
       setTemplates(templatesData);
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const getFilteredAndSortedSongs = () => {
+    let filtered = [...songs];
+
+    if (searchQuery) {
+      filtered = filtered.filter(song =>
+        song.originalName.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    if (bpmFilter !== 'all') {
+      filtered = filtered.filter(song => {
+        const bpm = song.analysis?.bpm;
+        if (!bpm) return false;
+        if (bpmFilter === 'slow') return bpm < 100;
+        if (bpmFilter === 'medium') return bpm >= 100 && bpm < 140;
+        if (bpmFilter === 'fast') return bpm >= 140;
+        return true;
+      });
+    }
+
+    filtered.sort((a, b) => {
+      if (sortBy === 'name') {
+        return a.originalName.localeCompare(b.originalName);
+      } else if (sortBy === 'bpm') {
+        const bpmA = a.analysis?.bpm || 0;
+        const bpmB = b.analysis?.bpm || 0;
+        return bpmA - bpmB;
+      }
+      return 0;
+    });
+
+    return filtered;
   };
 
   const handleSongSelect = (song: UploadResult) => {
@@ -207,14 +247,120 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
 
             {/* Song Library */}
             <div>
-              <h3 className="text-lg font-semibold text-white mb-4">Your Library</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">Your Library ({songs.length} songs)</h3>
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+                    showFilters
+                      ? 'bg-cyan-600 text-white'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-750'
+                  }`}
+                >
+                  <SlidersHorizontal size={16} />
+                  <span className="text-sm font-medium">Filters</span>
+                </button>
+              </div>
+
+              {/* Search and Filters */}
+              <div className="space-y-4 mb-6">
+                <div className="relative">
+                  <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+                  <input
+                    type="text"
+                    placeholder="Search songs..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-10 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-white"
+                    >
+                      <X size={18} />
+                    </button>
+                  )}
+                </div>
+
+                {showFilters && (
+                  <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-2">BPM Range</label>
+                        <div className="grid grid-cols-4 gap-2">
+                          {['all', 'slow', 'medium', 'fast'].map((filter) => (
+                            <button
+                              key={filter}
+                              onClick={() => setBpmFilter(filter as any)}
+                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                bpmFilter === filter
+                                  ? 'bg-cyan-600 text-white'
+                                  : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                              }`}
+                            >
+                              {filter === 'all' ? 'All' : filter === 'slow' ? '<100' : filter === 'medium' ? '100-140' : '140+'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-2">Sort By</label>
+                        <select
+                          value={sortBy}
+                          onChange={(e) => setSortBy(e.target.value as any)}
+                          className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        >
+                          <option value="recent">Most Recent</option>
+                          <option value="name">Name (A-Z)</option>
+                          <option value="bpm">BPM (Low to High)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-700">
+                      <p className="text-sm text-gray-500">
+                        {getFilteredAndSortedSongs().length} of {songs.length} songs shown
+                      </p>
+                      <button
+                        onClick={() => {
+                          setSearchQuery('');
+                          setBpmFilter('all');
+                          setSortBy('recent');
+                        }}
+                        className="text-sm text-cyan-400 hover:text-cyan-300 font-medium"
+                      >
+                        Clear Filters
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {songs.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-gray-400">No songs in your library. Upload some tracks first!</p>
+                <div className="text-center py-12 bg-gray-800 rounded-lg border border-gray-700">
+                  <Music size={48} className="text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-400 mb-2">No songs in your library</p>
+                  <p className="text-gray-500 text-sm">Upload some tracks in the Library section first!</p>
+                </div>
+              ) : getFilteredAndSortedSongs().length === 0 ? (
+                <div className="text-center py-12 bg-gray-800 rounded-lg border border-gray-700">
+                  <Search size={48} className="text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-400 mb-2">No songs match your filters</p>
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setBpmFilter('all');
+                    }}
+                    className="text-sm text-cyan-400 hover:text-cyan-300 font-medium"
+                  >
+                    Clear filters
+                  </button>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {songs.map((song) => {
+                  {getFilteredAndSortedSongs().map((song) => {
                     const isSelected = songA?.id === song.id || songB?.id === song.id;
                     const isDisabled = songA && songB && !isSelected;
 
@@ -245,7 +391,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                           {song.originalName}
                         </h3>
                         <p className="text-gray-400 text-xs">
-                          {song.analysis?.bpm ? `${song.analysis.bpm} BPM` : 'Not analyzed'}
+                          {song.analysis?.bpm ? `${Math.round(song.analysis.bpm)} BPM` : 'Not analyzed'}
                         </p>
                       </button>
                     );
