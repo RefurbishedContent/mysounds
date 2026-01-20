@@ -46,8 +46,17 @@ class AnalyticsService {
     if (!this.isEnabled) return;
 
     try {
+      // Get the current authenticated user if userId not provided
+      const { data: { user } } = await supabase.auth.getUser();
+      const actualUserId = userId || user?.id;
+
+      // Skip analytics if no user is authenticated (RLS requires user_id to match auth.uid())
+      if (!actualUserId) {
+        return;
+      }
+
       const eventData = {
-        user_id: userId || null,
+        user_id: actualUserId,
         event_name: eventName,
         properties: {
           ...properties,
@@ -65,7 +74,7 @@ class AnalyticsService {
       const { error } = await supabase
         .from('analytics_events')
         .insert(eventData);
-      
+
       if (error) {
         console.warn('Analytics tracking failed:', error);
       }
@@ -159,8 +168,12 @@ class ActivityLogger {
     userAgent?: string
   ): Promise<void> {
     try {
+      // Get the current authenticated user if userId not provided
+      const { data: { user } } = await supabase.auth.getUser();
+      const actualUserId = userId || user?.id || null;
+
       const logData = {
-        user_id: userId || null,
+        user_id: actualUserId,
         event_type: eventType,
         event_data: eventData,
         ip_address: ipAddress || null,
@@ -171,7 +184,7 @@ class ActivityLogger {
       const { error } = await supabase
         .from('activity_logs')
         .insert(logData);
-      
+
       if (error) {
         console.warn('Activity logging failed:', error);
       }

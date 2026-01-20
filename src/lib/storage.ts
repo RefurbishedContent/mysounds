@@ -5,6 +5,11 @@ export interface UploadResult {
   id: string;
   url: string;
   path: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  status: 'uploading' | 'processing' | 'ready' | 'error';
+  analysis?: AudioAnalysis;
   metadata: {
     filename: string;
     size: number;
@@ -113,6 +118,11 @@ class StorageService {
         id: uploadRecord.id,
         url: urlData.publicUrl,
         path: fileName,
+        originalName: file.name,
+        mimeType: file.type,
+        size: file.size,
+        status: 'processing',
+        analysis: analysis,
         metadata: {
           filename: file.name,
           size: file.size,
@@ -186,10 +196,15 @@ class StorageService {
       id: data.id,
       url: urlData?.signedUrl || data.url,
       path: data.filename,
+      originalName: data.original_name,
+      mimeType: data.mime_type || 'audio/mpeg',
+      size: data.size,
+      status: data.status || 'ready',
+      analysis: data.analysis,
       metadata: {
         filename: data.original_name,
         size: data.size,
-        mimeType: data.mime_type,
+        mimeType: data.mime_type || 'audio/mpeg',
         duration: data.analysis?.duration,
         analysis: data.analysis
       }
@@ -214,10 +229,15 @@ class StorageService {
       id: upload.id,
       url: upload.url,
       path: upload.filename,
+      originalName: upload.original_name,
+      mimeType: upload.mime_type || 'audio/mpeg',
+      size: upload.size,
+      status: upload.status || 'ready',
+      analysis: upload.analysis,
       metadata: {
         filename: upload.original_name,
         size: upload.size,
-        mimeType: upload.mime_type,
+        mimeType: upload.mime_type || 'audio/mpeg',
         duration: upload.analysis?.duration,
         analysis: upload.analysis
       }

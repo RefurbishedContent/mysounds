@@ -60,9 +60,9 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onPlaySong }) => {
   };
 
   const filteredSongs = songs.filter(song => {
-    const matchesSearch = song.originalName.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = song.originalName?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = selectedFilter === 'all' ||
-      song.mimeType.includes(selectedFilter);
+      song.mimeType?.includes(selectedFilter);
     return matchesSearch && matchesFilter;
   });
 
