@@ -24,12 +24,26 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
     const scrollContainer = document.querySelector('.main-content-scroll');
     if (!scrollContainer) return;
 
+    let ticking = false;
+
     const handleScroll = () => {
-      const scrollTop = scrollContainer.scrollTop;
-      setIsScrolled(scrollTop > 20);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const scrollTop = scrollContainer.scrollTop;
+          const shouldBeScrolled = scrollTop > 20;
+          setIsScrolled(prev => {
+            if (prev !== shouldBeScrolled) {
+              return shouldBeScrolled;
+            }
+            return prev;
+          });
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
 
-    scrollContainer.addEventListener('scroll', handleScroll);
+    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
     return () => scrollContainer.removeEventListener('scroll', handleScroll);
   }, []);
 
