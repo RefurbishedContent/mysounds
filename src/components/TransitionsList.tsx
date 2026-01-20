@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Trash2, Music, Search, Filter, Clock, Sparkles } from 'lucide-react';
+import { Play, Trash2, Music, Search, Filter, Clock, Sparkles, Plus } from 'lucide-react';
 import { transitionsService, TransitionData } from '../lib/transitionsService';
 import { useAuth } from '../contexts/AuthContext';
 
 interface TransitionsListProps {
   onPlayTransition?: (transitionId: string) => void;
+  onCreateNew?: () => void;
 }
 
-const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition }) => {
+const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition, onCreateNew }) => {
   const { user } = useAuth();
   const [transitions, setTransitions] = useState<TransitionData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,6 +85,14 @@ const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition }) =
             <h1 className="text-3xl font-bold text-white mb-2">My Transitions</h1>
             <p className="text-gray-400">View and manage your saved song transitions</p>
           </div>
+
+          <button
+            onClick={onCreateNew}
+            className="px-6 py-3 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105"
+          >
+            <Plus size={20} />
+            <span>Create New Transition</span>
+          </button>
         </div>
       )}
 
@@ -132,9 +141,16 @@ const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition }) =
               <div className="space-y-2">
                 <h2 className="text-2xl font-bold text-white">No Transitions Yet</h2>
                 <p className="text-gray-400">
-                  Go to your Library and select two songs to create your first transition
+                  Create your first transition by blending two songs together
                 </p>
               </div>
+              <button
+                onClick={onCreateNew}
+                className="px-8 py-4 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-xl font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105"
+              >
+                <Plus size={20} />
+                <span>Create New Transition</span>
+              </button>
             </div>
           </div>
         ) : (

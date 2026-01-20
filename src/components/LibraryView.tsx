@@ -5,11 +5,10 @@ import { storageService, UploadResult } from '../lib/storage';
 import AudioUploader from './AudioUploader';
 
 interface LibraryViewProps {
-  onCreateTransition?: (songA: UploadResult, songB: UploadResult) => void;
   onPlaySong?: (song: UploadResult) => void;
 }
 
-const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransition, onPlaySong }) => {
+const LibraryView: React.FC<LibraryViewProps> = ({ onPlaySong }) => {
   const { user } = useAuth();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
@@ -18,7 +17,6 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransition, onPlaySon
   const [songs, setSongs] = useState<UploadResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUploader, setShowUploader] = useState(false);
-  const [selectedSongs, setSelectedSongs] = useState<UploadResult[]>([]);
 
   useEffect(() => {
     const scrollContainer = document.querySelector('.main-content-scroll');
@@ -51,22 +49,14 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransition, onPlaySon
     }
   };
 
-  const handleSongClick = (song: UploadResult) => {
-    if (selectedSongs.length === 0) {
-      setSelectedSongs([song]);
-    } else if (selectedSongs.length === 1) {
-      if (selectedSongs[0].id === song.id) {
-        setSelectedSongs([]);
-      } else {
-        onCreateTransition?.(selectedSongs[0], song);
-        setSelectedSongs([]);
-      }
-    }
-  };
-
   const handleUploadComplete = (upload: UploadResult) => {
     setSongs([upload, ...songs]);
     setShowUploader(false);
+  };
+
+  const handlePlaySong = (e: React.MouseEvent, song: UploadResult) => {
+    e.stopPropagation();
+    onPlaySong?.(song);
   };
 
   const filteredSongs = songs.filter(song => {
@@ -193,29 +183,23 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransition, onPlaySon
           </div>
         ) : (
           <>
-            {selectedSongs.length > 0 && (
-              <div className="mb-4 p-4 bg-blue-900/30 border border-blue-700/50 rounded-lg">
-                <p className="text-blue-300 text-sm">
-                  Selected: <span className="font-semibold">{selectedSongs[0].originalName}</span>
-                  {' '}- Click another song to create a transition
-                </p>
-              </div>
-            )}
-
             {viewMode === 'grid' ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {filteredSongs.map((song) => (
                   <div
                     key={song.id}
-                    onClick={() => handleSongClick(song)}
-                    className={`
-                      group bg-gray-800 rounded-lg p-4 cursor-pointer transition-all duration-200
-                      hover:bg-gray-750 hover:shadow-lg
-                      ${selectedSongs.some(s => s.id === song.id) ? 'ring-2 ring-blue-500' : ''}
-                    `}
+                    className="group bg-gray-800 rounded-lg p-4 transition-all duration-200 hover:bg-gray-750 hover:shadow-lg relative"
                   >
-                    <div className="w-full aspect-square bg-gradient-to-br from-cyan-600/20 to-purple-600/20 rounded-lg mb-3 flex items-center justify-center">
+                    <div className="w-full aspect-square bg-gradient-to-br from-cyan-600/20 to-purple-600/20 rounded-lg mb-3 flex items-center justify-center relative">
                       <Music className="w-12 h-12 text-cyan-400" />
+                      <button
+                        onClick={(e) => handlePlaySong(e, song)}
+                        className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                      >
+                        <div className="w-12 h-12 bg-cyan-600 rounded-full flex items-center justify-center hover:bg-cyan-500 transition-colors">
+                          <Play className="w-6 h-6 text-white ml-0.5" />
+                        </div>
+                      </button>
                     </div>
                     <h3 className="text-white font-medium text-sm truncate mb-1">
                       {song.originalName}
@@ -231,12 +215,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransition, onPlaySon
                 {filteredSongs.map((song) => (
                   <div
                     key={song.id}
-                    onClick={() => handleSongClick(song)}
-                    className={`
-                      group flex items-center space-x-4 bg-gray-800 rounded-lg p-4 cursor-pointer transition-all duration-200
-                      hover:bg-gray-750
-                      ${selectedSongs.some(s => s.id === song.id) ? 'ring-2 ring-blue-500' : ''}
-                    `}
+                    className="group flex items-center space-x-4 bg-gray-800 rounded-lg p-4 transition-all duration-200 hover:bg-gray-750"
                   >
                     <div className="w-12 h-12 bg-gradient-to-br from-cyan-600/20 to-purple-600/20 rounded flex items-center justify-center flex-shrink-0">
                       <Music className="w-6 h-6 text-cyan-400" />
@@ -249,13 +228,10 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransition, onPlaySon
                       </p>
                     </div>
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onPlaySong?.(song);
-                      }}
-                      className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => handlePlaySong(e, song)}
+                      className="p-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      <Play className="w-5 h-5" />
+                      <Play className="w-5 h-5 text-white" />
                     </button>
                   </div>
                 ))}

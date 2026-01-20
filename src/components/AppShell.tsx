@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Music, Disc3, Headphones, Settings, Folder, AudioWaveform as Waveform, Sliders, FileAudio, User, Bell, Search, Menu, X, Activity, HelpCircle } from 'lucide-react';
+import { Home, Music, Disc3, Headphones, Settings, Folder, AudioWaveform as Waveform, Sliders, FileAudio, User, Bell, Search, Menu, X, Activity, HelpCircle, Plus, Sparkles, Wand2, Video, Mic, Grid3X3, Clock, Share2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { TemplateData, databaseService } from '../lib/database';
@@ -13,14 +13,28 @@ import MixerView from './MixerView';
 import PreviewView from './PreviewView';
 import FilesView from './FilesView';
 import TransitionEditorView from './TransitionEditorView';
+import TransitionCreator from './TransitionCreator';
 import { UploadResult } from '../lib/storage';
 
-type AppView = 'projects' | 'templates' | 'editor' | 'template-manager' | 'library' | 'mixer' | 'preview' | 'files' | 'transition-editor';
+type AppView = 'home' | 'create-with-ai' | 'ai-design' | 'ai-video' | 'ai-voice' | 'all-tools' | 'templates' | 'recent-projects' | 'share-schedule' | 'create-transition' | 'editor' | 'template-manager' | 'library' | 'mixer' | 'preview' | 'files' | 'transition-editor';
+
+interface MenuItem {
+  id: string;
+  icon: any;
+  label: string;
+  view?: AppView;
+  action?: () => void;
+}
+
+interface MenuSection {
+  title?: string;
+  items: MenuItem[];
+}
 
 const AppShell: React.FC = () => {
   const { user, signOut } = useAuth();
   const onboarding = useOnboarding();
-  const [currentView, setCurrentView] = useState<AppView>('projects');
+  const [currentView, setCurrentView] = useState<AppView>('home');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateData | undefined>();
@@ -33,16 +47,40 @@ const AppShell: React.FC = () => {
   const [transitionSongA, setTransitionSongA] = useState<UploadResult | undefined>();
   const [transitionSongB, setTransitionSongB] = useState<UploadResult | undefined>();
 
-  const menuItems = [
-    { id: 'projects', icon: Disc3, label: 'Transitions', view: 'projects' as AppView },
-    { id: 'templates', icon: FileAudio, label: 'Templates', view: 'templates' as AppView },
-    ...(user?.plan === 'admin' ? [
-      { id: 'template-manager', icon: Settings, label: 'Template Manager', view: 'template-manager' as AppView }
-    ] : []),
-    { id: 'library', icon: Music, label: 'Library', view: 'library' as AppView },
-    { id: 'mixer', icon: Sliders, label: 'Mixer', view: 'mixer' as AppView },
-    { id: 'preview', icon: Headphones, label: 'Preview', view: 'preview' as AppView },
-    { id: 'files', icon: Folder, label: 'Files', view: 'files' as AppView },
+  const handleCreateNew = () => {
+    setCurrentView('library');
+  };
+
+  const menuSections: MenuSection[] = [
+    {
+      items: [
+        { id: 'home', icon: Home, label: 'Home', view: 'home' },
+        { id: 'create-with-ai', icon: Sparkles, label: 'Create with AI', view: 'create-with-ai' },
+      ]
+    },
+    {
+      title: 'AI tools',
+      items: [
+        { id: 'ai-design', icon: Wand2, label: 'AI design', view: 'ai-design' },
+        { id: 'ai-video', icon: Video, label: 'AI video maker', view: 'ai-video' },
+        { id: 'ai-voice', icon: Mic, label: 'AI voice', view: 'ai-voice' },
+        { id: 'all-tools', icon: Grid3X3, label: 'All tools', view: 'all-tools' },
+      ]
+    },
+    {
+      title: 'Templates & projects',
+      items: [
+        { id: 'templates', icon: FileAudio, label: 'Templates', view: 'templates' },
+        { id: 'recent-projects', icon: Clock, label: 'Recent projects', view: 'recent-projects' },
+        { id: 'share-schedule', icon: Share2, label: 'Share and schedule', view: 'share-schedule' },
+      ]
+    },
+    ...(user?.plan === 'admin' ? [{
+      title: 'Admin',
+      items: [
+        { id: 'template-manager', icon: Settings, label: 'Template Manager', view: 'template-manager' as AppView }
+      ]
+    }] : [])
   ];
 
   const handleCreateProject = () => {
@@ -77,27 +115,26 @@ const AppShell: React.FC = () => {
   };
 
   const handleBackToProjects = () => {
-    setCurrentView('projects');
+    setCurrentView('recent-projects');
     setSelectedTemplate(undefined);
     setEditingProjectId(undefined);
   };
 
   const handleSaveProject = (project: any) => {
     console.log('Saving project:', project);
-    // Here you would typically save to your backend
-    setCurrentView('projects');
+    setCurrentView('recent-projects');
   };
 
-  const handleCreateTransition = (songA: UploadResult, songB: UploadResult) => {
-    setTransitionSongA(songA);
-    setTransitionSongB(songB);
-    setCurrentView('transition-editor');
+  const handleCreateNewTransition = () => {
+    setCurrentView('create-transition');
   };
 
-  const handleBackToLibrary = () => {
-    setTransitionSongA(undefined);
-    setTransitionSongB(undefined);
-    setCurrentView('library');
+  const handleTransitionSaved = () => {
+    setCurrentView('recent-projects');
+  };
+
+  const handleBackToTransitions = () => {
+    setCurrentView('recent-projects');
   };
 
   // Handle scroll to hide/show top bar
@@ -123,8 +160,69 @@ const AppShell: React.FC = () => {
 
   const renderContent = () => {
     switch (currentView) {
-      case 'projects':
-        return <TransitionsList />;
+      case 'home':
+        return (
+          <div className="h-full flex flex-col p-6">
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center space-y-6 max-w-2xl">
+                <div className="w-24 h-24 bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto shadow-2xl shadow-cyan-500/50">
+                  <Music size={48} className="text-white" />
+                </div>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+                  Welcome to MySounds.ai
+                </h1>
+                <p className="text-gray-400 text-lg leading-relaxed">
+                  Create seamless transitions between your songs using AI-powered templates.
+                  Upload your music library and start blending tracks like a pro.
+                </p>
+                <button
+                  onClick={() => setCurrentView('library')}
+                  className="px-8 py-4 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105"
+                >
+                  Get Started
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      case 'create-with-ai':
+        return <LibraryView />;
+      case 'ai-design':
+      case 'ai-video':
+      case 'ai-voice':
+      case 'all-tools':
+        return (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-2xl flex items-center justify-center mx-auto">
+                <Sparkles size={32} className="text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-white">Coming Soon</h2>
+              <p className="text-gray-400">This AI feature is under development</p>
+            </div>
+          </div>
+        );
+      case 'recent-projects':
+        return <TransitionsList onCreateNew={handleCreateNewTransition} />;
+      case 'share-schedule':
+        return (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-2xl flex items-center justify-center mx-auto">
+                <Share2 size={32} className="text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-white">Coming Soon</h2>
+              <p className="text-gray-400">Share and schedule your transitions</p>
+            </div>
+          </div>
+        );
+      case 'create-transition':
+        return (
+          <TransitionCreator
+            onBack={handleBackToTransitions}
+            onSave={handleTransitionSaved}
+          />
+        );
       case 'templates':
         return (
           <TemplateGallery 
@@ -143,36 +241,12 @@ const AppShell: React.FC = () => {
       case 'template-manager':
         return <TemplateManager />;
       case 'library':
-        return <LibraryView onCreateTransition={handleCreateTransition} />;
+      case 'files':
+        return <LibraryView />;
       case 'mixer':
         return <MixerView />;
       case 'preview':
         return <PreviewView />;
-      case 'files':
-        return <FilesView />;
-      case 'transition-editor':
-        if (!transitionSongA || !transitionSongB) {
-          return (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center space-y-4">
-                <p className="text-gray-400">No songs selected. Please go back to Library.</p>
-                <button
-                  onClick={handleBackToLibrary}
-                  className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
-                >
-                  Back to Library
-                </button>
-              </div>
-            </div>
-          );
-        }
-        return (
-          <TransitionEditorView
-            songA={transitionSongA}
-            songB={transitionSongB}
-            onBack={handleBackToLibrary}
-          />
-        );
       default:
         return (
           <div className="flex items-center justify-center h-full">
@@ -326,36 +400,60 @@ const AppShell: React.FC = () => {
             </div>
 
             {/* Navigation */}
-            <nav className={`flex-1 px-2 py-4 space-y-1 overflow-y-auto ${isSidebarCollapsed ? 'md:overflow-hidden' : ''}`}>
-              {menuItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = item.view === currentView;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      if (item.view) {
-                        setCurrentView(item.view);
-                        setIsMobileSidebarOpen(false);
-                      }
-                    }}
-                    className={`
-                      w-full flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
-                      ${isActive
-                        ? 'bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 text-white shadow-lg shadow-cyan-500/30'
-                        : 'text-gray-400 hover:text-white hover:bg-gray-700'
-                      }
-                      justify-start md:${isSidebarCollapsed ? 'justify-center' : 'justify-start'}
-                    `}
-                    title={isSidebarCollapsed ? item.label : undefined}
-                  >
-                    <Icon size={20} className="flex-shrink-0" />
-                    <span className={`ml-3 font-medium ${isSidebarCollapsed ? 'md:hidden' : ''}`}>
-                      {item.label}
-                    </span>
-                  </button>
-                );
-              })}
+            <nav className={`flex-1 px-3 py-4 space-y-6 overflow-y-auto ${isSidebarCollapsed ? 'md:overflow-hidden' : ''}`}>
+              {/* Create New Button */}
+              {!isSidebarCollapsed && (
+                <button
+                  onClick={handleCreateNew}
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/50"
+                >
+                  <Plus size={20} />
+                  <span>Create new</span>
+                </button>
+              )}
+
+              {/* Menu Sections */}
+              {menuSections.map((section, sectionIndex) => (
+                <div key={sectionIndex} className="space-y-1">
+                  {section.title && !isSidebarCollapsed && (
+                    <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                      {section.title}
+                    </h3>
+                  )}
+                  {section.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = item.view === currentView;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          if (item.view) {
+                            setCurrentView(item.view);
+                            setIsMobileSidebarOpen(false);
+                          } else if (item.action) {
+                            item.action();
+                            setIsMobileSidebarOpen(false);
+                          }
+                        }}
+                        className={`
+                          w-full flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200
+                          ${isActive
+                            ? 'bg-gray-700 text-white font-medium'
+                            : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                          }
+                          justify-start md:${isSidebarCollapsed ? 'justify-center' : 'justify-start'}
+                        `}
+                        title={isSidebarCollapsed ? item.label : undefined}
+                      >
+                        <Icon size={20} className="flex-shrink-0" />
+                        <span className={`ml-3 ${isSidebarCollapsed ? 'md:hidden' : ''}`}>
+                          {item.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
             </nav>
 
             {/* Bottom Section */}
