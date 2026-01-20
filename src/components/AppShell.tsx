@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { TemplateData, databaseService } from '../lib/database';
 import CreditsIndicator from './CreditsIndicator';
-import ProjectList from './ProjectList';
+import TransitionsList from './TransitionsList';
 import TemplateGallery from './TemplateGallery';
 import EditorView from './EditorView';
 import TemplateManager from './TemplateManager';
@@ -12,8 +12,10 @@ import LibraryView from './LibraryView';
 import MixerView from './MixerView';
 import PreviewView from './PreviewView';
 import FilesView from './FilesView';
+import TransitionEditorView from './TransitionEditorView';
+import { UploadResult } from '../lib/storage';
 
-type AppView = 'projects' | 'templates' | 'editor' | 'template-manager' | 'library' | 'mixer' | 'preview' | 'files';
+type AppView = 'projects' | 'templates' | 'editor' | 'template-manager' | 'library' | 'mixer' | 'preview' | 'files' | 'transition-editor';
 
 const AppShell: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -28,9 +30,11 @@ const AppShell: React.FC = () => {
   const [lastScrollY, setLastScrollY] = useState(0);
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
+  const [transitionSongA, setTransitionSongA] = useState<UploadResult | undefined>();
+  const [transitionSongB, setTransitionSongB] = useState<UploadResult | undefined>();
 
   const menuItems = [
-    { id: 'projects', icon: Disc3, label: 'Projects', view: 'projects' as AppView },
+    { id: 'projects', icon: Disc3, label: 'Transitions', view: 'projects' as AppView },
     { id: 'templates', icon: FileAudio, label: 'Templates', view: 'templates' as AppView },
     ...(user?.plan === 'admin' ? [
       { id: 'template-manager', icon: Settings, label: 'Template Manager', view: 'template-manager' as AppView }
@@ -84,6 +88,18 @@ const AppShell: React.FC = () => {
     setCurrentView('projects');
   };
 
+  const handleCreateTransition = (songA: UploadResult, songB: UploadResult) => {
+    setTransitionSongA(songA);
+    setTransitionSongB(songB);
+    setCurrentView('transition-editor');
+  };
+
+  const handleBackToLibrary = () => {
+    setTransitionSongA(undefined);
+    setTransitionSongB(undefined);
+    setCurrentView('library');
+  };
+
   // Handle scroll to hide/show top bar
   useEffect(() => {
     const mainContent = document.querySelector('.main-content-scroll');
@@ -108,12 +124,7 @@ const AppShell: React.FC = () => {
   const renderContent = () => {
     switch (currentView) {
       case 'projects':
-        return (
-          <ProjectList 
-            onCreateProject={handleCreateProjectFromTemplate}
-            onOpenProject={handleOpenProject}
-          />
-        );
+        return <TransitionsList />;
       case 'templates':
         return (
           <TemplateGallery 
@@ -132,13 +143,36 @@ const AppShell: React.FC = () => {
       case 'template-manager':
         return <TemplateManager />;
       case 'library':
-        return <LibraryView />;
+        return <LibraryView onCreateTransition={handleCreateTransition} />;
       case 'mixer':
         return <MixerView />;
       case 'preview':
         return <PreviewView />;
       case 'files':
         return <FilesView />;
+      case 'transition-editor':
+        if (!transitionSongA || !transitionSongB) {
+          return (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center space-y-4">
+                <p className="text-gray-400">No songs selected. Please go back to Library.</p>
+                <button
+                  onClick={handleBackToLibrary}
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
+                >
+                  Back to Library
+                </button>
+              </div>
+            </div>
+          );
+        }
+        return (
+          <TransitionEditorView
+            songA={transitionSongA}
+            songB={transitionSongB}
+            onBack={handleBackToLibrary}
+          />
+        );
       default:
         return (
           <div className="flex items-center justify-center h-full">

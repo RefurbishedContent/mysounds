@@ -1,13 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Music, Search, Filter, Upload, Folder, Clock, Star, Grid3X3, List, Play, Heart, MoreVertical } from 'lucide-react';
+import { Music, Search, Filter, Upload, Folder, Clock, Star, Grid3X3, List, Play, Heart, MoreVertical, Shuffle, Plus } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { storageService, UploadResult } from '../lib/storage';
+import AudioUploader from './AudioUploader';
 
-const LibraryView: React.FC = () => {
+interface LibraryViewProps {
+  onCreateTransition?: (songA: UploadResult, songB: UploadResult) => void;
+  onPlaySong?: (song: UploadResult) => void;
+}
+
+const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransition, onPlaySong }) => {
+  const { user } = useAuth();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [isScrolled, setIsScrolled] = useState(false);
+  const [songs, setSongs] = useState<UploadResult[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showUploader, setShowUploader] = useState(false);
+  const [selectedSongs, setSelectedSongs] = useState<UploadResult[]>([]);
 
-  // Handle scroll for minimizing header (listen to parent scroll)
   useEffect(() => {
     const scrollContainer = document.querySelector('.main-content-scroll');
     if (!scrollContainer) return;
@@ -20,6 +32,49 @@ const LibraryView: React.FC = () => {
     scrollContainer.addEventListener('scroll', handleScroll);
     return () => scrollContainer.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    loadSongs();
+  }, [user]);
+
+  const loadSongs = async () => {
+    if (!user) return;
+
+    setLoading(true);
+    try {
+      const uploads = await storageService.getUserUploads(user.id);
+      setSongs(uploads.filter(u => u.status === 'ready'));
+    } catch (error) {
+      console.error('Failed to load songs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSongClick = (song: UploadResult) => {
+    if (selectedSongs.length === 0) {
+      setSelectedSongs([song]);
+    } else if (selectedSongs.length === 1) {
+      if (selectedSongs[0].id === song.id) {
+        setSelectedSongs([]);
+      } else {
+        onCreateTransition?.(selectedSongs[0], song);
+        setSelectedSongs([]);
+      }
+    }
+  };
+
+  const handleUploadComplete = (upload: UploadResult) => {
+    setSongs([upload, ...songs]);
+    setShowUploader(false);
+  };
+
+  const filteredSongs = songs.filter(song => {
+    const matchesSearch = song.originalName.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = selectedFilter === 'all' ||
+      song.mimeType.includes(selectedFilter);
+    return matchesSearch && matchesFilter;
+  });
 
   const filters = [
     { value: 'all', label: 'All Files' },
@@ -64,7 +119,10 @@ const LibraryView: React.FC = () => {
               </button>
             </div>
 
-            <button className="px-6 py-3 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105">
+            <button
+              onClick={() => setShowUploader(true)}
+              className="px-6 py-3 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105"
+            >
               <Upload size={20} />
               <span>Upload Music</span>
             </button>
@@ -103,60 +161,130 @@ const LibraryView: React.FC = () => {
         </div>
       )}
 
-      {/* Empty State */}
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center space-y-6 max-w-md">
-          <div className="w-24 h-24 bg-gradient-to-r from-cyan-600/20 via-blue-600/20 to-purple-600/20 rounded-2xl flex items-center justify-center mx-auto">
-            <Music size={48} className="text-cyan-400" />
+      {/* Songs List/Grid */}
+      <div className="flex-1">
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center space-y-4">
+              <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+              <p className="text-gray-400">Loading your music library...</p>
+            </div>
           </div>
-
-          <div className="space-y-3">
-            <h2 className="text-2xl font-bold text-white">Your Library is Empty</h2>
-            <p className="text-gray-400 leading-relaxed">
-              Start building your music collection by uploading audio files.
-              Organize your tracks, create playlists, and access them quickly when creating mixes.
-            </p>
+        ) : filteredSongs.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center space-y-6 max-w-md">
+              <div className="w-24 h-24 bg-gradient-to-r from-cyan-600/20 via-blue-600/20 to-purple-600/20 rounded-2xl flex items-center justify-center mx-auto">
+                <Music size={48} className="text-cyan-400" />
+              </div>
+              <div className="space-y-3">
+                <h2 className="text-2xl font-bold text-white">Your Library is Empty</h2>
+                <p className="text-gray-400 leading-relaxed">
+                  Start building your music collection by uploading audio files.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowUploader(true)}
+                className="w-full px-6 py-4 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105"
+              >
+                <Upload size={20} />
+                <span>Upload Your First Track</span>
+              </button>
+            </div>
           </div>
+        ) : (
+          <>
+            {selectedSongs.length > 0 && (
+              <div className="mb-4 p-4 bg-blue-900/30 border border-blue-700/50 rounded-lg">
+                <p className="text-blue-300 text-sm">
+                  Selected: <span className="font-semibold">{selectedSongs[0].originalName}</span>
+                  {' '}- Click another song to create a transition
+                </p>
+              </div>
+            )}
 
-          <div className="space-y-4">
-            <button className="w-full px-6 py-4 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105">
-              <Upload size={20} />
-              <span>Upload Your First Track</span>
-            </button>
-            
-            <div className="text-center">
-              <p className="text-gray-500 text-sm mb-3">Supported formats:</p>
-              <div className="flex justify-center space-x-2">
-                {['MP3', 'WAV', 'FLAC', 'M4A', 'AAC'].map((format) => (
-                  <span key={format} className="px-2 py-1 bg-gray-800 text-gray-300 rounded text-xs">
-                    {format}
-                  </span>
+            {viewMode === 'grid' ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {filteredSongs.map((song) => (
+                  <div
+                    key={song.id}
+                    onClick={() => handleSongClick(song)}
+                    className={`
+                      group bg-gray-800 rounded-lg p-4 cursor-pointer transition-all duration-200
+                      hover:bg-gray-750 hover:shadow-lg
+                      ${selectedSongs.some(s => s.id === song.id) ? 'ring-2 ring-blue-500' : ''}
+                    `}
+                  >
+                    <div className="w-full aspect-square bg-gradient-to-br from-cyan-600/20 to-purple-600/20 rounded-lg mb-3 flex items-center justify-center">
+                      <Music className="w-12 h-12 text-cyan-400" />
+                    </div>
+                    <h3 className="text-white font-medium text-sm truncate mb-1">
+                      {song.originalName}
+                    </h3>
+                    <p className="text-gray-400 text-xs">
+                      {song.analysis?.bpm ? `${song.analysis.bpm} BPM` : 'Not analyzed'}
+                    </p>
+                  </div>
                 ))}
               </div>
-            </div>
-          </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredSongs.map((song) => (
+                  <div
+                    key={song.id}
+                    onClick={() => handleSongClick(song)}
+                    className={`
+                      group flex items-center space-x-4 bg-gray-800 rounded-lg p-4 cursor-pointer transition-all duration-200
+                      hover:bg-gray-750
+                      ${selectedSongs.some(s => s.id === song.id) ? 'ring-2 ring-blue-500' : ''}
+                    `}
+                  >
+                    <div className="w-12 h-12 bg-gradient-to-br from-cyan-600/20 to-purple-600/20 rounded flex items-center justify-center flex-shrink-0">
+                      <Music className="w-6 h-6 text-cyan-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-white font-medium truncate">{song.originalName}</h3>
+                      <p className="text-gray-400 text-sm">
+                        {song.analysis?.bpm ? `${song.analysis.bpm} BPM` : 'Not analyzed'}
+                        {song.analysis?.genre && ` • ${song.analysis.genre}`}
+                      </p>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onPlaySong?.(song);
+                      }}
+                      className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Play className="w-5 h-5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
-          <div className="border-t border-gray-700 pt-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-              <div className="space-y-2">
-                <Folder size={24} className="text-gray-500 mx-auto" />
-                <h4 className="text-white font-medium text-sm">Organize</h4>
-                <p className="text-gray-500 text-xs">Create folders and playlists</p>
-              </div>
-              <div className="space-y-2">
-                <Star size={24} className="text-gray-500 mx-auto" />
-                <h4 className="text-white font-medium text-sm">Favorite</h4>
-                <p className="text-gray-500 text-xs">Mark your best tracks</p>
-              </div>
-              <div className="space-y-2">
-                <Clock size={24} className="text-gray-500 mx-auto" />
-                <h4 className="text-white font-medium text-sm">Recent</h4>
-                <p className="text-gray-500 text-xs">Quick access to latest uploads</p>
-              </div>
+      {/* Upload Dialog */}
+      {showUploader && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-800 rounded-2xl border border-gray-600 shadow-2xl max-w-2xl w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-white">Upload Music</h2>
+              <button
+                onClick={() => setShowUploader(false)}
+                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                ×
+              </button>
             </div>
+            <AudioUploader
+              onUploadComplete={handleUploadComplete}
+              trackLabel="Song"
+            />
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
