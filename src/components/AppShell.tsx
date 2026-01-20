@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Music, Disc3, Headphones, Settings, Folder, AudioWaveform as Waveform, Sliders, FileAudio, User, Bell, Search, Menu, X, Activity, HelpCircle, Plus, Sparkles, Wand2, Video, Mic, Grid3X3, Clock, Share2 } from 'lucide-react';
+import { Home, Music, Disc3, Headphones, Settings, Folder, AudioWaveform as Waveform, Sliders, FileAudio, User, Bell, Search, Menu, X, Activity, HelpCircle, Plus, Sparkles, Wand2, Video, Mic, Grid3X3, Clock, Share2, ListMusic } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { TemplateData, databaseService } from '../lib/database';
@@ -16,7 +16,7 @@ import TransitionEditorView from './TransitionEditorView';
 import TransitionCreator from './TransitionCreator';
 import { UploadResult } from '../lib/storage';
 
-type AppView = 'home' | 'create-with-ai' | 'ai-design' | 'ai-video' | 'ai-voice' | 'all-tools' | 'templates' | 'recent-projects' | 'share-schedule' | 'create-transition' | 'editor' | 'template-manager' | 'library' | 'mixer' | 'preview' | 'files' | 'transition-editor';
+type AppView = 'home' | 'create-with-ai' | 'ai-design' | 'ai-video' | 'ai-voice' | 'all-tools' | 'templates' | 'recent-projects' | 'share-schedule' | 'create-transition' | 'editor' | 'template-manager' | 'library' | 'mixer' | 'preview' | 'files' | 'transition-editor' | 'transitions' | 'playlists';
 
 interface MenuItem {
   id: string;
@@ -59,12 +59,11 @@ const AppShell: React.FC = () => {
       ]
     },
     {
-      title: 'AI tools',
+      title: 'Tools',
       items: [
-        { id: 'ai-design', icon: Wand2, label: 'AI design', view: 'ai-design' },
-        { id: 'ai-video', icon: Video, label: 'AI video maker', view: 'ai-video' },
-        { id: 'ai-voice', icon: Mic, label: 'AI voice', view: 'ai-voice' },
-        { id: 'all-tools', icon: Grid3X3, label: 'All tools', view: 'all-tools' },
+        { id: 'transitions', icon: Waveform, label: 'Transitions', view: 'transitions' },
+        { id: 'library', icon: Music, label: 'Library', view: 'library' },
+        { id: 'playlists', icon: ListMusic, label: 'Playlists', view: 'playlists' },
       ]
     },
     {
@@ -187,21 +186,7 @@ const AppShell: React.FC = () => {
         );
       case 'create-with-ai':
         return <LibraryView />;
-      case 'ai-design':
-      case 'ai-video':
-      case 'ai-voice':
-      case 'all-tools':
-        return (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-2xl flex items-center justify-center mx-auto">
-                <Sparkles size={32} className="text-white" />
-              </div>
-              <h2 className="text-2xl font-bold text-white">Coming Soon</h2>
-              <p className="text-gray-400">This AI feature is under development</p>
-            </div>
-          </div>
-        );
+      case 'transitions':
       case 'recent-projects':
         return <TransitionsList onCreateNew={handleCreateNewTransition} />;
       case 'share-schedule':
@@ -243,6 +228,18 @@ const AppShell: React.FC = () => {
       case 'library':
       case 'files':
         return <LibraryView />;
+      case 'playlists':
+        return (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-2xl flex items-center justify-center mx-auto">
+                <ListMusic size={32} className="text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-white">Coming Soon</h2>
+              <p className="text-gray-400">Playlist management feature is under development</p>
+            </div>
+          </div>
+        );
       case 'mixer':
         return <MixerView />;
       case 'preview':
