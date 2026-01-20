@@ -47,12 +47,42 @@ class StorageService {
    * Upload an audio file to Supabase storage
    */
   async uploadAudioFile(
-    file: File, 
+    file: File,
     userId: string,
     onProgress?: (progress: number) => void
   ): Promise<UploadResult> {
     // Validate file
     this.validateFile(file);
+
+    // Check for existing upload with same name and size
+    const { data: existingUpload } = await supabase
+      .from('uploads')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('original_name', file.name)
+      .eq('size', file.size)
+      .maybeSingle();
+
+    // If exact match found, return existing upload instead of creating duplicate
+    if (existingUpload) {
+      return {
+        id: existingUpload.id,
+        url: existingUpload.url,
+        path: existingUpload.filename,
+        originalName: existingUpload.original_name,
+        mimeType: existingUpload.mime_type || 'audio/mpeg',
+        size: existingUpload.size,
+        status: existingUpload.status || 'ready',
+        analysis: existingUpload.analysis,
+        metadata: {
+          filename: existingUpload.original_name,
+          size: existingUpload.size,
+          mimeType: existingUpload.mime_type || 'audio/mpeg',
+          duration: existingUpload.analysis?.duration,
+          analysis: existingUpload.analysis
+        }
+      };
+    }
 
     // Generate unique filename
     const fileExt = file.name.split('.').pop();
