@@ -14,6 +14,9 @@ import TemplateGallery from './TemplateGallery';
 import TemplateInspector from './TemplateInspector';
 import RenderDialog from './RenderDialog';
 import OnboardingOverlay from './OnboardingOverlay';
+import AIPowerButton from './AIPowerButton';
+import AIRecommendationsPanel from './AIRecommendationsPanel';
+import { TemplateRecommendation } from '../lib/ai/aiService';
 
 interface EditorViewProps {
   projectId?: string;
@@ -64,6 +67,10 @@ const EditorView: React.FC<EditorViewProps> = ({ projectId, template, onBack, on
 
   // Template gallery collapse state
   const [isGalleryCollapsed, setIsGalleryCollapsed] = useState(false);
+
+  // AI recommendations state
+  const [aiRecommendations, setAiRecommendations] = useState<TemplateRecommendation[]>([]);
+  const [showAIRecommendations, setShowAIRecommendations] = useState(false);
 
   // Calculate max duration from uploaded tracks
   const maxDuration = React.useMemo(() => {
@@ -1016,6 +1023,19 @@ const EditorView: React.FC<EditorViewProps> = ({ projectId, template, onBack, on
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
+                        <AIPowerButton
+                          uploadIdA={uploadedTracks.trackA?.id}
+                          uploadIdB={uploadedTracks.trackB?.id}
+                          onAnalysisComplete={(recommendations) => {
+                            setAiRecommendations(recommendations);
+                            setShowAIRecommendations(true);
+                            showToast('success', `AI found ${recommendations.length} matching templates!`);
+                          }}
+                          onError={(errorMsg) => {
+                            showToast('error', errorMsg);
+                          }}
+                          disabled={!uploadedTracks.trackA || !uploadedTracks.trackB}
+                        />
                         <button
                           onClick={() => setShowInspector(!showInspector)}
                           className="px-4 py-2 bg-cyan-600/10 hover:bg-cyan-600/20 border border-cyan-500/30 hover:border-cyan-400/50 text-cyan-400 rounded-lg text-sm font-medium transition-all duration-200 hover:shadow-lg hover:shadow-cyan-500/20"
@@ -1032,7 +1052,20 @@ const EditorView: React.FC<EditorViewProps> = ({ projectId, template, onBack, on
                         </button>
                       </div>
                     </div>
-                    <div className="pb-4">
+                    <div className="pb-4 space-y-4">
+                      {showAIRecommendations && aiRecommendations.length > 0 && (
+                        <AIRecommendationsPanel
+                          recommendations={aiRecommendations}
+                          onSelectTemplate={(templateId) => {
+                            const template = aiRecommendations.find(r => r.templateId === templateId)?.template;
+                            if (template) {
+                              handleSelectTemplate(template);
+                            }
+                          }}
+                          onClose={() => setShowAIRecommendations(false)}
+                          isVisible={showAIRecommendations}
+                        />
+                      )}
                       <TemplateGallery
                         onSelectTemplate={handleSelectTemplate}
                         compact={false}
