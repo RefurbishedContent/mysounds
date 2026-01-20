@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Music, Search, Filter, Upload, Folder, Clock, Star, Grid3X3, List, Play, Heart, MoreVertical, Shuffle, Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { storageService, UploadResult } from '../lib/storage';
-import AudioUploader from './AudioUploader';
+import LibraryUploader from './LibraryUploader';
 
 interface LibraryViewProps {
   onPlaySong?: (song: UploadResult) => void;
@@ -244,20 +244,19 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onPlaySong }) => {
       {/* Upload Dialog */}
       {showUploader && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-800 rounded-2xl border border-gray-600 shadow-2xl max-w-2xl w-full p-6">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-gray-800 rounded-2xl border border-gray-600 shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-gray-800 border-b border-gray-700 px-6 py-4 flex items-center justify-between z-10">
               <h2 className="text-2xl font-bold text-white">Upload Music</h2>
               <button
                 onClick={() => setShowUploader(false)}
-                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-700 rounded-lg transition-colors text-gray-400 hover:text-white"
               >
-                ×
+                <span className="text-2xl">×</span>
               </button>
             </div>
-            <AudioUploader
-              onUploadComplete={handleUploadComplete}
-              trackLabel="Song"
-            />
+            <div className="p-6">
+              <LibraryUploader onUploadComplete={handleUploadComplete} />
+            </div>
           </div>
         </div>
       )}
