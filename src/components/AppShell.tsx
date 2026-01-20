@@ -136,6 +136,11 @@ const AppShell: React.FC = () => {
     setCurrentView('recent-projects');
   };
 
+  const handleCreateTransitionWithSong = (song: UploadResult) => {
+    setTransitionSongA(song);
+    setCurrentView('create-transition');
+  };
+
   // Handle scroll to hide/show top bar
   useEffect(() => {
     const mainContent = document.querySelector('.main-content-scroll');
@@ -185,7 +190,7 @@ const AppShell: React.FC = () => {
           </div>
         );
       case 'create-with-ai':
-        return <LibraryView />;
+        return <LibraryView onCreateTransitionWithSong={handleCreateTransitionWithSong} />;
       case 'transitions':
       case 'recent-projects':
         return <TransitionsList onCreateNew={handleCreateNewTransition} />;
@@ -206,6 +211,7 @@ const AppShell: React.FC = () => {
           <TransitionCreator
             onBack={handleBackToTransitions}
             onSave={handleTransitionSaved}
+            initialSongA={transitionSongA}
           />
         );
       case 'templates':
@@ -227,7 +233,7 @@ const AppShell: React.FC = () => {
         return <TemplateManager />;
       case 'library':
       case 'files':
-        return <LibraryView />;
+        return <LibraryView onCreateTransitionWithSong={handleCreateTransitionWithSong} />;
       case 'playlists':
         return (
           <div className="flex items-center justify-center h-full">

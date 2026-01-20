@@ -3,12 +3,14 @@ import { Music, Search, Filter, Upload, Folder, Clock, Star, Grid3X3, List, Play
 import { useAuth } from '../contexts/AuthContext';
 import { storageService, UploadResult } from '../lib/storage';
 import LibraryUploader from './LibraryUploader';
+import SongDetailModal from './SongDetailModal';
 
 interface LibraryViewProps {
   onPlaySong?: (song: UploadResult) => void;
+  onCreateTransitionWithSong?: (song: UploadResult) => void;
 }
 
-const LibraryView: React.FC<LibraryViewProps> = ({ onPlaySong }) => {
+const LibraryView: React.FC<LibraryViewProps> = ({ onPlaySong, onCreateTransitionWithSong }) => {
   const { user } = useAuth();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
@@ -17,6 +19,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onPlaySong }) => {
   const [songs, setSongs] = useState<UploadResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUploader, setShowUploader] = useState(false);
+  const [selectedSong, setSelectedSong] = useState<UploadResult | null>(null);
 
   useEffect(() => {
     const scrollContainer = document.querySelector('.main-content-scroll');
@@ -49,9 +52,19 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onPlaySong }) => {
     }
   };
 
-  const handleUploadComplete = (upload: UploadResult) => {
-    setSongs([upload, ...songs]);
+  const handleUploadComplete = async (upload: UploadResult) => {
     setShowUploader(false);
+    // Reload the entire list to prevent duplicates
+    await loadSongs();
+  };
+
+  const handleSongClick = (song: UploadResult) => {
+    setSelectedSong(song);
+  };
+
+  const handleCreateTransition = (song: UploadResult) => {
+    setSelectedSong(null);
+    onCreateTransitionWithSong?.(song);
   };
 
   const handlePlaySong = (e: React.MouseEvent, song: UploadResult) => {
@@ -188,7 +201,8 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onPlaySong }) => {
                 {filteredSongs.map((song) => (
                   <div
                     key={song.id}
-                    className="group bg-gray-800 rounded-lg p-4 transition-all duration-200 hover:bg-gray-750 hover:shadow-lg relative"
+                    onClick={() => handleSongClick(song)}
+                    className="group bg-gray-800 rounded-lg p-4 transition-all duration-200 hover:bg-gray-750 hover:shadow-lg relative cursor-pointer"
                   >
                     <div className="w-full aspect-square bg-gradient-to-br from-cyan-600/20 to-purple-600/20 rounded-lg mb-3 flex items-center justify-center relative">
                       <Music className="w-12 h-12 text-cyan-400" />
@@ -215,7 +229,8 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onPlaySong }) => {
                 {filteredSongs.map((song) => (
                   <div
                     key={song.id}
-                    className="group flex items-center space-x-4 bg-gray-800 rounded-lg p-4 transition-all duration-200 hover:bg-gray-750"
+                    onClick={() => handleSongClick(song)}
+                    className="group flex items-center space-x-4 bg-gray-800 rounded-lg p-4 transition-all duration-200 hover:bg-gray-750 cursor-pointer"
                   >
                     <div className="w-12 h-12 bg-gradient-to-br from-cyan-600/20 to-purple-600/20 rounded flex items-center justify-center flex-shrink-0">
                       <Music className="w-6 h-6 text-cyan-400" />
@@ -259,6 +274,15 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onPlaySong }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Song Detail Modal */}
+      {selectedSong && (
+        <SongDetailModal
+          song={selectedSong}
+          onClose={() => setSelectedSong(null)}
+          onCreateTransition={handleCreateTransition}
+        />
       )}
     </div>
   );

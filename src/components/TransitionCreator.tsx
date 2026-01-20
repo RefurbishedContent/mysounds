@@ -8,17 +8,18 @@ import { transitionsService } from '../lib/transitionsService';
 interface TransitionCreatorProps {
   onBack: () => void;
   onSave: () => void;
+  initialSongA?: UploadResult;
 }
 
 type CreatorStep = 'select-songs' | 'select-template' | 'edit-timeline';
 
-const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave }) => {
+const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, initialSongA }) => {
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState<CreatorStep>('select-songs');
   const [songs, setSongs] = useState<UploadResult[]>([]);
   const [templates, setTemplates] = useState<TemplateData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [songA, setSongA] = useState<UploadResult | null>(null);
+  const [songA, setSongA] = useState<UploadResult | null>(initialSongA || null);
   const [songB, setSongB] = useState<UploadResult | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateData | null>(null);
   const [transitionName, setTransitionName] = useState('');
