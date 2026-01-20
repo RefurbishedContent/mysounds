@@ -34,8 +34,12 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
   }, [user]);
 
   const loadData = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('[TransitionCreator] No user, skipping load');
+      return;
+    }
 
+    console.log('[TransitionCreator] Loading data for user:', user.id, user.email);
     setLoading(true);
     try {
       const [songsData, templatesData] = await Promise.all([
@@ -43,11 +47,17 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
         databaseService.listTemplates()
       ]);
       const readySongs = songsData.filter(s => s.status === 'ready');
-      console.log('Loaded songs:', readySongs.length, readySongs);
+      console.log('[TransitionCreator] Loaded data:', {
+        totalSongs: songsData.length,
+        readySongs: readySongs.length,
+        templates: templatesData.length,
+        songs: readySongs
+      });
       setSongs(readySongs);
       setTemplates(templatesData);
     } catch (error) {
-      console.error('Failed to load data:', error);
+      console.error('[TransitionCreator] Failed to load data:', error);
+      alert(`Failed to load library: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }

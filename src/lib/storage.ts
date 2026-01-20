@@ -245,17 +245,34 @@ class StorageService {
    * Get user's uploads
    */
   async getUserUploads(userId: string): Promise<UploadResult[]> {
+    console.log('[StorageService] getUserUploads called for userId:', userId);
+
+    const { data: session } = await supabase.auth.getSession();
+    console.log('[StorageService] Current session:', {
+      hasSession: !!session.session,
+      sessionUserId: session.session?.user?.id,
+      requestedUserId: userId,
+      match: session.session?.user?.id === userId
+    });
+
     const { data, error } = await supabase
       .from('uploads')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
+    console.log('[StorageService] Query result:', {
+      error: error?.message,
+      dataLength: data?.length,
+      data: data
+    });
+
     if (error) {
+      console.error('[StorageService] Query error:', error);
       throw new Error(`Failed to fetch uploads: ${error.message}`);
     }
 
-    return data.map(upload => ({
+    const results = data.map(upload => ({
       id: upload.id,
       url: upload.url,
       path: upload.filename,
@@ -272,6 +289,9 @@ class StorageService {
         analysis: upload.analysis
       }
     }));
+
+    console.log('[StorageService] Returning', results.length, 'uploads');
+    return results;
   }
 
   /**
