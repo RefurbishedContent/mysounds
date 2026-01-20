@@ -28,10 +28,17 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
   const [showFilters, setShowFilters] = useState(false);
   const [bpmFilter, setBpmFilter] = useState<'all' | 'slow' | 'medium' | 'fast'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'recent' | 'bpm'>('recent');
+  const [transitionDuration, setTransitionDuration] = useState(8);
 
   useEffect(() => {
     loadData();
   }, [user]);
+
+  useEffect(() => {
+    if (selectedTemplate) {
+      setTransitionDuration(selectedTemplate.duration || 8);
+    }
+  }, [selectedTemplate]);
 
   const loadData = async () => {
     if (!user) {
@@ -132,7 +139,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
         songAId: songA.id,
         songBId: songB.id,
         templateId: selectedTemplate.id,
-        transitionDuration: selectedTemplate.duration || 8,
+        transitionDuration: transitionDuration,
         status: 'draft',
         metadata: {
           songAName: songA.originalName,
@@ -511,12 +518,13 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                         <input
                           type="range"
                           min="2"
-                          max="16"
-                          defaultValue={selectedTemplate.duration || 8}
+                          max="60"
+                          value={transitionDuration}
+                          onChange={(e) => setTransitionDuration(Number(e.target.value))}
                           className="flex-1"
                         />
                         <span className="text-white font-medium w-12 text-right">
-                          {selectedTemplate.duration || 8}s
+                          {transitionDuration}s
                         </span>
                       </div>
                     </div>
