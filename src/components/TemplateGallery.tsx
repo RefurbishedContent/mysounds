@@ -599,28 +599,29 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
             <p className="text-gray-400">Try adjusting your search or filters</p>
           </div>
         ) : (
-          <div className={compact ? 'flex space-x-3 overflow-x-auto pb-2' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'}>
+          <div className={compact ? 'flex space-x-3 overflow-x-auto pb-2' : 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3'}>
             {filteredTemplates.map((template) => (
               <div
                 key={template.id}
-                className={`group hover:shadow-xl hover:shadow-cyan-500/20 transition-all duration-300 cursor-grab active:cursor-grabbing ${
+                className={`group relative transition-all duration-300 cursor-grab active:cursor-grabbing ${
                   compact
                     ? 'flex-shrink-0 w-64 bg-gray-800/50 backdrop-blur-sm border border-cyan-500/20 hover:border-cyan-400/40 rounded-xl p-3 flex items-center space-x-3'
-                    : 'glass-surface rounded-xl overflow-hidden'
+                    : 'bg-gray-800/40 backdrop-blur-sm border border-cyan-500/10 hover:border-cyan-400/30 rounded-lg overflow-hidden hover:shadow-lg hover:shadow-cyan-500/20 hover:scale-[1.02]'
                 }`}
                 draggable
                 onDragStart={(e) => handleDragStart(template, e)}
+                onClick={() => !compact && onSelectTemplate(template)}
               >
                 {/* Disabled overlay for templates when tracks not ready */}
-                {(!trackA || !trackB) && (
-                  <div className="absolute inset-0 bg-gray-900/70 flex items-center justify-center z-10 rounded-xl">
-                    <div className="text-center space-y-1">
-                      <div className="text-yellow-400 text-xs font-medium">Upload Required</div>
-                      <div className="text-gray-400 text-xs">Upload both tracks first</div>
+                {(!trackA || !trackB) && !compact && (
+                  <div className="absolute inset-0 bg-gray-900/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
+                    <div className="text-center space-y-0.5 px-2">
+                      <div className="text-yellow-400 text-[10px] font-medium">Upload Required</div>
+                      <div className="text-gray-400 text-[9px]">Upload tracks first</div>
                     </div>
                   </div>
                 )}
-                
+
                 {/* Drag Handle */}
                 {compact && (
                   <div className="text-gray-500 group-hover:text-gray-300 transition-colors duration-200">
@@ -630,99 +631,75 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
 
                 {/* Thumbnail */}
                 <div className={`relative ${compact ? 'w-16 h-16 flex-shrink-0' : ''}`}>
-                  <div className={`overflow-hidden ${compact ? 'w-16 h-16 rounded-lg' : 'w-full h-48'}`}>
-                    <div className={`group-hover:scale-110 transition-transform duration-300 ${compact ? 'w-16 h-16' : 'w-full h-48'}`}>
+                  <div className={`overflow-hidden ${compact ? 'w-16 h-16 rounded-lg' : 'w-full aspect-square'}`}>
+                    <div className={`group-hover:scale-110 transition-transform duration-300 ${compact ? 'w-16 h-16' : 'w-full h-full'}`}>
                       <TemplateIcon category={template.category} name={template.name} />
                     </div>
                   </div>
-                  
-                  {/* Overlay */}
+
+                  {/* Hover Glow Effect */}
                   {!compact && (
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <div className="flex space-x-2">
-                      <button className="p-2 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition-all duration-200">
-                        <Play size={16} />
-                      </button>
-                      <button
-                        onClick={() => onSelectTemplate(template)}
-                        disabled={!trackA || !trackB}
-                        className="px-4 py-2 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 text-white rounded-lg font-medium hover:from-cyan-700 hover:via-blue-700 hover:to-purple-700 transition-all duration-200 hover:shadow-lg hover:shadow-cyan-500/40"
-                      >
-                        Use Template
-                      </button>
-                    </div>
-                  </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-cyan-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                   )}
 
                   {/* Badges */}
-                  <div className={`absolute flex space-x-1 ${compact ? 'top-1 left-1' : 'top-3 left-3 space-x-2'}`}>
+                  <div className={`absolute flex ${compact ? 'space-x-1 top-1 left-1' : 'gap-1 top-1.5 left-1.5'}`}>
                     {template.isPopular && (
-                      <span className={`bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 text-white font-medium rounded-full flex items-center shadow-lg shadow-cyan-500/30 ${compact ? 'px-1 py-0.5 text-xs' : 'px-2 py-1 text-xs space-x-1'}`}>
-                        <Star size={compact ? 8 : 10} />
-                        {!compact && <span>Popular</span>}
+                      <span className={`bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/30 ${compact ? 'w-4 h-4' : 'w-5 h-5'}`}>
+                        <Star size={compact ? 8 : 10} fill="white" />
                       </span>
                     )}
                     {template.isPremium && (
-                      <span className={`bg-gradient-to-r from-yellow-600 to-orange-600 text-white font-medium rounded-full flex items-center ${compact ? 'px-1 py-0.5 text-xs' : 'px-2 py-1 text-xs space-x-1'}`}>
-                        <Crown size={compact ? 8 : 10} />
-                        {!compact && <span>Pro</span>}
+                      <span className={`bg-gradient-to-r from-yellow-600 to-orange-600 text-white font-bold rounded-full flex items-center justify-center shadow-lg shadow-yellow-500/30 ${compact ? 'w-4 h-4' : 'w-5 h-5'}`}>
+                        <Crown size={compact ? 8 : 10} fill="white" />
                       </span>
                     )}
                   </div>
 
-                  {/* Actions */}
-                  {!compact && (
-                    <div className="absolute top-3 right-3 flex space-x-2">
-                    <button className="p-2 bg-black/50 backdrop-blur-sm text-white rounded-lg hover:bg-black/70 transition-all duration-200">
-                      <Heart size={14} />
-                    </button>
-                  </div>
-                  )}
-
                   {/* Duration */}
-                  <div className={`absolute ${compact ? 'bottom-1 right-1' : 'bottom-3 right-3'}`}>
-                    <span className={`bg-black/70 backdrop-blur-sm text-white rounded ${compact ? 'px-1 py-0.5 text-xs' : 'px-2 py-1 text-xs'}`}>
-                      {template.duration}s
-                    </span>
-                  </div>
+                  {!compact && (
+                    <div className="absolute bottom-1.5 right-1.5">
+                      <span className="bg-black/80 backdrop-blur-sm text-white rounded px-1.5 py-0.5 text-[10px] font-medium">
+                        {template.duration}s
+                      </span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Content */}
-                <div className={`space-y-2 ${compact ? 'flex-1 min-w-0' : 'p-6 space-y-4'}`}>
-                  <div>
-                    <h3 className={`font-semibold text-white ${compact ? 'text-sm mb-0.5 truncate' : 'text-lg mb-1'}`}>
+                {/* Compact Content */}
+                {compact ? (
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div>
+                      <h3 className="text-sm font-semibold text-white mb-0.5 truncate">
+                        {template.name}
+                      </h3>
+                      <p className="text-xs text-gray-400 line-clamp-1">
+                        {template.description}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-400 truncate">by {template.author}</span>
+                      <span className={`px-2 py-1 font-medium rounded-full text-xs ${getDifficultyColor(template.difficulty)}`}>
+                        {template.difficulty}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-2 space-y-1">
+                    <h3 className="text-xs font-semibold text-white truncate group-hover:text-cyan-400 transition-colors duration-200">
                       {template.name}
                     </h3>
-                    <p className={`text-gray-400 ${compact ? 'text-xs line-clamp-1' : 'text-sm line-clamp-2'}`}>
-                      {template.description}
-                    </p>
-                  </div>
-
-                  {/* Author & Category */}
-                  <div className={`flex items-center justify-between ${compact ? 'text-xs' : 'text-sm'}`}>
-                    <span className="text-gray-400 truncate">by {template.author}</span>
-                    <span className={`px-2 py-1 font-medium rounded-full ${getDifficultyColor(template.difficulty)} ${compact ? 'text-xs' : 'text-xs'}`}>
-                      {template.difficulty}
-                    </span>
-                  </div>
-
-                  {/* Stats */}
-                  {!compact && (
-                    <div className="flex items-center justify-between text-sm text-gray-500">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-1">
-                        <Download size={14} />
-                        <span>{formatNumber(template.downloads)}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Star size={14} className="text-yellow-500" />
-                        <span>{template.rating}</span>
+                    <div className="flex items-center justify-between gap-1">
+                      <span className={`px-1.5 py-0.5 text-[9px] font-medium rounded-full ${getDifficultyColor(template.difficulty)}`}>
+                        {template.difficulty}
+                      </span>
+                      <div className="flex items-center gap-1 text-gray-500">
+                        <Star size={10} className="text-yellow-500" fill="currentColor" />
+                        <span className="text-[9px]">{template.rating}</span>
                       </div>
                     </div>
-                    <span className="capitalize">{template.category}</span>
                   </div>
-                  )}
-                </div>
+                )}
               </div>
             ))}
           </div>
