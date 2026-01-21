@@ -312,9 +312,13 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                         style={{ width: `${((songADuration - songAMarkerPoint) / songADuration) * 100}%` }}
                       />
                       <div
-                        className="absolute top-0 bottom-0 w-1 bg-blue-500 shadow-lg shadow-blue-500/50"
-                        style={{ left: `${(songAMarkerPoint / songADuration) * 100}%` }}
-                      />
+                        className="absolute -top-2 -bottom-2 w-1 bg-gradient-to-b from-cyan-400 via-blue-500 to-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.8)] animate-pulse"
+                        style={{ left: `${(songAMarkerPoint / songADuration) * 100}%`, width: '3px' }}
+                      >
+                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-cyan-500 text-white text-xs px-2 py-1 rounded whitespace-nowrap font-medium shadow-lg">
+                          Marker
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -359,9 +363,13 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                         style={{ width: `${((songBDuration - songBClipEnd) / songBDuration) * 100}%` }}
                       />
                       <div
-                        className="absolute top-0 bottom-0 w-1 bg-green-500 shadow-lg shadow-green-500/50"
-                        style={{ left: `${(songBMarkerPoint / songBDuration) * 100}%` }}
-                      />
+                        className="absolute -top-2 -bottom-2 w-1 bg-gradient-to-b from-green-400 via-emerald-500 to-green-400 shadow-[0_0_20px_rgba(52,211,153,0.8)] animate-pulse"
+                        style={{ left: `${(songBMarkerPoint / songBDuration) * 100}%`, width: '3px' }}
+                      >
+                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs px-2 py-1 rounded whitespace-nowrap font-medium shadow-lg">
+                          Marker
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

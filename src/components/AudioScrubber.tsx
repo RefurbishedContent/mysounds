@@ -9,6 +9,8 @@ interface AudioScrubberProps {
   duration: number;
   onSeek: (time: number) => void;
   isPlaying: boolean;
+  markerTime?: number;
+  markerColor?: string;
 }
 
 export function AudioScrubber({
@@ -16,7 +18,9 @@ export function AudioScrubber({
   currentTime,
   duration,
   onSeek,
-  isPlaying: externalIsPlaying
+  isPlaying: externalIsPlaying,
+  markerTime,
+  markerColor = '#06b6d4'
 }: AudioScrubberProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(currentTime);
@@ -180,6 +184,29 @@ export function AudioScrubber({
           onSeek={handleWaveformClick}
           showScrubber={true}
         />
+        {markerTime !== undefined && markerTime > 0 && (
+          <div
+            className="absolute top-0 bottom-0 pointer-events-none"
+            style={{ left: `${(markerTime / duration) * 100}%` }}
+          >
+            <div
+              className="absolute -top-3 -bottom-3 animate-pulse"
+              style={{
+                width: '3px',
+                boxShadow: `0 0 20px ${markerColor}, 0 0 40px ${markerColor}80`,
+                background: `linear-gradient(to bottom, ${markerColor}cc, ${markerColor}, ${markerColor}cc)`
+              }}
+            >
+              <div
+                className="absolute -top-8 left-1/2 -translate-x-1/2 text-white text-xs px-2 py-1 rounded whitespace-nowrap font-medium shadow-lg flex items-center space-x-1"
+                style={{ backgroundColor: markerColor }}
+              >
+                <MapPin className="w-3 h-3" />
+                <span>Marker</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mt-3 flex items-center justify-between text-xs text-gray-400">

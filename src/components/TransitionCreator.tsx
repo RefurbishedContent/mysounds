@@ -598,6 +598,8 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                     setSongAMarkerPoint(time);
                   }}
                   isPlaying={isPlayingA}
+                  markerTime={songAMarkerPoint}
+                  markerColor="#3b82f6"
                 />
 
                 <div className="mt-4 bg-gray-900 rounded-lg p-4 border border-blue-500/30">
@@ -647,6 +649,8 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                     setSongBMarkerPoint(time);
                   }}
                   isPlaying={isPlayingB}
+                  markerTime={songBMarkerPoint}
+                  markerColor="#10b981"
                 />
 
                 <div className="mt-4 bg-gray-900 rounded-lg p-4 border border-green-500/30">
