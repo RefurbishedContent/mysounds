@@ -30,6 +30,29 @@
   .scrollbar-track-transparent {
     scrollbar-color: #374151 transparent;
   }
+
+  /* Hide scrollbar for horizontal filter tags while keeping functionality */
+  .filter-scroll::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .filter-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .filter-scroll::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 2px;
+  }
+
+  .filter-scroll::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+  }
+
+  .filter-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #4b5563 transparent;
+  }
 }
 
 @keyframes fadeIn {
