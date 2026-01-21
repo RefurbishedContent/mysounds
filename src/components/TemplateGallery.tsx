@@ -377,190 +377,190 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                   </div>
                 )}
 
-              {/* Horizontal Filter Tags */}
-              <div className="space-y-3">
+              {/* Compact Filter Tags */}
+              <div className="space-y-1.5">
                 {/* Genre/Category */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                <Music size={14} className="text-gray-400" />
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Genre</span>
+                <div className="flex items-start gap-2">
+                  <div className="flex items-center gap-1.5 min-w-[80px] pt-1">
+                    <Music size={12} className="text-gray-500" />
+                    <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Genre</span>
                   </div>
-                  <div className="flex items-center space-x-2 overflow-x-auto pb-2 filter-scroll">
-                {categories.map(category => (
-                  <button
-                    key={category}
-                    onClick={() => toggleFilter(category, selectedCategories, setSelectedCategories)}
-                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                      selectedCategories.includes(category)
-                        ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/30'
-                        : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600'
-                    }`}
-                  >
-                    {category.charAt(0).toUpperCase() + category.slice(1)}
-                  </button>
-                ))}
-              </div>
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 filter-scroll flex-1">
+                    {categories.map(category => (
+                      <button
+                        key={category}
+                        onClick={() => toggleFilter(category, selectedCategories, setSelectedCategories)}
+                        className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
+                          selectedCategories.includes(category)
+                            ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-500/20'
+                            : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600/50'
+                        }`}
+                      >
+                        {category.charAt(0).toUpperCase() + category.slice(1)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Duration */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Duration</span>
+                <div className="flex items-start gap-2">
+                  <div className="flex items-center gap-1.5 min-w-[80px] pt-1">
+                    <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Duration</span>
                   </div>
-                  <div className="flex items-center space-x-2 overflow-x-auto pb-2 filter-scroll">
-                {durations.map(duration => (
-                  <button
-                    key={duration}
-                    onClick={() => toggleFilter(duration, selectedDurations, setSelectedDurations)}
-                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                      selectedDurations.includes(duration)
-                        ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/30'
-                        : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600'
-                    }`}
-                  >
-                    {duration === 'short' ? 'Short (4-8s)' : duration === 'medium' ? 'Medium (8-15s)' : 'Long (16-25s)'}
-                  </button>
-                ))}
-              </div>
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 filter-scroll flex-1">
+                    {durations.map(duration => (
+                      <button
+                        key={duration}
+                        onClick={() => toggleFilter(duration, selectedDurations, setSelectedDurations)}
+                        className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
+                          selectedDurations.includes(duration)
+                            ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-500/20'
+                            : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600/50'
+                        }`}
+                      >
+                        {duration === 'short' ? 'Short (4-8s)' : duration === 'medium' ? 'Medium (8-15s)' : 'Long (16-25s)'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* BPM Range */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                <TrendingUp size={14} className="text-gray-400" />
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">BPM</span>
+                <div className="flex items-start gap-2">
+                  <div className="flex items-center gap-1.5 min-w-[80px] pt-1">
+                    <TrendingUp size={12} className="text-gray-500" />
+                    <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">BPM</span>
                   </div>
-                  <div className="flex items-center space-x-2 overflow-x-auto pb-2 filter-scroll">
-                {bpmRanges.map(range => (
-                  <button
-                    key={range}
-                    onClick={() => toggleFilter(range, selectedBPMRanges, setSelectedBPMRanges)}
-                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                      selectedBPMRanges.includes(range)
-                        ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/30'
-                        : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600'
-                    }`}
-                  >
-                    {range === 'slow' ? 'Slow (<90)' : range === 'moderate' ? 'Moderate (90-120)' : range === 'fast' ? 'Fast (120-140)' : 'Very Fast (140+)'}
-                  </button>
-                ))}
-              </div>
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 filter-scroll flex-1">
+                    {bpmRanges.map(range => (
+                      <button
+                        key={range}
+                        onClick={() => toggleFilter(range, selectedBPMRanges, setSelectedBPMRanges)}
+                        className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
+                          selectedBPMRanges.includes(range)
+                            ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-500/20'
+                            : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600/50'
+                        }`}
+                      >
+                        {range === 'slow' ? '<90' : range === 'moderate' ? '90-120' : range === 'fast' ? '120-140' : '140+'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Energy Level */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                <Zap size={14} className="text-gray-400" />
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Energy</span>
+                <div className="flex items-start gap-2">
+                  <div className="flex items-center gap-1.5 min-w-[80px] pt-1">
+                    <Zap size={12} className="text-gray-500" />
+                    <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Energy</span>
                   </div>
-                  <div className="flex items-center space-x-2 overflow-x-auto pb-2 filter-scroll">
-                {energyLevels.map(level => (
-                  <button
-                    key={level}
-                    onClick={() => toggleFilter(level, selectedEnergyLevels, setSelectedEnergyLevels)}
-                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                      selectedEnergyLevels.includes(level)
-                        ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/30'
-                        : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600'
-                    }`}
-                  >
-                    {level.charAt(0).toUpperCase() + level.slice(1)}
-                  </button>
-                ))}
-              </div>
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 filter-scroll flex-1">
+                    {energyLevels.map(level => (
+                      <button
+                        key={level}
+                        onClick={() => toggleFilter(level, selectedEnergyLevels, setSelectedEnergyLevels)}
+                        className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
+                          selectedEnergyLevels.includes(level)
+                            ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-500/20'
+                            : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600/50'
+                        }`}
+                      >
+                        {level.charAt(0).toUpperCase() + level.slice(1)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Mood Tags */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Mood</span>
+                <div className="flex items-start gap-2">
+                  <div className="flex items-center gap-1.5 min-w-[80px] pt-1">
+                    <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Mood</span>
                   </div>
-                  <div className="flex items-center space-x-2 overflow-x-auto pb-2 filter-scroll">
-                {moods.map(mood => (
-                  <button
-                    key={mood}
-                    onClick={() => toggleFilter(mood, selectedMoods, setSelectedMoods)}
-                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                      selectedMoods.includes(mood)
-                        ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/30'
-                        : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600'
-                    }`}
-                  >
-                    {mood.charAt(0).toUpperCase() + mood.slice(1)}
-                  </button>
-                ))}
-              </div>
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 filter-scroll flex-1">
+                    {moods.map(mood => (
+                      <button
+                        key={mood}
+                        onClick={() => toggleFilter(mood, selectedMoods, setSelectedMoods)}
+                        className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
+                          selectedMoods.includes(mood)
+                            ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-500/20'
+                            : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600/50'
+                        }`}
+                      >
+                        {mood.charAt(0).toUpperCase() + mood.slice(1)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Transition Style */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                <Filter size={14} className="text-gray-400" />
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Style</span>
+                <div className="flex items-start gap-2">
+                  <div className="flex items-center gap-1.5 min-w-[80px] pt-1">
+                    <Filter size={12} className="text-gray-500" />
+                    <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Style</span>
                   </div>
-                  <div className="flex items-center space-x-2 overflow-x-auto pb-2 filter-scroll">
-                {styles.map(style => (
-                  <button
-                    key={style}
-                    onClick={() => toggleFilter(style, selectedStyles, setSelectedStyles)}
-                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                      selectedStyles.includes(style)
-                        ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/30'
-                        : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600'
-                    }`}
-                  >
-                    {style.charAt(0).toUpperCase() + style.slice(1)}
-                  </button>
-                ))}
-              </div>
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 filter-scroll flex-1">
+                    {styles.map(style => (
+                      <button
+                        key={style}
+                        onClick={() => toggleFilter(style, selectedStyles, setSelectedStyles)}
+                        className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
+                          selectedStyles.includes(style)
+                            ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-500/20'
+                            : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600/50'
+                        }`}
+                      >
+                        {style.charAt(0).toUpperCase() + style.slice(1)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Difficulty & Sort & Premium */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                <Award size={14} className="text-gray-400" />
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">More Filters</span>
+                <div className="flex items-start gap-2">
+                  <div className="flex items-center gap-1.5 min-w-[80px] pt-1">
+                    <Award size={12} className="text-gray-500" />
+                    <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">More</span>
                   </div>
-                  <div className="flex items-center space-x-2 overflow-x-auto pb-2 filter-scroll">
-                {difficulties.map(difficulty => (
-                  <button
-                    key={difficulty}
-                    onClick={() => toggleFilter(difficulty, selectedDifficulties, setSelectedDifficulties)}
-                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                      selectedDifficulties.includes(difficulty)
-                        ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/30'
-                        : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600'
-                    }`}
-                  >
-                    {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
-                  </button>
-                ))}
-                <div className="w-px h-6 bg-gray-600 flex-shrink-0"></div>
-                {sortOptions.map(sort => (
-                  <button
-                    key={sort}
-                    onClick={() => setSortBy(sortBy === sort ? '' : sort)}
-                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                      sortBy === sort
-                        ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/30'
-                        : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600'
-                    }`}
-                  >
-                    {sort === 'popular' ? 'Most Popular' : sort === 'rating' ? 'Top Rated' : sort === 'downloads' ? 'Most Downloaded' : 'Newest'}
-                  </button>
-                ))}
-                <div className="w-px h-6 bg-gray-600 flex-shrink-0"></div>
-                <button
-                  onClick={() => setShowPremiumOnly(!showPremiumOnly)}
-                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center space-x-1 ${
-                    showPremiumOnly
-                      ? 'bg-gradient-to-r from-yellow-600 to-orange-600 text-white shadow-lg shadow-yellow-500/30'
-                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600'
-                  }`}
-                >
-                  <Crown size={14} />
-                  <span>Premium Only</span>
-                </button>
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 filter-scroll flex-1">
+                    {difficulties.map(difficulty => (
+                      <button
+                        key={difficulty}
+                        onClick={() => toggleFilter(difficulty, selectedDifficulties, setSelectedDifficulties)}
+                        className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
+                          selectedDifficulties.includes(difficulty)
+                            ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-500/20'
+                            : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600/50'
+                        }`}
+                      >
+                        {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+                      </button>
+                    ))}
+                    <div className="w-px h-4 bg-gray-600 flex-shrink-0"></div>
+                    {sortOptions.map(sort => (
+                      <button
+                        key={sort}
+                        onClick={() => setSortBy(sortBy === sort ? '' : sort)}
+                        className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
+                          sortBy === sort
+                            ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-500/20'
+                            : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600/50'
+                        }`}
+                      >
+                        {sort === 'popular' ? 'Popular' : sort === 'rating' ? 'Top Rated' : sort === 'downloads' ? 'Downloaded' : 'Newest'}
+                      </button>
+                    ))}
+                    <div className="w-px h-4 bg-gray-600 flex-shrink-0"></div>
+                    <button
+                      onClick={() => setShowPremiumOnly(!showPremiumOnly)}
+                      className={`flex-shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-200 flex items-center gap-1 ${
+                        showPremiumOnly
+                          ? 'bg-gradient-to-r from-yellow-600 to-orange-600 text-white shadow-md shadow-yellow-500/20'
+                          : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600/50'
+                      }`}
+                    >
+                      <Crown size={12} />
+                      <span>Premium</span>
+                    </button>
                   </div>
                 </div>
               </div>
