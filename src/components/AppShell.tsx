@@ -13,6 +13,7 @@ import MixerView from './MixerView';
 import PreviewView from './PreviewView';
 import FilesView from './FilesView';
 import TransitionEditorView from './TransitionEditorView';
+import TransitionEditorWrapper from './TransitionEditorWrapper';
 import TransitionCreator from './TransitionCreator';
 import { UploadResult } from '../lib/storage';
 
@@ -46,6 +47,7 @@ const AppShell: React.FC = () => {
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
   const [transitionSongA, setTransitionSongA] = useState<UploadResult | undefined>();
   const [transitionSongB, setTransitionSongB] = useState<UploadResult | undefined>();
+  const [editingTransitionId, setEditingTransitionId] = useState<string | undefined>();
 
   const handleCreateNew = () => {
     setCurrentView('library');
@@ -141,6 +143,11 @@ const AppShell: React.FC = () => {
     setCurrentView('create-transition');
   };
 
+  const handleEditTransition = (transitionId: string) => {
+    setEditingTransitionId(transitionId);
+    setCurrentView('transition-editor');
+  };
+
   // Handle scroll to hide/show top bar
   useEffect(() => {
     const mainContent = document.querySelector('.main-content-scroll');
@@ -193,7 +200,7 @@ const AppShell: React.FC = () => {
         return <LibraryView onCreateTransitionWithSong={handleCreateTransitionWithSong} />;
       case 'transitions':
       case 'recent-projects':
-        return <TransitionsList onCreateNew={handleCreateNewTransition} />;
+        return <TransitionsList onCreateNew={handleCreateNewTransition} onEditTransition={handleEditTransition} />;
       case 'share-schedule':
         return (
           <div className="flex items-center justify-center h-full">
@@ -214,6 +221,14 @@ const AppShell: React.FC = () => {
             initialSongA={transitionSongA}
           />
         );
+      case 'transition-editor':
+        return editingTransitionId ? (
+          <TransitionEditorWrapper
+            transitionId={editingTransitionId}
+            onBack={() => setCurrentView('transitions')}
+            onSave={() => setCurrentView('transitions')}
+          />
+        ) : null;
       case 'templates':
         return (
           <TemplateGallery 
