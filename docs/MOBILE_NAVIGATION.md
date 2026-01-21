@@ -43,21 +43,21 @@ Desktop users enjoy a reorganized sidebar navigation that mirrors the mobile str
 ### Sidebar Navigation Structure
 1. **Home** - Dashboard home view
 
-2. **AI Fusion** section:
+2. **Labs** section:
+   - Transitions - Transition editor
+   - Mixer - Advanced mixing controls
+
+3. **Library** section:
+   - My Music - Uploaded songs
+   - Playlists - Playlist management
+
+4. **AI Fusion** section:
    - Smart Blend - AI-powered song blending
    - Auto Transition - Automatic transition detection
    - AI Mashup (Coming Soon)
    - Voice Enhancement (Coming Soon)
    - Mood Analysis (Coming Soon)
    - Beat Matching (Coming Soon)
-
-3. **Labs** section:
-   - Transitions - Transition editor
-   - Mixer - Advanced mixing controls
-
-4. **Library** section:
-   - My Music - Uploaded songs
-   - Playlists - Playlist management
 
 5. **Templates & projects** section:
    - Templates - Template gallery

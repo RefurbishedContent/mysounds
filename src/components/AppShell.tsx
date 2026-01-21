@@ -68,17 +68,6 @@ const AppShell: React.FC = () => {
       ]
     },
     {
-      title: 'AI Fusion',
-      items: [
-        { id: 'smart-blend', icon: Sparkles, label: 'Smart Blend', view: 'library' },
-        { id: 'auto-transition', icon: Wand2, label: 'Auto Transition', view: 'library' },
-        { id: 'ai-mashup', icon: Music, label: 'AI Mashup', comingSoon: true },
-        { id: 'voice-enhance', icon: Mic, label: 'Voice Enhancement', comingSoon: true },
-        { id: 'mood-analysis', icon: Brain, label: 'Mood Analysis', comingSoon: true },
-        { id: 'beat-match', icon: Zap, label: 'Beat Matching', comingSoon: true },
-      ]
-    },
-    {
       title: 'Labs',
       items: [
         { id: 'transitions', icon: Waveform, label: 'Transitions', view: 'transitions' },
@@ -90,6 +79,17 @@ const AppShell: React.FC = () => {
       items: [
         { id: 'library', icon: Music, label: 'My Music', view: 'library' },
         { id: 'playlists', icon: ListMusic, label: 'Playlists', view: 'playlists' },
+      ]
+    },
+    {
+      title: 'AI Fusion',
+      items: [
+        { id: 'smart-blend', icon: Sparkles, label: 'Smart Blend', view: 'library' },
+        { id: 'auto-transition', icon: Wand2, label: 'Auto Transition', view: 'library' },
+        { id: 'ai-mashup', icon: Music, label: 'AI Mashup', comingSoon: true },
+        { id: 'voice-enhance', icon: Mic, label: 'Voice Enhancement', comingSoon: true },
+        { id: 'mood-analysis', icon: Brain, label: 'Mood Analysis', comingSoon: true },
+        { id: 'beat-match', icon: Zap, label: 'Beat Matching', comingSoon: true },
       ]
     },
     {
