@@ -40,6 +40,7 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const scrollIntervalRef = useRef<number | null>(null);
 
   const categories = ['electronic', 'hip-hop', 'house', 'techno', 'trance', 'dubstep', 'ambient'];
@@ -308,45 +309,82 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
 
       {/* Filters */}
       {!compact && (
-        <div className={`transition-all duration-300 overflow-hidden ${
-          isScrolled ? 'max-h-0 opacity-0 mb-0' : 'max-h-[2000px] opacity-100 mb-6'
+        <div className={`transition-all duration-300 ${
+          isScrolled ? 'max-h-0 opacity-0 mb-0 overflow-hidden' : 'opacity-100 mb-6'
         }`}>
-          <div className="space-y-4">
-            {/* Search Bar */}
-            <div className="relative">
-              <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
-              <input
-                type="text"
-                placeholder="Search templates, authors..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
-              />
-            </div>
-
-            {/* Clear Filters Button */}
-            {hasActiveFilters && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">{filteredTemplates.length} templates found</span>
-                <button
-                  onClick={clearAllFilters}
-                  className="flex items-center space-x-1 px-3 py-1.5 text-sm text-cyan-400 hover:text-cyan-300 transition-colors duration-200"
-                >
-                  <X size={14} />
-                  <span>Clear all filters</span>
-                </button>
+          {/* Filter Toggle Bar */}
+          <div className="mb-4">
+            <button
+              onClick={() => setFiltersExpanded(!filtersExpanded)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-gray-800/50 hover:bg-gray-800 border border-gray-600 rounded-lg transition-all duration-200 group"
+            >
+              <div className="flex items-center space-x-3">
+                <Filter size={18} className="text-cyan-500" />
+                <span className="text-white font-medium">
+                  {filtersExpanded ? 'Hide Filters' : 'Show Filters'}
+                </span>
+                {hasActiveFilters && !filtersExpanded && (
+                  <span className="px-2 py-0.5 bg-cyan-600 text-white text-xs rounded-full">
+                    {selectedCategories.length + selectedDifficulties.length + selectedDurations.length +
+                     selectedBPMRanges.length + selectedEnergyLevels.length + selectedMoods.length +
+                     selectedStyles.length + (sortBy ? 1 : 0) + (showPremiumOnly ? 1 : 0)} active
+                  </span>
+                )}
               </div>
-            )}
-
-            {/* Horizontal Filter Tags */}
-            <div className="space-y-3">
-            {/* Genre/Category */}
-            <div className="space-y-2">
               <div className="flex items-center space-x-2">
+                {hasActiveFilters && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      clearAllFilters();
+                    }}
+                    className="flex items-center space-x-1 px-2 py-1 text-xs text-cyan-400 hover:text-cyan-300 bg-gray-700 hover:bg-gray-600 rounded transition-colors duration-200"
+                  >
+                    <X size={12} />
+                    <span>Clear</span>
+                  </button>
+                )}
+                <ChevronRight
+                  size={20}
+                  className={`text-gray-400 transition-transform duration-300 ${filtersExpanded ? 'rotate-90' : ''}`}
+                />
+              </div>
+            </button>
+          </div>
+
+          {/* Expandable Filter Content */}
+          <div className={`transition-all duration-300 overflow-hidden ${
+            filtersExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
+          }`}>
+            <div className="space-y-4">
+              {/* Search Bar */}
+              <div className="relative">
+                <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+                <input
+                  type="text"
+                  placeholder="Search templates, authors..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
+                />
+              </div>
+
+              {/* Results Count */}
+              {hasActiveFilters && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-400">{filteredTemplates.length} templates found</span>
+                </div>
+              )}
+
+              {/* Horizontal Filter Tags */}
+              <div className="space-y-3">
+                {/* Genre/Category */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
                 <Music size={14} className="text-gray-400" />
                 <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Genre</span>
-              </div>
-              <div className="flex items-center space-x-2 overflow-x-auto pb-2 filter-scroll">
+                  </div>
+                  <div className="flex items-center space-x-2 overflow-x-auto pb-2 filter-scroll">
                 {categories.map(category => (
                   <button
                     key={category}
@@ -361,14 +399,14 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                   </button>
                 ))}
               </div>
-            </div>
+                </div>
 
-            {/* Duration */}
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
+                {/* Duration */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
                 <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Duration</span>
-              </div>
-              <div className="flex items-center space-x-2 overflow-x-auto pb-2 filter-scroll">
+                  </div>
+                  <div className="flex items-center space-x-2 overflow-x-auto pb-2 filter-scroll">
                 {durations.map(duration => (
                   <button
                     key={duration}
@@ -383,15 +421,15 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                   </button>
                 ))}
               </div>
-            </div>
+                </div>
 
-            {/* BPM Range */}
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
+                {/* BPM Range */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
                 <TrendingUp size={14} className="text-gray-400" />
                 <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">BPM</span>
-              </div>
-              <div className="flex items-center space-x-2 overflow-x-auto pb-2 filter-scroll">
+                  </div>
+                  <div className="flex items-center space-x-2 overflow-x-auto pb-2 filter-scroll">
                 {bpmRanges.map(range => (
                   <button
                     key={range}
@@ -406,15 +444,15 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                   </button>
                 ))}
               </div>
-            </div>
+                </div>
 
-            {/* Energy Level */}
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
+                {/* Energy Level */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
                 <Zap size={14} className="text-gray-400" />
                 <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Energy</span>
-              </div>
-              <div className="flex items-center space-x-2 overflow-x-auto pb-2 filter-scroll">
+                  </div>
+                  <div className="flex items-center space-x-2 overflow-x-auto pb-2 filter-scroll">
                 {energyLevels.map(level => (
                   <button
                     key={level}
@@ -429,14 +467,14 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                   </button>
                 ))}
               </div>
-            </div>
+                </div>
 
-            {/* Mood Tags */}
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
+                {/* Mood Tags */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
                 <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Mood</span>
-              </div>
-              <div className="flex items-center space-x-2 overflow-x-auto pb-2 filter-scroll">
+                  </div>
+                  <div className="flex items-center space-x-2 overflow-x-auto pb-2 filter-scroll">
                 {moods.map(mood => (
                   <button
                     key={mood}
@@ -451,15 +489,15 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                   </button>
                 ))}
               </div>
-            </div>
+                </div>
 
-            {/* Transition Style */}
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
+                {/* Transition Style */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
                 <Filter size={14} className="text-gray-400" />
                 <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Style</span>
-              </div>
-              <div className="flex items-center space-x-2 overflow-x-auto pb-2 filter-scroll">
+                  </div>
+                  <div className="flex items-center space-x-2 overflow-x-auto pb-2 filter-scroll">
                 {styles.map(style => (
                   <button
                     key={style}
@@ -474,15 +512,15 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                   </button>
                 ))}
               </div>
-            </div>
+                </div>
 
-            {/* Difficulty & Sort & Premium */}
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
+                {/* Difficulty & Sort & Premium */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
                 <Award size={14} className="text-gray-400" />
                 <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">More Filters</span>
-              </div>
-              <div className="flex items-center space-x-2 overflow-x-auto pb-2 filter-scroll">
+                  </div>
+                  <div className="flex items-center space-x-2 overflow-x-auto pb-2 filter-scroll">
                 {difficulties.map(difficulty => (
                   <button
                     key={difficulty}
@@ -522,9 +560,10 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                   <Crown size={14} />
                   <span>Premium Only</span>
                 </button>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
           </div>
         </div>
       )}
@@ -912,8 +951,8 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                 >
                   Apply Filters
                 </button>
-              </div>
-            </div>
+                  </div>
+                </div>
           </div>
         </div>
       )}
