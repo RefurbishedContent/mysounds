@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Play, Pause, RotateCcw, Save, Sparkles, Music, Zap, Clock, Timer, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Play, Pause, RotateCcw, Save, Sparkles, Music, Zap, Clock, Timer, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import { UploadResult } from '../lib/storage';
 import { TemplateData, databaseService } from '../lib/database';
 import { transitionsService, TransitionData } from '../lib/transitionsService';
@@ -9,6 +9,7 @@ import AIPowerButton from './AIPowerButton';
 import AIRecommendationsPanel from './AIRecommendationsPanel';
 import { TemplateRecommendation } from '../lib/ai/aiService';
 import { WaveformDisplay } from './WaveformDisplay';
+import BlendExportDialog from './BlendExportDialog';
 
 interface TransitionEditorViewProps {
   songA: UploadResult;
@@ -56,6 +57,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showTemplateGallery, setShowTemplateGallery] = useState(true);
+  const [showExportDialog, setShowExportDialog] = useState(false);
 
   const songADuration = songA.metadata?.duration || 180;
   const songBDuration = songB.metadata?.duration || 180;
@@ -244,6 +246,20 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                 alert(errorMsg);
               }}
             />
+            <button
+              onClick={() => setShowExportDialog(true)}
+              disabled={!selectedTemplate || transition?.status !== 'ready'}
+              className={`
+                px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2
+                ${selectedTemplate && transition?.status === 'ready'
+                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white shadow-lg'
+                  : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                }
+              `}
+            >
+              <Download className="w-5 h-5" />
+              <span>Export Blend</span>
+            </button>
             <button
               onClick={handleSave}
               disabled={!selectedTemplate || saving}
@@ -473,6 +489,19 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
           </div>
         </div>
       </div>
+
+      {showExportDialog && transition && (
+        <BlendExportDialog
+          transition={transition}
+          songA={songA}
+          songB={songB}
+          onClose={() => setShowExportDialog(false)}
+          onExportComplete={() => {
+            setShowExportDialog(false);
+            alert('Export started! Check the Blends section in your Library to view your exported blend.');
+          }}
+        />
+      )}
     </div>
   );
 };

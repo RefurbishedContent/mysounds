@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Music, Search, Filter, Upload, Folder, Clock, Star, Grid3X3, List, Heart, MoreVertical, Shuffle, Plus } from 'lucide-react';
+import { Music, Search, Filter, Upload, Folder, Clock, Star, Grid3X3, List, Heart, MoreVertical, Shuffle, Plus, Sparkles, Download, Play } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { storageService, UploadResult } from '../lib/storage';
+import { blendExportService, BlendData } from '../lib/blendExportService';
 import LibraryUploader from './LibraryUploader';
 import SongDetailModal from './SongDetailModal';
 
@@ -11,11 +12,13 @@ interface LibraryViewProps {
 
 const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong }) => {
   const { user } = useAuth();
+  const [currentTab, setCurrentTab] = useState<'songs' | 'blends'>('songs');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [isScrolled, setIsScrolled] = useState(false);
   const [songs, setSongs] = useState<UploadResult[]>([]);
+  const [blends, setBlends] = useState<BlendData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUploader, setShowUploader] = useState(false);
   const [selectedSong, setSelectedSong] = useState<UploadResult | null>(null);
@@ -48,22 +51,29 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
   }, []);
 
   useEffect(() => {
-    loadSongs();
-  }, [user]);
+    loadData();
+  }, [user, currentTab]);
 
-  const loadSongs = async () => {
+  const loadData = async () => {
     if (!user) return;
 
     setLoading(true);
     try {
-      const uploads = await storageService.getUserUploads(user.id);
-      setSongs(uploads.filter(u => u.status === 'ready'));
+      if (currentTab === 'songs') {
+        const uploads = await storageService.getUserUploads(user.id);
+        setSongs(uploads.filter(u => u.status === 'ready'));
+      } else {
+        const userBlends = await blendExportService.getUserBlends(user.id);
+        setBlends(userBlends);
+      }
     } catch (error) {
-      console.error('Failed to load songs:', error);
+      console.error('Failed to load data:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  const loadSongs = loadData;
 
   const handleUploadComplete = async (upload: UploadResult) => {
     setShowUploader(false);
@@ -100,7 +110,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
     <div className="h-full flex flex-col p-3 sm:p-4 md:p-6">
       {/* Header */}
       {!isScrolled && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 transition-all duration-300">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 transition-all duration-300">
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">Music Library</h1>
             <p className="text-gray-400">Organize and manage your audio collection</p>
@@ -141,6 +151,36 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
         </div>
       )}
 
+      {/* Tabs */}
+      {!isScrolled && (
+        <div className="flex items-center space-x-2 mb-6">
+          <button
+            onClick={() => setCurrentTab('songs')}
+            className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 ${
+              currentTab === 'songs'
+                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg'
+                : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
+            }`}
+          >
+            <Music size={18} />
+            <span>Songs</span>
+            <span className="px-2 py-0.5 bg-white/20 rounded-full text-xs">{songs.length}</span>
+          </button>
+          <button
+            onClick={() => setCurrentTab('blends')}
+            className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 ${
+              currentTab === 'blends'
+                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg'
+                : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
+            }`}
+          >
+            <Sparkles size={18} />
+            <span>Blends</span>
+            <span className="px-2 py-0.5 bg-white/20 rounded-full text-xs">{blends.length}</span>
+          </button>
+        </div>
+      )}
+
       {/* Search & Filters */}
       {!isScrolled && (
         <div className="flex flex-col sm:flex-row gap-4 mb-6 transition-all duration-300">
@@ -172,16 +212,16 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
         </div>
       )}
 
-      {/* Songs List/Grid */}
+      {/* Content: Songs or Blends */}
       <div className="flex-1">
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-center space-y-4">
               <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-              <p className="text-gray-400">Loading your music library...</p>
+              <p className="text-gray-400">Loading {currentTab === 'songs' ? 'your music library' : 'your blends'}...</p>
             </div>
           </div>
-        ) : filteredSongs.length === 0 ? (
+        ) : currentTab === 'songs' && filteredSongs.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center space-y-6 max-w-md">
               <div className="w-24 h-24 bg-gradient-to-r from-cyan-600/20 via-blue-600/20 to-purple-600/20 rounded-2xl flex items-center justify-center mx-auto">
@@ -202,7 +242,21 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
               </button>
             </div>
           </div>
-        ) : (
+        ) : currentTab === 'blends' && blends.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center space-y-6 max-w-md">
+              <div className="w-24 h-24 bg-gradient-to-r from-purple-600/20 via-cyan-600/20 to-blue-600/20 rounded-2xl flex items-center justify-center mx-auto">
+                <Sparkles size={48} className="text-purple-400" />
+              </div>
+              <div className="space-y-3">
+                <h2 className="text-2xl font-bold text-white">No Blends Yet</h2>
+                <p className="text-gray-400 leading-relaxed">
+                  Create your first transition blend by selecting songs from your library and using the Transitions section.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : currentTab === 'songs' ? (
           <>
             {viewMode === 'grid' ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -239,20 +293,79 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
                       <h3 className="text-white font-medium truncate">{song.originalName}</h3>
                       <p className="text-gray-400 text-sm">
                         {song.analysis?.bpm ? `${song.analysis.bpm} BPM` : 'Not analyzed'}
-                        {song.analysis?.genre && ` • ${song.analysis.genre}`}
                       </p>
                     </div>
-                    <button
-                      onClick={(e) => handlePlaySong(e, song)}
-                      className="p-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Play className="w-5 h-5 text-white" />
-                    </button>
                   </div>
                 ))}
               </div>
             )}
           </>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {blends.map((blend) => (
+              <div
+                key={blend.id}
+                className="group bg-gray-800 rounded-lg p-6 transition-all duration-200 hover:bg-gray-750 hover:shadow-lg border border-gray-700 hover:border-cyan-500"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-2">
+                    <Sparkles className="w-5 h-5 text-purple-400" />
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      blend.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                      blend.status === 'processing' ? 'bg-yellow-500/20 text-yellow-400' :
+                      'bg-red-500/20 text-red-400'
+                    }`}>
+                      {blend.status === 'completed' ? 'Ready' : blend.status === 'processing' ? 'Processing' : 'Failed'}
+                    </span>
+                  </div>
+                  {blend.status === 'completed' && (
+                    <a
+                      href={blend.url}
+                      download
+                      onClick={(e) => e.stopPropagation()}
+                      className="p-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg transition-colors"
+                    >
+                      <Download className="w-4 h-4 text-white" />
+                    </a>
+                  )}
+                </div>
+
+                <h3 className="text-white font-semibold text-lg mb-2 truncate">
+                  {blend.name}
+                </h3>
+
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-400">Duration:</span>
+                    <span className="text-white font-mono">{Math.floor(blend.duration / 60)}:{(blend.duration % 60).toString().padStart(2, '0')}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-400">Format:</span>
+                    <span className="text-white uppercase">{blend.format}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-400">Quality:</span>
+                    <span className="text-white capitalize">{blend.quality}</span>
+                  </div>
+                </div>
+
+                {blend.templateName && (
+                  <div className="pt-3 border-t border-gray-700">
+                    <div className="flex items-center space-x-2 text-sm text-gray-400">
+                      <Clock size={14} />
+                      <span>Template: {blend.templateName}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-3 border-t border-gray-700 mt-3">
+                  <div className="text-xs text-gray-500">
+                    Created {new Date(blend.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
