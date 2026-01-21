@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Home, Music, Disc3, Headphones, Settings, Folder, AudioWaveform as Waveform, Sliders, FileAudio, User, Bell, Search, Menu, X, Activity, HelpCircle, Plus, Sparkles, Wand2, Video, Mic, Grid3X3, Clock, Share2, ListMusic } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useOnboarding } from '../hooks/useOnboarding';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { TemplateData, databaseService } from '../lib/database';
 import CreditsIndicator from './CreditsIndicator';
 import TransitionsList from './TransitionsList';
@@ -15,9 +16,13 @@ import FilesView from './FilesView';
 import TransitionEditorView from './TransitionEditorView';
 import TransitionEditorWrapper from './TransitionEditorWrapper';
 import TransitionCreator from './TransitionCreator';
+import ProfileView from './ProfileView';
+import AIFusionView from './AIFusionView';
+import LabsView from './LabsView';
+import MobileBottomNav, { MobileNavView } from './MobileBottomNav';
 import { UploadResult } from '../lib/storage';
 
-type AppView = 'home' | 'create-with-ai' | 'ai-design' | 'ai-video' | 'ai-voice' | 'all-tools' | 'templates' | 'recent-projects' | 'share-schedule' | 'create-transition' | 'editor' | 'template-manager' | 'library' | 'mixer' | 'preview' | 'files' | 'transition-editor' | 'transitions' | 'playlists';
+type AppView = 'home' | 'create-with-ai' | 'ai-design' | 'ai-video' | 'ai-voice' | 'all-tools' | 'templates' | 'recent-projects' | 'share-schedule' | 'create-transition' | 'editor' | 'template-manager' | 'library' | 'mixer' | 'preview' | 'files' | 'transition-editor' | 'transitions' | 'playlists' | 'profile';
 
 interface MenuItem {
   id: string;
@@ -35,7 +40,9 @@ interface MenuSection {
 const AppShell: React.FC = () => {
   const { user, signOut } = useAuth();
   const onboarding = useOnboarding();
-  const [currentView, setCurrentView] = useState<AppView>('home');
+  const isMobile = useIsMobile();
+  const [currentView, setCurrentView] = useState<AppView>('library');
+  const [mobileNavView, setMobileNavView] = useState<MobileNavView>('library');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateData | undefined>();
@@ -148,6 +155,53 @@ const AppShell: React.FC = () => {
     setCurrentView('transition-editor');
   };
 
+  const handleMobileNavigation = (view: MobileNavView) => {
+    setMobileNavView(view);
+
+    switch (view) {
+      case 'ai-fusion':
+        setCurrentView('create-with-ai');
+        break;
+      case 'labs':
+        setCurrentView('transitions');
+        break;
+      case 'library':
+        setCurrentView('library');
+        break;
+      case 'templates':
+        setCurrentView('templates');
+        break;
+      case 'profile':
+        setCurrentView('profile');
+        break;
+    }
+  };
+
+  const handleAIToolSelect = (tool: string) => {
+    setCurrentView(tool as AppView);
+  };
+
+  const handleLabToolSelect = (tool: string) => {
+    setCurrentView(tool as AppView);
+  };
+
+  // Sync mobile nav view with current view
+  useEffect(() => {
+    if (!isMobile) return;
+
+    if (currentView === 'create-with-ai' || currentView === 'ai-design' || currentView === 'ai-video' || currentView === 'ai-voice') {
+      setMobileNavView('ai-fusion');
+    } else if (currentView === 'transitions' || currentView === 'mixer' || currentView === 'transition-editor' || currentView === 'create-transition') {
+      setMobileNavView('labs');
+    } else if (currentView === 'library' || currentView === 'files' || currentView === 'playlists') {
+      setMobileNavView('library');
+    } else if (currentView === 'templates' || currentView === 'template-manager') {
+      setMobileNavView('templates');
+    } else if (currentView === 'profile') {
+      setMobileNavView('profile');
+    }
+  }, [currentView, isMobile]);
+
   // Handle scroll to hide/show top bar
   useEffect(() => {
     const mainContent = document.querySelector('.main-content-scroll');
@@ -197,8 +251,17 @@ const AppShell: React.FC = () => {
           </div>
         );
       case 'create-with-ai':
-        return <LibraryView onCreateTransitionWithSong={handleCreateTransitionWithSong} />;
+        return isMobile ? (
+          <AIFusionView onSelectTool={handleAIToolSelect} />
+        ) : (
+          <LibraryView onCreateTransitionWithSong={handleCreateTransitionWithSong} />
+        );
       case 'transitions':
+        return isMobile ? (
+          <LabsView onSelectTool={handleLabToolSelect} />
+        ) : (
+          <TransitionsList onCreateNew={handleCreateNewTransition} onEditTransition={handleEditTransition} />
+        );
       case 'recent-projects':
         return <TransitionsList onCreateNew={handleCreateNewTransition} onEditTransition={handleEditTransition} />;
       case 'share-schedule':
@@ -265,6 +328,15 @@ const AppShell: React.FC = () => {
         return <MixerView />;
       case 'preview':
         return <PreviewView />;
+      case 'profile':
+        return (
+          <ProfileView
+            onShowTutorial={() => {
+              onboarding.resetOnboarding();
+              setCurrentView('editor');
+            }}
+          />
+        );
       default:
         return (
           <div className="flex items-center justify-center h-full">
@@ -282,8 +354,8 @@ const AppShell: React.FC = () => {
 
   return (
     <div className="h-screen bg-gray-900 flex flex-col overflow-hidden">
-      {/* Top Bar */}
-      <div className={`bg-gray-800 border-b border-gray-700 px-3 sm:px-4 py-2 sm:py-3 flex-shrink-0 transition-transform duration-300 ${isTopBarVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+      {/* Top Bar - Hidden on Mobile */}
+      <div className={`bg-gray-800 border-b border-gray-700 px-3 sm:px-4 py-2 sm:py-3 flex-shrink-0 transition-transform duration-300 ${isTopBarVisible ? 'translate-y-0' : '-translate-y-full'} ${isMobile ? 'hidden' : ''}`}>
         <div className="flex items-center justify-between gap-2">
           {/* Left Section */}
           <div className="flex items-center space-x-2 sm:space-x-4">
@@ -395,13 +467,12 @@ const AppShell: React.FC = () => {
           />
         )}
 
-        {/* Sidebar */}
+        {/* Sidebar - Hidden on Mobile (bottom nav replaces it) */}
         <div className={`
           bg-gray-800 border-r border-gray-700 transition-all duration-300 ease-in-out
-          ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          ${isMobile ? 'hidden' : ''}
           md:translate-x-0
-          fixed md:relative inset-y-0 left-0 z-50
-          w-64
+          md:relative inset-y-0 left-0 z-50
           md:w-auto
           ${isSidebarCollapsed ? 'md:w-16' : 'md:w-64'}
         `}>
@@ -510,27 +581,27 @@ const AppShell: React.FC = () => {
 
         {/* Main Content */}
         <div className="flex-1 w-full flex flex-col min-w-0">
-          <div className="flex-1 overflow-y-auto overflow-x-hidden main-content-scroll" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className={`flex-1 overflow-y-auto overflow-x-hidden main-content-scroll ${isMobile ? 'pb-20' : ''}`} style={{ WebkitOverflowScrolling: 'touch' }}>
             {renderContent()}
           </div>
         </div>
       </div>
 
-      {/* Floating Action Buttons - visible when top bar is hidden */}
-      {!isTopBarVisible && (
-        <>
-          {/* Floating Menu Button - Mobile */}
-          <button
-            onClick={() => setIsMobileSidebarOpen(true)}
-            className="fixed top-4 left-4 z-50 w-14 h-14 bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 rounded-full shadow-2xl shadow-cyan-500/50 flex items-center justify-center text-white hover:scale-110 transition-transform duration-200 md:hidden"
-          >
-            <Menu size={24} />
-          </button>
+      {/* Mobile Bottom Navigation */}
+      {isMobile && (
+        <MobileBottomNav
+          currentView={mobileNavView}
+          onNavigate={handleMobileNavigation}
+        />
+      )}
 
+      {/* Floating Action Buttons - visible when top bar is hidden on desktop only */}
+      {!isTopBarVisible && !isMobile && (
+        <>
           {/* Floating Menu Button - Desktop */}
           <button
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="fixed top-4 left-4 z-50 w-12 h-12 bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 rounded-full shadow-2xl shadow-cyan-500/50 flex items-center justify-center text-white hover:scale-110 transition-transform duration-200 hidden md:flex"
+            className="fixed top-4 left-4 z-50 w-12 h-12 bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 rounded-full shadow-2xl shadow-cyan-500/50 flex items-center justify-center text-white hover:scale-110 transition-transform duration-200"
           >
             <Menu size={20} />
           </button>
