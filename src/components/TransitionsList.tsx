@@ -161,7 +161,7 @@ const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition, onC
                 className="bg-gray-800 rounded-xl border border-gray-700 p-6 hover:border-gray-600 transition-all duration-200"
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <h3 className="text-white font-semibold text-lg mb-2 truncate">
                       {transition.name}
                     </h3>
