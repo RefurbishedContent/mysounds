@@ -77,7 +77,7 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
 
     const handleScroll = () => {
       const scrollTop = scrollContainer.scrollTop;
-      setIsScrolled(scrollTop > 20);
+      setIsScrolled(scrollTop > 150);
     };
 
     scrollContainer.addEventListener('scroll', handleScroll);
@@ -290,8 +290,10 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
   return (
     <div className={`h-full flex flex-col ${compact ? '' : 'p-3 sm:p-4 md:p-6'}`} data-onboarding="templates">
       {/* Header */}
-      {!compact && !isScrolled && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all duration-300 mb-8">
+      {!compact && (
+        <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all duration-300 overflow-hidden ${
+          isScrolled ? 'max-h-0 opacity-0 mb-0' : 'max-h-32 opacity-100 mb-8'
+        }`}>
           <div>
             <h1 className="font-bold text-white transition-all duration-300 text-3xl mb-2">
               Template Gallery
@@ -305,36 +307,39 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
       )}
 
       {/* Filters */}
-      {!compact && !isScrolled && (
-        <div className="space-y-4 transition-all duration-300 mb-6">
-          {/* Search Bar */}
-          <div className="relative">
-            <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search templates, authors..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
-            />
-          </div>
-
-          {/* Clear Filters Button */}
-          {hasActiveFilters && (
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">{filteredTemplates.length} templates found</span>
-              <button
-                onClick={clearAllFilters}
-                className="flex items-center space-x-1 px-3 py-1.5 text-sm text-cyan-400 hover:text-cyan-300 transition-colors duration-200"
-              >
-                <X size={14} />
-                <span>Clear all filters</span>
-              </button>
+      {!compact && (
+        <div className={`transition-all duration-300 overflow-hidden ${
+          isScrolled ? 'max-h-0 opacity-0 mb-0' : 'max-h-[2000px] opacity-100 mb-6'
+        }`}>
+          <div className="space-y-4">
+            {/* Search Bar */}
+            <div className="relative">
+              <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Search templates, authors..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
+              />
             </div>
-          )}
 
-          {/* Horizontal Filter Tags */}
-          <div className="space-y-3">
+            {/* Clear Filters Button */}
+            {hasActiveFilters && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-400">{filteredTemplates.length} templates found</span>
+                <button
+                  onClick={clearAllFilters}
+                  className="flex items-center space-x-1 px-3 py-1.5 text-sm text-cyan-400 hover:text-cyan-300 transition-colors duration-200"
+                >
+                  <X size={14} />
+                  <span>Clear all filters</span>
+                </button>
+              </div>
+            )}
+
+            {/* Horizontal Filter Tags */}
+            <div className="space-y-3">
             {/* Genre/Category */}
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
@@ -520,6 +525,7 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
               </div>
             </div>
           </div>
+          </div>
         </div>
       )}
 
@@ -686,7 +692,7 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
       {!compact && isScrolled && (
         <button
           onClick={() => setShowSearchOverlay(true)}
-          className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 rounded-full shadow-2xl shadow-cyan-500/50 flex items-center justify-center text-white hover:scale-110 transition-transform duration-200"
+          className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 rounded-full shadow-2xl shadow-cyan-500/50 flex items-center justify-center text-white hover:scale-110 transition-all duration-200 animate-fade-in"
         >
           <Search size={24} />
         </button>
