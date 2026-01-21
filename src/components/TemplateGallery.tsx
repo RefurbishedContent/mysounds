@@ -11,6 +11,8 @@ interface TemplateGalleryProps {
   onDragStart?: (template: TemplateData, e: React.DragEvent) => void;
   trackA?: UploadResult | null;
   trackB?: UploadResult | null;
+  durationFilter?: 'short' | 'medium' | 'long';
+  selectedTemplateId?: string;
 }
 
 const TemplateGallery: React.FC<TemplateGalleryProps> = ({
@@ -18,7 +20,9 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
   compact = false,
   onDragStart,
   trackA,
-  trackB
+  trackB,
+  durationFilter,
+  selectedTemplateId
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -69,6 +73,12 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
     return () => scrollContainer.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const getDurationSize = (duration: number): 'short' | 'medium' | 'long' => {
+    if (duration >= 4 && duration <= 8) return 'short';
+    if (duration > 8 && duration <= 15) return 'medium';
+    return 'long';
+  };
+
   const filteredTemplates = templates.filter(template => {
     const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          template.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -76,8 +86,9 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
     const matchesCategory = selectedCategory === 'all' || template.category === selectedCategory;
     const matchesDifficulty = selectedDifficulty === 'all' || template.difficulty === selectedDifficulty;
     const matchesPremium = !showPremiumOnly || template.isPremium;
-    
-    return matchesSearch && matchesCategory && matchesDifficulty && matchesPremium;
+    const matchesDuration = !durationFilter || getDurationSize(template.duration) === durationFilter;
+
+    return matchesSearch && matchesCategory && matchesDifficulty && matchesPremium && matchesDuration;
   });
 
   const getDifficultyColor = (difficulty: TemplateData['difficulty']) => {

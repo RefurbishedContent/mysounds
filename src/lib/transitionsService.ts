@@ -6,11 +6,15 @@ export interface TransitionData {
   name: string;
   songAId: string;
   songBId: string;
-  templateId: string;
+  templateId: string | null;
   transitionStartPoint: number;
   transitionDuration: number;
   songAEndTime: number;
   songBStartTime: number;
+  songAMarkerPoint?: number;
+  songBMarkerPoint?: number;
+  songAClipStart?: number;
+  songBClipEnd?: number;
   status: 'draft' | 'ready' | 'processing' | 'error';
   renderJobId?: string;
   outputUrl?: string;
@@ -23,21 +27,29 @@ export interface CreateTransitionInput {
   name?: string;
   songAId: string;
   songBId: string;
-  templateId: string;
+  templateId: string | null;
   transitionStartPoint: number;
   transitionDuration: number;
   songAEndTime: number;
   songBStartTime?: number;
+  songAMarkerPoint?: number;
+  songBMarkerPoint?: number;
+  songAClipStart?: number;
+  songBClipEnd?: number;
   metadata?: any;
 }
 
 export interface UpdateTransitionInput {
   name?: string;
-  templateId?: string;
+  templateId?: string | null;
   transitionStartPoint?: number;
   transitionDuration?: number;
   songAEndTime?: number;
   songBStartTime?: number;
+  songAMarkerPoint?: number;
+  songBMarkerPoint?: number;
+  songAClipStart?: number;
+  songBClipEnd?: number;
   status?: 'draft' | 'ready' | 'processing' | 'error';
   renderJobId?: string;
   outputUrl?: string;
@@ -46,21 +58,28 @@ export interface UpdateTransitionInput {
 
 class TransitionsService {
   async createTransition(userId: string, input: CreateTransitionInput): Promise<TransitionData> {
+    const insertData: any = {
+      user_id: userId,
+      name: input.name || 'Untitled Transition',
+      song_a_id: input.songAId,
+      song_b_id: input.songBId,
+      template_id: input.templateId,
+      transition_start_point: input.transitionStartPoint,
+      transition_duration: input.transitionDuration,
+      song_a_end_time: input.songAEndTime,
+      song_b_start_time: input.songBStartTime || 0,
+      metadata: input.metadata || {},
+      status: 'draft'
+    };
+
+    if (input.songAMarkerPoint !== undefined) insertData.song_a_marker_point = input.songAMarkerPoint;
+    if (input.songBMarkerPoint !== undefined) insertData.song_b_marker_point = input.songBMarkerPoint;
+    if (input.songAClipStart !== undefined) insertData.song_a_clip_start = input.songAClipStart;
+    if (input.songBClipEnd !== undefined) insertData.song_b_clip_end = input.songBClipEnd;
+
     const { data, error } = await supabase
       .from('transitions')
-      .insert({
-        user_id: userId,
-        name: input.name || 'Untitled Transition',
-        song_a_id: input.songAId,
-        song_b_id: input.songBId,
-        template_id: input.templateId,
-        transition_start_point: input.transitionStartPoint,
-        transition_duration: input.transitionDuration,
-        song_a_end_time: input.songAEndTime,
-        song_b_start_time: input.songBStartTime || 0,
-        metadata: input.metadata || {},
-        status: 'draft'
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -99,6 +118,10 @@ class TransitionsService {
     if (updates.transitionDuration !== undefined) updateData.transition_duration = updates.transitionDuration;
     if (updates.songAEndTime !== undefined) updateData.song_a_end_time = updates.songAEndTime;
     if (updates.songBStartTime !== undefined) updateData.song_b_start_time = updates.songBStartTime;
+    if (updates.songAMarkerPoint !== undefined) updateData.song_a_marker_point = updates.songAMarkerPoint;
+    if (updates.songBMarkerPoint !== undefined) updateData.song_b_marker_point = updates.songBMarkerPoint;
+    if (updates.songAClipStart !== undefined) updateData.song_a_clip_start = updates.songAClipStart;
+    if (updates.songBClipEnd !== undefined) updateData.song_b_clip_end = updates.songBClipEnd;
     if (updates.status !== undefined) updateData.status = updates.status;
     if (updates.renderJobId !== undefined) updateData.render_job_id = updates.renderJobId;
     if (updates.outputUrl !== undefined) updateData.output_url = updates.outputUrl;
@@ -163,6 +186,10 @@ class TransitionsService {
       transitionDuration: row.transition_duration,
       songAEndTime: row.song_a_end_time,
       songBStartTime: row.song_b_start_time,
+      songAMarkerPoint: row.song_a_marker_point,
+      songBMarkerPoint: row.song_b_marker_point,
+      songAClipStart: row.song_a_clip_start,
+      songBClipEnd: row.song_b_clip_end,
       status: row.status,
       renderJobId: row.render_job_id,
       outputUrl: row.output_url,

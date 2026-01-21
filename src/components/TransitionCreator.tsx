@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Music, Play, Save, ArrowLeft, Sparkles, Check, ChevronRight, Search, Filter, X, SlidersHorizontal, Zap, Clock, Timer } from 'lucide-react';
+import { Music, ArrowLeft, Check, ChevronRight, Search, X, SlidersHorizontal, Zap, Clock, Timer, Sparkles, Play, Pause } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { storageService, UploadResult } from '../lib/storage';
-import { databaseService, TemplateData } from '../lib/database';
 import { transitionsService } from '../lib/transitionsService';
-import { WaveformDisplay } from './WaveformDisplay';
+import { AudioScrubber } from './AudioScrubber';
+import { TransitionEditorView } from './TransitionEditorView';
 
 interface TransitionCreatorProps {
   onBack: () => void;
@@ -12,7 +12,7 @@ interface TransitionCreatorProps {
   initialSongA?: UploadResult;
 }
 
-type CreatorStep = 'select-songs' | 'select-template' | 'edit-timeline';
+type CreatorStep = 'select-songs' | 'set-transition-points';
 type DurationSize = 'short' | 'medium' | 'long';
 
 const DURATION_RANGES = {
@@ -25,23 +25,13 @@ const getDurationForSize = (size: DurationSize): number => {
   return DURATION_RANGES[size].default;
 };
 
-const getDurationSizeFromValue = (duration: number): DurationSize => {
-  if (duration >= 4 && duration <= 8) return 'short';
-  if (duration > 8 && duration <= 15) return 'medium';
-  return 'long';
-};
-
 const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, initialSongA }) => {
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState<CreatorStep>('select-songs');
   const [songs, setSongs] = useState<UploadResult[]>([]);
-  const [templates, setTemplates] = useState<TemplateData[]>([]);
   const [loading, setLoading] = useState(true);
   const [songA, setSongA] = useState<UploadResult | null>(initialSongA || null);
   const [songB, setSongB] = useState<UploadResult | null>(null);
-  const [selectedTemplate, setSelectedTemplate] = useState<TemplateData | null>(null);
-  const [transitionName, setTransitionName] = useState('');
-  const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [bpmFilter, setBpmFilter] = useState<'all' | 'slow' | 'medium' | 'fast'>('all');
@@ -49,18 +39,27 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
   const [durationSize, setDurationSize] = useState<DurationSize>('medium');
   const [transitionDuration, setTransitionDuration] = useState(12);
 
+  const [songAMarkerPoint, setSongAMarkerPoint] = useState<number>(0);
+  const [songBMarkerPoint, setSongBMarkerPoint] = useState<number>(0);
+  const [songACurrentTime, setSongACurrentTime] = useState(0);
+  const [songBCurrentTime, setSongBCurrentTime] = useState(0);
+  const [isPlayingA, setIsPlayingA] = useState(false);
+  const [isPlayingB, setIsPlayingB] = useState(false);
+
+  const [transitionId, setTransitionId] = useState<string | null>(null);
+  const [showEditor, setShowEditor] = useState(false);
+  const [saving, setSaving] = useState(false);
+
   useEffect(() => {
     loadData();
   }, [user]);
 
   useEffect(() => {
-    if (selectedTemplate) {
-      const templateDuration = selectedTemplate.duration || 12;
-      const size = getDurationSizeFromValue(templateDuration);
-      setDurationSize(size);
-      setTransitionDuration(getDurationForSize(size));
+    if (songA) {
+      const duration = songA.metadata?.duration || 180;
+      setSongAMarkerPoint(Math.max(30, duration - 30));
     }
-  }, [selectedTemplate]);
+  }, [songA]);
 
   const handleDurationSizeChange = (size: DurationSize) => {
     setDurationSize(size);
@@ -76,19 +75,14 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
     console.log('[TransitionCreator] Loading data for user:', user.id, user.email);
     setLoading(true);
     try {
-      const [songsData, templatesData] = await Promise.all([
-        storageService.getUserUploads(user.id),
-        databaseService.getTemplates()
-      ]);
+      const songsData = await storageService.getUserUploads(user.id);
       const readySongs = songsData.filter(s => s.status === 'ready');
       console.log('[TransitionCreator] Loaded data:', {
         totalSongs: songsData.length,
         readySongs: readySongs.length,
-        templates: templatesData.length,
         songs: readySongs
       });
       setSongs(readySongs);
-      setTemplates(templatesData);
     } catch (error) {
       console.error('[TransitionCreator] Failed to load data:', error);
       alert(`Failed to load library: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -143,50 +137,61 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
     }
   };
 
-  const handleContinueToTemplates = () => {
+  const handleContinueToSetPoints = () => {
     if (songA && songB) {
-      setCurrentStep('select-template');
+      setCurrentStep('set-transition-points');
     }
   };
 
-  const handleTemplateSelect = (template: TemplateData) => {
-    setSelectedTemplate(template);
-    setTransitionName(`${songA?.originalName} → ${songB?.originalName}`);
-    setCurrentStep('edit-timeline');
-  };
-
-  const handleSaveTransition = async () => {
-    if (!user || !songA || !songB || !selectedTemplate) return;
+  const handleBeginEditing = async () => {
+    if (!user || !songA || !songB) return;
 
     setSaving(true);
     try {
-      const songADuration = songA.metadata?.duration || 180;
-      const defaultTransitionStart = Math.max(30, songADuration - 30);
+      const songAClipStart = Math.max(0, songAMarkerPoint - transitionDuration);
+      const songBClipEnd = songBMarkerPoint + transitionDuration;
 
-      await transitionsService.createTransition(user.id, {
-        name: transitionName || `${songA.originalName} → ${songB.originalName}`,
+      const transition = await transitionsService.createTransition(user.id, {
+        name: `${songA.originalName} → ${songB.originalName}`,
         songAId: songA.id,
         songBId: songB.id,
-        templateId: selectedTemplate.id,
-        transitionStartPoint: defaultTransitionStart,
+        templateId: null,
+        transitionStartPoint: songAMarkerPoint,
         transitionDuration: transitionDuration,
-        songAEndTime: defaultTransitionStart,
-        songBStartTime: 0,
+        songAEndTime: songAMarkerPoint,
+        songBStartTime: songBMarkerPoint,
+        songAMarkerPoint: songAMarkerPoint,
+        songBMarkerPoint: songBMarkerPoint,
+        songAClipStart: songAClipStart,
+        songBClipEnd: songBClipEnd,
         metadata: {
           songAName: songA.originalName,
           songBName: songB.originalName,
-          templateName: selectedTemplate.name,
           durationSize: durationSize
         }
       });
-      onSave();
+
+      setTransitionId(transition.id);
+      setShowEditor(true);
     } catch (error) {
-      console.error('Failed to save transition:', error);
-      alert('Failed to save transition');
+      console.error('Failed to create transition:', error);
+      alert('Failed to create transition');
     } finally {
       setSaving(false);
     }
   };
+
+  if (showEditor && transitionId && songA && songB) {
+    return (
+      <TransitionEditorView
+        songA={songA}
+        songB={songB}
+        transitionId={transitionId}
+        onBack={onBack}
+        onSave={onSave}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -199,9 +204,13 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
     );
   }
 
+  const songADuration = songA?.metadata?.duration || 180;
+  const songBDuration = songB?.metadata?.duration || 180;
+  const songAClipStart = Math.max(0, songAMarkerPoint - transitionDuration);
+  const songBClipEnd = songBMarkerPoint + transitionDuration;
+
   return (
     <div className="h-full flex flex-col bg-gray-900">
-      {/* Header */}
       <div className="bg-gray-800 border-b border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -218,31 +227,26 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                   Select Songs
                 </span>
                 <ChevronRight size={12} className="text-gray-600" />
-                <span className={`text-xs ${currentStep === 'select-template' ? 'text-cyan-400' : 'text-gray-500'}`}>
-                  Choose Template
-                </span>
-                <ChevronRight size={12} className="text-gray-600" />
-                <span className={`text-xs ${currentStep === 'edit-timeline' ? 'text-cyan-400' : 'text-gray-500'}`}>
-                  Edit Timeline
+                <span className={`text-xs ${currentStep === 'set-transition-points' ? 'text-cyan-400' : 'text-gray-500'}`}>
+                  Set Transition Points
                 </span>
               </div>
             </div>
           </div>
 
-          {currentStep === 'edit-timeline' && (
+          {currentStep === 'set-transition-points' && (
             <button
-              onClick={handleSaveTransition}
-              disabled={saving}
+              onClick={handleBeginEditing}
+              disabled={saving || !songAMarkerPoint || !songBMarkerPoint}
               className="px-6 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2"
             >
-              <Save size={20} />
-              <span>{saving ? 'Saving...' : 'Save Transition'}</span>
+              <Sparkles size={20} />
+              <span>{saving ? 'Creating...' : 'Begin Editing'}</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Content */}
       <div className="flex-1 overflow-y-auto p-6">
         {currentStep === 'select-songs' && (
           <div className="max-w-6xl mx-auto space-y-6">
@@ -251,7 +255,6 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
               <p className="text-gray-400">Choose the ending song and the beginning song for your transition</p>
             </div>
 
-            {/* Selected Songs */}
             <div className="grid grid-cols-2 gap-6 mb-8">
               <div className="bg-gray-800 rounded-xl border-2 border-dashed border-gray-700 p-6">
                 <div className="text-center">
@@ -294,7 +297,6 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
               </div>
             </div>
 
-            {/* Song Library */}
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-white">Your Library ({songs.length} songs)</h3>
@@ -311,7 +313,6 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                 </button>
               </div>
 
-              {/* Search and Filters */}
               <div className="space-y-4 mb-6">
                 <div className="relative">
                   <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
@@ -449,14 +450,13 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
               )}
             </div>
 
-            {/* Continue Button */}
             {songA && songB && (
               <div className="flex justify-center pt-6">
                 <button
-                  onClick={handleContinueToTemplates}
+                  onClick={handleContinueToSetPoints}
                   className="px-8 py-4 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-xl font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60"
                 >
-                  <span>Continue to Templates</span>
+                  <span>Continue</span>
                   <ChevronRight size={20} />
                 </button>
               </div>
@@ -464,266 +464,221 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
           </div>
         )}
 
-        {currentStep === 'select-template' && (
+        {currentStep === 'set-transition-points' && songA && songB && (
           <div className="max-w-6xl mx-auto space-y-6">
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-white mb-2">Choose a Transition Template</h2>
-              <p className="text-gray-400">Select a template that matches the vibe you want to create</p>
+              <h2 className="text-2xl font-bold text-white mb-2">Set Transition Points</h2>
+              <p className="text-gray-400">Choose where Song A ends and Song B begins</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {templates.map((template) => (
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-3">Transition Duration</h3>
+              <p className="text-sm text-gray-400 mb-4">Choose how long the blend between songs should take</p>
+              <div className="grid grid-cols-3 gap-4 mb-8">
                 <button
-                  key={template.id}
-                  onClick={() => handleTemplateSelect(template)}
-                  className="bg-gray-800 rounded-xl border border-gray-700 p-6 hover:border-cyan-500 transition-all duration-200 text-left group"
+                  onClick={() => handleDurationSizeChange('short')}
+                  className={`
+                    relative p-6 rounded-xl border-2 transition-all duration-200
+                    ${durationSize === 'short'
+                      ? 'border-cyan-500 bg-cyan-500/10 shadow-lg shadow-cyan-500/20'
+                      : 'border-gray-700 bg-gray-900 hover:border-gray-600 hover:bg-gray-800'
+                    }
+                  `}
                 >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-cyan-600 to-purple-600 rounded-lg flex items-center justify-center">
-                      <Sparkles className="w-6 h-6 text-white" />
+                  <div className="flex flex-col items-center space-y-3">
+                    <div className={`
+                      w-12 h-12 rounded-full flex items-center justify-center
+                      ${durationSize === 'short' ? 'bg-cyan-500' : 'bg-gray-700'}
+                    `}>
+                      <Zap className={`w-6 h-6 ${durationSize === 'short' ? 'text-white' : 'text-gray-400'}`} />
                     </div>
-                    <span className="text-xs text-gray-500 bg-gray-700 px-2 py-1 rounded">
-                      {template.duration || 8}s
-                    </span>
-                  </div>
-                  <h3 className="text-white font-semibold text-lg mb-2 group-hover:text-cyan-400 transition-colors">
-                    {template.name}
-                  </h3>
-                  <p className="text-gray-400 text-sm mb-4 line-clamp-2">
-                    {template.description || 'A seamless transition template'}
-                  </p>
-                  <div className="flex items-center space-x-2 text-xs text-gray-500">
-                    <span className="bg-gray-700 px-2 py-1 rounded">{template.type}</span>
-                    {template.tags?.slice(0, 2).map((tag, idx) => (
-                      <span key={idx} className="bg-gray-700 px-2 py-1 rounded">{tag}</span>
-                    ))}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {currentStep === 'edit-timeline' && songA && songB && selectedTemplate && (
-          <div className="h-full">
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-400 mb-2">Transition Name</label>
-              <input
-                type="text"
-                value={transitionName}
-                onChange={(e) => setTransitionName(e.target.value)}
-                placeholder="Enter transition name..."
-                className="w-full max-w-2xl px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-              />
-            </div>
-
-            <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Transition Overview</h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-gray-900 rounded-lg p-4">
-                      <p className="text-xs text-gray-500 mb-1">Song A (Ending)</p>
-                      <p className="text-white font-medium text-sm truncate">{songA.originalName}</p>
-                    </div>
-                    <div className="bg-gray-900 rounded-lg p-4 flex items-center justify-center">
-                      <div className="text-center">
-                        <Sparkles className="w-6 h-6 text-purple-400 mx-auto mb-1" />
-                        <p className="text-xs text-purple-400 font-medium">{selectedTemplate.name}</p>
-                      </div>
-                    </div>
-                    <div className="bg-gray-900 rounded-lg p-4">
-                      <p className="text-xs text-gray-500 mb-1">Song B (Beginning)</p>
-                      <p className="text-white font-medium text-sm truncate">{songB.originalName}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-3">Transition Duration</h3>
-                  <p className="text-sm text-gray-400 mb-4">Choose how long the blend between songs should take</p>
-                  <div className="grid grid-cols-3 gap-4">
-                    <button
-                      onClick={() => handleDurationSizeChange('short')}
-                      className={`
-                        relative p-6 rounded-xl border-2 transition-all duration-200
-                        ${durationSize === 'short'
-                          ? 'border-cyan-500 bg-cyan-500/10 shadow-lg shadow-cyan-500/20'
-                          : 'border-gray-700 bg-gray-900 hover:border-gray-600 hover:bg-gray-800'
-                        }
-                      `}
-                    >
-                      <div className="flex flex-col items-center space-y-3">
-                        <div className={`
-                          w-12 h-12 rounded-full flex items-center justify-center
-                          ${durationSize === 'short' ? 'bg-cyan-500' : 'bg-gray-700'}
-                        `}>
-                          <Zap className={`w-6 h-6 ${durationSize === 'short' ? 'text-white' : 'text-gray-400'}`} />
-                        </div>
-                        <div className="text-center">
-                          <p className={`text-lg font-bold ${durationSize === 'short' ? 'text-cyan-400' : 'text-white'}`}>
-                            Short
-                          </p>
-                          <p className="text-sm text-gray-400 mt-1">4-8 seconds</p>
-                          <p className="text-xs text-gray-500 mt-2">Quick, energetic blend</p>
-                        </div>
-                      </div>
-                      {durationSize === 'short' && (
-                        <div className="absolute top-3 right-3">
-                          <Check className="w-5 h-5 text-cyan-400" />
-                        </div>
-                      )}
-                    </button>
-
-                    <button
-                      onClick={() => handleDurationSizeChange('medium')}
-                      className={`
-                        relative p-6 rounded-xl border-2 transition-all duration-200
-                        ${durationSize === 'medium'
-                          ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/20'
-                          : 'border-gray-700 bg-gray-900 hover:border-gray-600 hover:bg-gray-800'
-                        }
-                      `}
-                    >
-                      <div className="flex flex-col items-center space-y-3">
-                        <div className={`
-                          w-12 h-12 rounded-full flex items-center justify-center
-                          ${durationSize === 'medium' ? 'bg-blue-500' : 'bg-gray-700'}
-                        `}>
-                          <Clock className={`w-6 h-6 ${durationSize === 'medium' ? 'text-white' : 'text-gray-400'}`} />
-                        </div>
-                        <div className="text-center">
-                          <p className={`text-lg font-bold ${durationSize === 'medium' ? 'text-blue-400' : 'text-white'}`}>
-                            Medium
-                          </p>
-                          <p className="text-sm text-gray-400 mt-1">8-15 seconds</p>
-                          <p className="text-xs text-gray-500 mt-2">Balanced transition</p>
-                        </div>
-                      </div>
-                      {durationSize === 'medium' && (
-                        <div className="absolute top-3 right-3">
-                          <Check className="w-5 h-5 text-blue-400" />
-                        </div>
-                      )}
-                    </button>
-
-                    <button
-                      onClick={() => handleDurationSizeChange('long')}
-                      className={`
-                        relative p-6 rounded-xl border-2 transition-all duration-200
-                        ${durationSize === 'long'
-                          ? 'border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/20'
-                          : 'border-gray-700 bg-gray-900 hover:border-gray-600 hover:bg-gray-800'
-                        }
-                      `}
-                    >
-                      <div className="flex flex-col items-center space-y-3">
-                        <div className={`
-                          w-12 h-12 rounded-full flex items-center justify-center
-                          ${durationSize === 'long' ? 'bg-purple-500' : 'bg-gray-700'}
-                        `}>
-                          <Timer className={`w-6 h-6 ${durationSize === 'long' ? 'text-white' : 'text-gray-400'}`} />
-                        </div>
-                        <div className="text-center">
-                          <p className={`text-lg font-bold ${durationSize === 'long' ? 'text-purple-400' : 'text-white'}`}>
-                            Long
-                          </p>
-                          <p className="text-sm text-gray-400 mt-1">16-25 seconds</p>
-                          <p className="text-xs text-gray-500 mt-2">Smooth, gradual blend</p>
-                        </div>
-                      </div>
-                      {durationSize === 'long' && (
-                        <div className="absolute top-3 right-3">
-                          <Check className="w-5 h-5 text-purple-400" />
-                        </div>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Waveform Preview Section */}
-                <div className="mt-6">
-                  <h3 className="text-lg font-semibold text-white mb-4">Visual Timeline</h3>
-                  <div className="bg-gray-900 rounded-xl p-6 space-y-6">
-                    {/* Song A Waveform */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium text-gray-400">
-                          {songA.originalName} (Ending)
-                        </label>
-                        <span className="text-xs text-gray-500">Last {transitionDuration} seconds</span>
-                      </div>
-                      <div className="relative">
-                        <WaveformDisplay
-                          audioUrl={songA.url}
-                          height={80}
-                          color="#3b82f6"
-                          progressColor="#60a5fa"
-                        />
-                        <div className="absolute top-0 right-0 bottom-0 left-0 pointer-events-none">
-                          <div className="relative h-full">
-                            <div className="absolute right-0 top-0 bottom-0 w-1 bg-cyan-500 shadow-lg shadow-cyan-500/50" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Transition Zone Indicator */}
-                    <div className="flex items-center justify-center">
-                      <div className="flex items-center space-x-3 px-6 py-3 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-green-500/20 rounded-full border border-purple-500/30">
-                        <Sparkles className="w-5 h-5 text-purple-400" />
-                        <span className="text-sm font-medium text-purple-300">
-                          {transitionDuration}s Transition Blend
-                        </span>
-                        <Sparkles className="w-5 h-5 text-purple-400" />
-                      </div>
-                    </div>
-
-                    {/* Song B Waveform */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium text-gray-400">
-                          {songB.originalName} (Beginning)
-                        </label>
-                        <span className="text-xs text-gray-500">First {transitionDuration} seconds</span>
-                      </div>
-                      <div className="relative">
-                        <WaveformDisplay
-                          audioUrl={songB.url}
-                          height={80}
-                          color="#10b981"
-                          progressColor="#34d399"
-                        />
-                        <div className="absolute top-0 right-0 bottom-0 left-0 pointer-events-none">
-                          <div className="relative h-full">
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-500 shadow-lg shadow-green-500/50" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Template Info */}
-                    <div className="pt-4 border-t border-gray-800">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-gray-800/50 rounded-lg p-4">
-                          <p className="text-xs text-gray-500 mb-1">Template</p>
-                          <p className="text-white font-medium">{selectedTemplate.name}</p>
-                          <p className="text-xs text-gray-400 mt-1">{selectedTemplate.type}</p>
-                        </div>
-                        <div className="bg-gray-800/50 rounded-lg p-4">
-                          <p className="text-xs text-gray-500 mb-1">Duration</p>
-                          <p className="text-white font-medium capitalize">{durationSize}</p>
-                          <p className="text-xs text-gray-400 mt-1">{transitionDuration} seconds</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-cyan-900/20 border border-cyan-700/50 rounded-lg p-4">
-                      <p className="text-cyan-300 text-sm">
-                        <strong>Ready to create!</strong> Click "Save Transition" to save your configuration. You can fine-tune the timing later in the editor.
+                    <div className="text-center">
+                      <p className={`text-lg font-bold ${durationSize === 'short' ? 'text-cyan-400' : 'text-white'}`}>
+                        Short
                       </p>
+                      <p className="text-sm text-gray-400 mt-1">{DURATION_RANGES.short.default} seconds</p>
+                      <p className="text-xs text-gray-500 mt-2">Quick, energetic blend</p>
                     </div>
                   </div>
+                  {durationSize === 'short' && (
+                    <div className="absolute top-3 right-3">
+                      <Check className="w-5 h-5 text-cyan-400" />
+                    </div>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => handleDurationSizeChange('medium')}
+                  className={`
+                    relative p-6 rounded-xl border-2 transition-all duration-200
+                    ${durationSize === 'medium'
+                      ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/20'
+                      : 'border-gray-700 bg-gray-900 hover:border-gray-600 hover:bg-gray-800'
+                    }
+                  `}
+                >
+                  <div className="flex flex-col items-center space-y-3">
+                    <div className={`
+                      w-12 h-12 rounded-full flex items-center justify-center
+                      ${durationSize === 'medium' ? 'bg-blue-500' : 'bg-gray-700'}
+                    `}>
+                      <Clock className={`w-6 h-6 ${durationSize === 'medium' ? 'text-white' : 'text-gray-400'}`} />
+                    </div>
+                    <div className="text-center">
+                      <p className={`text-lg font-bold ${durationSize === 'medium' ? 'text-blue-400' : 'text-white'}`}>
+                        Medium
+                      </p>
+                      <p className="text-sm text-gray-400 mt-1">{DURATION_RANGES.medium.default} seconds</p>
+                      <p className="text-xs text-gray-500 mt-2">Balanced transition</p>
+                    </div>
+                  </div>
+                  {durationSize === 'medium' && (
+                    <div className="absolute top-3 right-3">
+                      <Check className="w-5 h-5 text-blue-400" />
+                    </div>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => handleDurationSizeChange('long')}
+                  className={`
+                    relative p-6 rounded-xl border-2 transition-all duration-200
+                    ${durationSize === 'long'
+                      ? 'border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/20'
+                      : 'border-gray-700 bg-gray-900 hover:border-gray-600 hover:bg-gray-800'
+                    }
+                  `}
+                >
+                  <div className="flex flex-col items-center space-y-3">
+                    <div className={`
+                      w-12 h-12 rounded-full flex items-center justify-center
+                      ${durationSize === 'long' ? 'bg-purple-500' : 'bg-gray-700'}
+                    `}>
+                      <Timer className={`w-6 h-6 ${durationSize === 'long' ? 'text-white' : 'text-gray-400'}`} />
+                    </div>
+                    <div className="text-center">
+                      <p className={`text-lg font-bold ${durationSize === 'long' ? 'text-purple-400' : 'text-white'}`}>
+                        Long
+                      </p>
+                      <p className="text-sm text-gray-400 mt-1">{DURATION_RANGES.long.default} seconds</p>
+                      <p className="text-xs text-gray-500 mt-2">Smooth, gradual blend</p>
+                    </div>
+                  </div>
+                  {durationSize === 'long' && (
+                    <div className="absolute top-3 right-3">
+                      <Check className="w-5 h-5 text-purple-400" />
+                    </div>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 space-y-8">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h4 className="text-lg font-semibold text-white">{songA.originalName}</h4>
+                    <p className="text-sm text-gray-400">Select where Song A should END</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-400">Marker at</p>
+                    <p className="text-xl font-bold text-blue-400">{formatTime(songAMarkerPoint)}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Will use {transitionDuration}s before this point
+                    </p>
+                  </div>
+                </div>
+
+                <AudioScrubber
+                  audioUrl={songA.url}
+                  currentTime={songACurrentTime}
+                  duration={songADuration}
+                  onSeek={(time) => {
+                    setSongACurrentTime(time);
+                    setSongAMarkerPoint(time);
+                  }}
+                  isPlaying={isPlayingA}
+                />
+
+                <div className="mt-4 bg-gray-900 rounded-lg p-4 border border-blue-500/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <span className="text-sm text-gray-300">
+                        Extraction Range: <span className="text-blue-400 font-mono">{formatTime(songAClipStart)}</span> to <span className="text-blue-400 font-mono">{formatTime(songAMarkerPoint)}</span>
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-500">({transitionDuration}s clip)</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center py-4">
+                <div className="flex items-center space-x-3 px-6 py-3 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-green-500/20 rounded-full border border-purple-500/30">
+                  <Sparkles className="w-5 h-5 text-purple-400" />
+                  <span className="text-sm font-medium text-purple-300">
+                    {transitionDuration}s Transition Blend
+                  </span>
+                  <Sparkles className="w-5 h-5 text-purple-400" />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h4 className="text-lg font-semibold text-white">{songB.originalName}</h4>
+                    <p className="text-sm text-gray-400">Select where Song B should START</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-400">Marker at</p>
+                    <p className="text-xl font-bold text-green-400">{formatTime(songBMarkerPoint)}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Will use {transitionDuration}s after this point
+                    </p>
+                  </div>
+                </div>
+
+                <AudioScrubber
+                  audioUrl={songB.url}
+                  currentTime={songBCurrentTime}
+                  duration={songBDuration}
+                  onSeek={(time) => {
+                    setSongBCurrentTime(time);
+                    setSongBMarkerPoint(time);
+                  }}
+                  isPlaying={isPlayingB}
+                />
+
+                <div className="mt-4 bg-gray-900 rounded-lg p-4 border border-green-500/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <span className="text-sm text-gray-300">
+                        Extraction Range: <span className="text-green-400 font-mono">{formatTime(songBMarkerPoint)}</span> to <span className="text-green-400 font-mono">{formatTime(songBClipEnd)}</span>
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-500">({transitionDuration}s clip)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-cyan-900/20 border border-cyan-700/50 rounded-lg p-6">
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0">
+                  <Sparkles className="w-6 h-6 text-cyan-400" />
+                </div>
+                <div>
+                  <h4 className="text-cyan-300 font-semibold mb-2">Ready to Begin Editing</h4>
+                  <p className="text-cyan-100/80 text-sm mb-4">
+                    Your transition points are set. Click "Begin Editing" to enter the full editor where you can:
+                  </p>
+                  <ul className="text-cyan-100/70 text-sm space-y-1 list-disc list-inside">
+                    <li>Browse and apply transition templates</li>
+                    <li>Fine-tune timing and crossfades</li>
+                    <li>Use AI Fusion for automatic blending</li>
+                    <li>Preview your transition in real-time</li>
+                  </ul>
                 </div>
               </div>
             </div>
@@ -733,5 +688,11 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
     </div>
   );
 };
+
+function formatTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
 
 export default TransitionCreator;
