@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import * as Tone from 'tone';
 import { WaveformDisplay } from './WaveformDisplay';
+import { Play, Pause, MapPin } from 'lucide-react';
 
 interface AudioScrubberProps {
   audioUrl: string;
@@ -15,107 +16,179 @@ export function AudioScrubber({
   currentTime,
   duration,
   onSeek,
-  isPlaying
+  isPlaying: externalIsPlaying
 }: AudioScrubberProps) {
-  const [isScrubbing, setIsScrubbing] = useState(false);
-  const [scrubTime, setScrubTime] = useState(0);
-  const scrubPlayerRef = useRef<Tone.Player | null>(null);
-  const scrubTimeoutRef = useRef<number | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackTime, setPlaybackTime] = useState(currentTime);
+  const playerRef = useRef<Tone.Player | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number>(0);
+  const pauseTimeRef = useRef<number>(0);
 
   useEffect(() => {
-    const initializeScrubPlayer = async () => {
-      if (!scrubPlayerRef.current) {
+    const initializePlayer = async () => {
+      if (!playerRef.current) {
         await Tone.start();
-        scrubPlayerRef.current = new Tone.Player(audioUrl).toDestination();
-        scrubPlayerRef.current.volume.value = -6;
+        playerRef.current = new Tone.Player(audioUrl).toDestination();
+        playerRef.current.loop = false;
       }
     };
 
-    initializeScrubPlayer();
+    initializePlayer();
 
     return () => {
-      if (scrubPlayerRef.current) {
-        scrubPlayerRef.current.dispose();
-        scrubPlayerRef.current = null;
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (playerRef.current) {
+        playerRef.current.stop();
+        playerRef.current.dispose();
+        playerRef.current = null;
       }
     };
   }, [audioUrl]);
 
-  const playScrubSound = useCallback((time: number) => {
-    if (!scrubPlayerRef.current || !scrubPlayerRef.current.loaded) return;
+  useEffect(() => {
+    setPlaybackTime(currentTime);
+  }, [currentTime]);
+
+  const updatePlaybackTime = useCallback(() => {
+    if (!playerRef.current || !isPlaying) return;
+
+    const elapsed = Tone.now() - startTimeRef.current;
+    const newTime = pauseTimeRef.current + elapsed;
+
+    if (newTime >= duration) {
+      setIsPlaying(false);
+      setPlaybackTime(duration);
+      playerRef.current.stop();
+      return;
+    }
+
+    setPlaybackTime(newTime);
+    animationFrameRef.current = requestAnimationFrame(updatePlaybackTime);
+  }, [isPlaying, duration]);
+
+  useEffect(() => {
+    if (isPlaying) {
+      animationFrameRef.current = requestAnimationFrame(updatePlaybackTime);
+    } else {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    }
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [isPlaying, updatePlaybackTime]);
+
+  const handlePlayPause = async () => {
+    if (!playerRef.current || !playerRef.current.loaded) {
+      console.warn('Player not ready');
+      return;
+    }
 
     try {
-      scrubPlayerRef.current.stop();
+      if (isPlaying) {
+        playerRef.current.stop();
+        pauseTimeRef.current = playbackTime;
+        setIsPlaying(false);
+      } else {
+        await Tone.start();
 
-      const scrubDuration = 0.05;
-      scrubPlayerRef.current.start(Tone.now(), time, scrubDuration);
+        if (playbackTime >= duration) {
+          pauseTimeRef.current = 0;
+          setPlaybackTime(0);
+        } else {
+          pauseTimeRef.current = playbackTime;
+        }
 
-      if (scrubTimeoutRef.current) {
-        clearTimeout(scrubTimeoutRef.current);
+        startTimeRef.current = Tone.now();
+        playerRef.current.start(Tone.now(), pauseTimeRef.current);
+        setIsPlaying(true);
       }
-
-      scrubTimeoutRef.current = window.setTimeout(() => {
-        scrubPlayerRef.current?.stop();
-      }, scrubDuration * 1000);
     } catch (error) {
-      console.error('Scrub playback error:', error);
+      console.error('Playback error:', error);
     }
-  }, []);
+  };
 
-  const handleScrubStart = useCallback(() => {
-    setIsScrubbing(true);
-  }, []);
-
-  const handleScrubMove = useCallback(
+  const handleWaveformClick = useCallback(
     (progress: number) => {
       const time = progress * duration;
-      setScrubTime(time);
 
-      if (isScrubbing) {
-        playScrubSound(time);
+      if (playerRef.current) {
+        playerRef.current.stop();
+      }
+
+      setPlaybackTime(time);
+      pauseTimeRef.current = time;
+      setIsPlaying(false);
+
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
       }
     },
-    [duration, isScrubbing, playScrubSound]
+    [duration]
   );
 
-  const handleScrubEnd = useCallback(
-    (progress: number) => {
-      const time = progress * duration;
-      setIsScrubbing(false);
-      onSeek(time);
-    },
-    [duration, onSeek]
-  );
+  const handleSetMarker = () => {
+    if (playerRef.current && isPlaying) {
+      playerRef.current.stop();
+      setIsPlaying(false);
+    }
+    onSeek(playbackTime);
+  };
 
-  const progress = isScrubbing ? scrubTime / duration : currentTime / duration;
+  const progress = playbackTime / duration;
 
   return (
     <div className="bg-gray-800 rounded-lg p-4">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-medium">Audio Scrubber</h3>
-        <div className="text-xs text-gray-400 font-mono">
-          {formatTime(isScrubbing ? scrubTime : currentTime)} / {formatTime(duration)}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={handlePlayPause}
+            className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors"
+            title={isPlaying ? 'Pause' : 'Play'}
+          >
+            {isPlaying ? (
+              <Pause className="w-5 h-5 text-white" />
+            ) : (
+              <Play className="w-5 h-5 text-white" />
+            )}
+          </button>
+          <div className="text-sm font-mono text-gray-300">
+            {formatTime(playbackTime)} / {formatTime(duration)}
+          </div>
         </div>
+        <button
+          onClick={handleSetMarker}
+          className="flex items-center space-x-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg transition-colors text-white text-sm font-medium"
+        >
+          <MapPin className="w-4 h-4" />
+          <span>Set Marker Here</span>
+        </button>
       </div>
 
-      <div
-        onMouseDown={handleScrubStart}
-        onMouseUp={() => handleScrubEnd(progress)}
-        className="relative"
-      >
+      <div className="relative">
         <WaveformDisplay
           audioUrl={audioUrl}
           progress={progress}
           height={120}
-          onSeek={handleScrubMove}
+          onSeek={handleWaveformClick}
           showScrubber={true}
         />
       </div>
 
-      <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
-        <span>Drag to scrub with audio preview</span>
-        {isScrubbing && (
-          <span className="text-blue-400 animate-pulse">Scrubbing...</span>
+      <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
+        <span>Click waveform to jump to position</span>
+        {isPlaying && (
+          <span className="text-blue-400 animate-pulse flex items-center space-x-1">
+            <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+            <span>Playing</span>
+          </span>
         )}
       </div>
     </div>
