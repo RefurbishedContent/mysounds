@@ -3,19 +3,12 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AuthGateway from './components/AuthGateway';
 import AppShell from './components/AppShell';
 import LandingPage from './components/LandingPage';
-import UIShowcase from './components/UIShowcase';
-import ToneTestPage from './components/ToneTestPage';
-import ProjectTone from './pages/ProjectTone';
 import './styles/theme.css';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
-  const [currentView, setCurrentView] = useState<'landing' | 'showcase' | 'app' | 'tone-test' | 'project-tone'>('landing');
+  const [currentView, setCurrentView] = useState<'landing' | 'app'>('landing');
   const [showAuthGateway, setShowAuthGateway] = useState(false);
-  
-  // Get project ID from URL for project-tone view
-  const urlParams = new URLSearchParams(window.location.search);
-  const projectId = urlParams.get('projectId');
 
   if (loading) {
     return (
@@ -42,36 +35,6 @@ const AppContent: React.FC = () => {
             setShowAuthGateway(true);
           }
         }} />
-        
-        {/* Development Navigation */}
-        <div className="fixed bottom-4 left-4 z-50 flex space-x-2">
-          <button
-            onClick={() => setCurrentView('showcase')}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-all duration-200"
-          >
-            UI Showcase
-          </button>
-          <button
-            onClick={() => setCurrentView('tone-test')}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-all duration-200"
-          >
-            Tone.js Test
-          </button>
-          <button
-            onClick={() => setCurrentView('project-tone')}
-            className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-all duration-200"
-          >
-            Project Tone
-          </button>
-          {isAuthenticated && (
-            <button
-              onClick={() => setCurrentView('app')}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all duration-200"
-            >
-              App Shell
-            </button>
-          )}
-        </div>
 
         {/* Auth Gateway */}
         {showAuthGateway && (
@@ -83,45 +46,6 @@ const AppContent: React.FC = () => {
             }
           }} />
         )}
-      </div>
-    );
-  }
-
-  // UI Showcase View
-  if (currentView === 'showcase') {
-    return (
-      <div className="min-h-screen bg-gray-900">
-        <UIShowcase />
-        
-        {/* Development Navigation */}
-        <div className="fixed bottom-4 left-4 z-50 flex space-x-2">
-          <button
-            onClick={() => setCurrentView('landing')}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-all duration-200"
-          >
-            Landing
-          </button>
-          <button
-            onClick={() => setCurrentView('tone-test')}
-            className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm font-medium transition-all duration-200"
-          >
-            Tone.js Test
-          </button>
-          <button
-            onClick={() => setCurrentView('project-tone')}
-            className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-all duration-200"
-          >
-            Project Tone
-          </button>
-          {isAuthenticated && (
-            <button
-              onClick={() => setCurrentView('app')}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all duration-200"
-            >
-              App Shell
-            </button>
-          )}
-        </div>
       </div>
     );
   }
@@ -147,52 +71,6 @@ const AppContent: React.FC = () => {
     return (
       <div className="h-screen bg-gray-900 flex flex-col overflow-hidden">
         <AppShell />
-        
-        {/* Development Navigation */}
-        <div className="fixed bottom-4 left-4 z-50 flex space-x-2">
-          <button
-            onClick={() => setCurrentView('landing')}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-all duration-200"
-          >
-            Landing
-          </button>
-          <button
-            onClick={() => setCurrentView('showcase')}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-all duration-200"
-          >
-            UI Showcase
-          </button>
-          <button
-            onClick={() => setCurrentView('tone-test')}
-            className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm font-medium transition-all duration-200"
-          >
-            Tone.js Test
-          </button>
-          <button
-            onClick={() => setCurrentView('project-tone')}
-            className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-all duration-200"
-          >
-            Project Tone
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Tone.js Test View
-  if (currentView === 'tone-test') {
-    return (
-      <div className="min-h-screen bg-gray-900">
-        <ToneTestPage onBack={() => setCurrentView('landing')} />
-      </div>
-    );
-  }
-
-  // Project Tone Test View
-  if (currentView === 'project-tone') {
-    return (
-      <div className="min-h-screen bg-gray-900">
-        <ProjectTone />
       </div>
     );
   }
