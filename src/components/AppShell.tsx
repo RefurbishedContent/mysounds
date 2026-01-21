@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Music, Disc3, Headphones, Settings, Folder, AudioWaveform as Waveform, Sliders, FileAudio, User, Bell, Search, Menu, X, Activity, HelpCircle, Plus, Sparkles, Wand2, Video, Mic, Grid3X3, Clock, Share2, ListMusic } from 'lucide-react';
+import { Home, Music, Disc3, Headphones, Settings, Folder, AudioWaveform as Waveform, Sliders, FileAudio, User, Bell, Search, Menu, X, Activity, HelpCircle, Plus, Sparkles, Wand2, Video, Mic, Grid3X3, Clock, Share2, ListMusic, Zap, Brain, FlaskConical } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -30,6 +30,7 @@ interface MenuItem {
   label: string;
   view?: AppView;
   action?: () => void;
+  comingSoon?: boolean;
 }
 
 interface MenuSection {
@@ -64,14 +65,30 @@ const AppShell: React.FC = () => {
     {
       items: [
         { id: 'home', icon: Home, label: 'Home', view: 'home' },
-        { id: 'create-with-ai', icon: Sparkles, label: 'Create with AI', view: 'create-with-ai' },
       ]
     },
     {
-      title: 'Tools',
+      title: 'AI Fusion',
+      items: [
+        { id: 'smart-blend', icon: Sparkles, label: 'Smart Blend', view: 'library' },
+        { id: 'auto-transition', icon: Wand2, label: 'Auto Transition', view: 'library' },
+        { id: 'ai-mashup', icon: Music, label: 'AI Mashup', comingSoon: true },
+        { id: 'voice-enhance', icon: Mic, label: 'Voice Enhancement', comingSoon: true },
+        { id: 'mood-analysis', icon: Brain, label: 'Mood Analysis', comingSoon: true },
+        { id: 'beat-match', icon: Zap, label: 'Beat Matching', comingSoon: true },
+      ]
+    },
+    {
+      title: 'Labs',
       items: [
         { id: 'transitions', icon: Waveform, label: 'Transitions', view: 'transitions' },
-        { id: 'library', icon: Music, label: 'Library', view: 'library' },
+        { id: 'mixer', icon: Sliders, label: 'Mixer', view: 'mixer' },
+      ]
+    },
+    {
+      title: 'Library',
+      items: [
+        { id: 'library', icon: Music, label: 'My Music', view: 'library' },
         { id: 'playlists', icon: ListMusic, label: 'Playlists', view: 'playlists' },
       ]
     },
@@ -512,10 +529,12 @@ const AppShell: React.FC = () => {
                   {section.items.map((item) => {
                     const Icon = item.icon;
                     const isActive = item.view === currentView;
+                    const isDisabled = item.comingSoon;
                     return (
                       <button
                         key={item.id}
                         onClick={() => {
+                          if (isDisabled) return;
                           if (item.view) {
                             setCurrentView(item.view);
                             setIsMobileSidebarOpen(false);
@@ -524,9 +543,11 @@ const AppShell: React.FC = () => {
                             setIsMobileSidebarOpen(false);
                           }
                         }}
+                        disabled={isDisabled}
                         className={`
                           w-full flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200
-                          ${isActive
+                          ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
+                          ${isActive && !isDisabled
                             ? 'bg-gray-700 text-white font-medium'
                             : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
                           }
@@ -535,9 +556,14 @@ const AppShell: React.FC = () => {
                         title={isSidebarCollapsed ? item.label : undefined}
                       >
                         <Icon size={20} className="flex-shrink-0" />
-                        <span className={`ml-3 ${isSidebarCollapsed ? 'md:hidden' : ''}`}>
+                        <span className={`ml-3 flex-1 text-left ${isSidebarCollapsed ? 'md:hidden' : ''}`}>
                           {item.label}
                         </span>
+                        {item.comingSoon && !isSidebarCollapsed && (
+                          <span className="text-xs px-2 py-0.5 bg-gray-700 rounded text-gray-500">
+                            Soon
+                          </span>
+                        )}
                       </button>
                     );
                   })}

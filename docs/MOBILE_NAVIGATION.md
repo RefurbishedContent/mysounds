@@ -38,11 +38,42 @@ The mobile experience features 5 primary navigation buttons at the bottom of the
    - Sign out
 
 ## Desktop Experience (≥768px)
-Desktop users continue to enjoy:
-- Full sidebar navigation with labeled items
+Desktop users enjoy a reorganized sidebar navigation that mirrors the mobile structure:
+
+### Sidebar Navigation Structure
+1. **Home** - Dashboard home view
+
+2. **AI Fusion** section:
+   - Smart Blend - AI-powered song blending
+   - Auto Transition - Automatic transition detection
+   - AI Mashup (Coming Soon)
+   - Voice Enhancement (Coming Soon)
+   - Mood Analysis (Coming Soon)
+   - Beat Matching (Coming Soon)
+
+3. **Labs** section:
+   - Transitions - Transition editor
+   - Mixer - Advanced mixing controls
+
+4. **Library** section:
+   - My Music - Uploaded songs
+   - Playlists - Playlist management
+
+5. **Templates & projects** section:
+   - Templates - Template gallery
+   - Recent projects - Project history
+   - Share and schedule - Sharing tools
+
+6. **Admin** section (admin users only):
+   - Template Manager - Template administration
+
+### Desktop Features
+- Full sidebar navigation with labeled items and "Soon" badges for upcoming features
 - Top bar with search and user menu
 - Sidebar collapse functionality
-- All existing desktop features
+- Hover states and tooltips
+- Coming soon items are disabled with visual indicators
+- All existing desktop features preserved
 
 ## Key Features
 
@@ -101,10 +132,11 @@ The app properly handles device safe areas:
 4. Use back buttons within views to return to section home
 
 ### For Desktop Users
-1. Use the sidebar as before
-2. All existing functionality preserved
-3. Sidebar collapse still available
-4. Top bar search and user menu unchanged
+1. Use the reorganized sidebar with AI Fusion and Labs sections
+2. Click on available menu items (non-grayed items)
+3. "Coming Soon" items are marked with a "Soon" badge and disabled
+4. Sidebar collapse still available for compact view
+5. Top bar search and user menu unchanged
 
 ## Future Enhancements
 - Swipe gestures for navigation
