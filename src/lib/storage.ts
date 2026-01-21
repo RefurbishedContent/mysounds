@@ -402,25 +402,49 @@ class StorageService {
     return new Promise((resolve) => {
       const audio = new Audio();
       const url = URL.createObjectURL(file);
-      
+
       const cleanup = () => {
         URL.revokeObjectURL(url);
       };
 
+      audio.preload = 'metadata';
+
       audio.addEventListener('loadedmetadata', () => {
+        const duration = audio.duration;
+
+        if (!duration || !isFinite(duration) || duration === 0) {
+          audio.addEventListener('durationchange', () => {
+            if (isFinite(audio.duration) && audio.duration > 0) {
+              cleanup();
+              resolve({ duration: audio.duration });
+            }
+          });
+          return;
+        }
+
         const analysis: AudioAnalysis = {
-          duration: audio.duration || 0
+          duration: duration
         };
-        
+
         cleanup();
         resolve(analysis);
       });
-      
+
       audio.addEventListener('error', () => {
         cleanup();
         resolve({ duration: 0 });
       });
-      
+
+      setTimeout(() => {
+        if (isFinite(audio.duration) && audio.duration > 0) {
+          cleanup();
+          resolve({ duration: audio.duration });
+        } else {
+          cleanup();
+          resolve({ duration: 0 });
+        }
+      }, 5000);
+
       audio.src = url;
     });
   }

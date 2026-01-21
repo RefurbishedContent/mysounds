@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Music, ArrowLeft, Check, ChevronRight, Search, X, SlidersHorizontal, Zap, Clock, Timer, Sparkles, Play, Pause } from 'lucide-react';
+import * as Tone from 'tone';
 import { useAuth } from '../contexts/AuthContext';
 import { storageService, UploadResult } from '../lib/storage';
 import { transitionsService } from '../lib/transitionsService';
@@ -50,16 +51,61 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
   const [showEditor, setShowEditor] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const [songADuration, setSongADuration] = useState<number>(300);
+  const [songBDuration, setSongBDuration] = useState<number>(300);
+
   useEffect(() => {
     loadData();
   }, [user]);
 
   useEffect(() => {
     if (songA) {
-      const duration = songA.metadata?.duration || 180;
+      const duration = songA.metadata?.duration || 300;
+      setSongADuration(duration);
       setSongAMarkerPoint(Math.max(30, duration - 30));
+
+      const loadActualDuration = async () => {
+        try {
+          const player = new Tone.Player(songA.url, () => {
+            const actualDuration = player.buffer.duration;
+            player.dispose();
+            if (actualDuration > 0) {
+              setSongADuration(actualDuration);
+              setSongAMarkerPoint(Math.max(30, actualDuration - 30));
+            }
+          });
+        } catch (error) {
+          console.error('Failed to load Song A duration:', error);
+        }
+      };
+
+      loadActualDuration();
     }
   }, [songA]);
+
+  useEffect(() => {
+    if (songB) {
+      const duration = songB.metadata?.duration || 300;
+      setSongBDuration(duration);
+      setSongBMarkerPoint(Math.min(30, duration / 2));
+
+      const loadActualDuration = async () => {
+        try {
+          const player = new Tone.Player(songB.url, () => {
+            const actualDuration = player.buffer.duration;
+            player.dispose();
+            if (actualDuration > 0) {
+              setSongBDuration(actualDuration);
+            }
+          });
+        } catch (error) {
+          console.error('Failed to load Song B duration:', error);
+        }
+      };
+
+      loadActualDuration();
+    }
+  }, [songB]);
 
   const handleDurationSizeChange = (size: DurationSize) => {
     setDurationSize(size);
@@ -204,8 +250,6 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
     );
   }
 
-  const songADuration = songA?.metadata?.duration || 180;
-  const songBDuration = songB?.metadata?.duration || 180;
   const songAClipStart = Math.max(0, songAMarkerPoint - transitionDuration);
   const songBClipEnd = songBMarkerPoint + transitionDuration;
 

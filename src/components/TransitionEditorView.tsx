@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Play, Pause, RotateCcw, Save, Sparkles, Music, Zap, Clock, Timer, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import * as Tone from 'tone';
 import { UploadResult } from '../lib/storage';
 import { TemplateData, databaseService } from '../lib/database';
 import { transitionsService, TransitionData } from '../lib/transitionsService';
@@ -59,8 +60,8 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   const [showTemplateGallery, setShowTemplateGallery] = useState(true);
   const [showExportDialog, setShowExportDialog] = useState(false);
 
-  const songADuration = songA.metadata?.duration || 180;
-  const songBDuration = songB.metadata?.duration || 180;
+  const [songADuration, setSongADuration] = useState(songA.metadata?.duration || 300);
+  const [songBDuration, setSongBDuration] = useState(songB.metadata?.duration || 300);
 
   useEffect(() => {
     loadData();
@@ -72,6 +73,36 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       setDurationSize(getDurationSizeFromValue(transition.transitionDuration));
     }
   }, [transition]);
+
+  useEffect(() => {
+    const loadActualDurations = async () => {
+      try {
+        const [bufferA, bufferB] = await Promise.all([
+          new Promise<number>((resolve) => {
+            const player = new Tone.Player(songA.url, () => {
+              const duration = player.buffer.duration;
+              player.dispose();
+              resolve(duration);
+            });
+          }),
+          new Promise<number>((resolve) => {
+            const player = new Tone.Player(songB.url, () => {
+              const duration = player.buffer.duration;
+              player.dispose();
+              resolve(duration);
+            });
+          })
+        ]);
+
+        if (bufferA > 0) setSongADuration(bufferA);
+        if (bufferB > 0) setSongBDuration(bufferB);
+      } catch (error) {
+        console.error('Failed to load audio durations:', error);
+      }
+    };
+
+    loadActualDurations();
+  }, [songA.url, songB.url]);
 
   const loadData = async () => {
     setLoading(true);
