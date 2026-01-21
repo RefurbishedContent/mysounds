@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Music, Play, Save, ArrowLeft, Sparkles, Check, ChevronRight, Search, Filter, X, SlidersHorizontal } from 'lucide-react';
+import { Music, Play, Save, ArrowLeft, Sparkles, Check, ChevronRight, Search, Filter, X, SlidersHorizontal, Zap, Clock, Timer } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { storageService, UploadResult } from '../lib/storage';
 import { databaseService, TemplateData } from '../lib/database';
 import { transitionsService } from '../lib/transitionsService';
+import { WaveformDisplay } from './WaveformDisplay';
 
 interface TransitionCreatorProps {
   onBack: () => void;
@@ -12,6 +13,23 @@ interface TransitionCreatorProps {
 }
 
 type CreatorStep = 'select-songs' | 'select-template' | 'edit-timeline';
+type DurationSize = 'short' | 'medium' | 'long';
+
+const DURATION_RANGES = {
+  short: { min: 4, max: 8, default: 6 },
+  medium: { min: 8, max: 15, default: 12 },
+  long: { min: 16, max: 25, default: 20 }
+};
+
+const getDurationForSize = (size: DurationSize): number => {
+  return DURATION_RANGES[size].default;
+};
+
+const getDurationSizeFromValue = (duration: number): DurationSize => {
+  if (duration >= 4 && duration <= 8) return 'short';
+  if (duration > 8 && duration <= 15) return 'medium';
+  return 'long';
+};
 
 const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, initialSongA }) => {
   const { user } = useAuth();
@@ -28,7 +46,8 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
   const [showFilters, setShowFilters] = useState(false);
   const [bpmFilter, setBpmFilter] = useState<'all' | 'slow' | 'medium' | 'fast'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'recent' | 'bpm'>('recent');
-  const [transitionDuration, setTransitionDuration] = useState(8);
+  const [durationSize, setDurationSize] = useState<DurationSize>('medium');
+  const [transitionDuration, setTransitionDuration] = useState(12);
 
   useEffect(() => {
     loadData();
@@ -36,9 +55,17 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
 
   useEffect(() => {
     if (selectedTemplate) {
-      setTransitionDuration(selectedTemplate.duration || 8);
+      const templateDuration = selectedTemplate.duration || 12;
+      const size = getDurationSizeFromValue(templateDuration);
+      setDurationSize(size);
+      setTransitionDuration(getDurationForSize(size));
     }
   }, [selectedTemplate]);
+
+  const handleDurationSizeChange = (size: DurationSize) => {
+    setDurationSize(size);
+    setTransitionDuration(getDurationForSize(size));
+  };
 
   const loadData = async () => {
     if (!user) {
@@ -133,18 +160,23 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
 
     setSaving(true);
     try {
-      await transitionsService.createTransition({
-        userId: user.id,
+      const songADuration = songA.metadata?.duration || 180;
+      const defaultTransitionStart = Math.max(30, songADuration - 30);
+
+      await transitionsService.createTransition(user.id, {
         name: transitionName || `${songA.originalName} → ${songB.originalName}`,
         songAId: songA.id,
         songBId: songB.id,
         templateId: selectedTemplate.id,
+        transitionStartPoint: defaultTransitionStart,
         transitionDuration: transitionDuration,
-        status: 'draft',
+        songAEndTime: defaultTransitionStart,
+        songBStartTime: 0,
         metadata: {
           songAName: songA.originalName,
           songBName: songB.originalName,
-          templateName: selectedTemplate.name
+          templateName: selectedTemplate.name,
+          durationSize: durationSize
         }
       });
       onSave();
@@ -508,52 +540,187 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-3">Transition Settings</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-2">
-                        Transition Duration
-                      </label>
-                      <div className="flex items-center space-x-4">
-                        <input
-                          type="range"
-                          min="2"
-                          max="60"
-                          value={transitionDuration}
-                          onChange={(e) => setTransitionDuration(Number(e.target.value))}
-                          className="flex-1"
-                        />
-                        <span className="text-white font-medium w-12 text-right">
-                          {transitionDuration}s
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="bg-gray-900 rounded-lg p-4">
-                      <p className="text-sm text-gray-400 mb-2">Template Type</p>
-                      <p className="text-white font-medium">{selectedTemplate.type}</p>
-                    </div>
-
-                    {selectedTemplate.tags && selectedTemplate.tags.length > 0 && (
-                      <div className="bg-gray-900 rounded-lg p-4">
-                        <p className="text-sm text-gray-400 mb-3">Tags</p>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedTemplate.tags.map((tag, idx) => (
-                            <span
-                              key={idx}
-                              className="px-3 py-1 bg-gray-800 text-cyan-400 text-xs rounded-full"
-                            >
-                              {tag}
-                            </span>
-                          ))}
+                  <h3 className="text-lg font-semibold text-white mb-3">Transition Duration</h3>
+                  <p className="text-sm text-gray-400 mb-4">Choose how long the blend between songs should take</p>
+                  <div className="grid grid-cols-3 gap-4">
+                    <button
+                      onClick={() => handleDurationSizeChange('short')}
+                      className={`
+                        relative p-6 rounded-xl border-2 transition-all duration-200
+                        ${durationSize === 'short'
+                          ? 'border-cyan-500 bg-cyan-500/10 shadow-lg shadow-cyan-500/20'
+                          : 'border-gray-700 bg-gray-900 hover:border-gray-600 hover:bg-gray-800'
+                        }
+                      `}
+                    >
+                      <div className="flex flex-col items-center space-y-3">
+                        <div className={`
+                          w-12 h-12 rounded-full flex items-center justify-center
+                          ${durationSize === 'short' ? 'bg-cyan-500' : 'bg-gray-700'}
+                        `}>
+                          <Zap className={`w-6 h-6 ${durationSize === 'short' ? 'text-white' : 'text-gray-400'}`} />
+                        </div>
+                        <div className="text-center">
+                          <p className={`text-lg font-bold ${durationSize === 'short' ? 'text-cyan-400' : 'text-white'}`}>
+                            Short
+                          </p>
+                          <p className="text-sm text-gray-400 mt-1">4-8 seconds</p>
+                          <p className="text-xs text-gray-500 mt-2">Quick, energetic blend</p>
                         </div>
                       </div>
-                    )}
+                      {durationSize === 'short' && (
+                        <div className="absolute top-3 right-3">
+                          <Check className="w-5 h-5 text-cyan-400" />
+                        </div>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => handleDurationSizeChange('medium')}
+                      className={`
+                        relative p-6 rounded-xl border-2 transition-all duration-200
+                        ${durationSize === 'medium'
+                          ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/20'
+                          : 'border-gray-700 bg-gray-900 hover:border-gray-600 hover:bg-gray-800'
+                        }
+                      `}
+                    >
+                      <div className="flex flex-col items-center space-y-3">
+                        <div className={`
+                          w-12 h-12 rounded-full flex items-center justify-center
+                          ${durationSize === 'medium' ? 'bg-blue-500' : 'bg-gray-700'}
+                        `}>
+                          <Clock className={`w-6 h-6 ${durationSize === 'medium' ? 'text-white' : 'text-gray-400'}`} />
+                        </div>
+                        <div className="text-center">
+                          <p className={`text-lg font-bold ${durationSize === 'medium' ? 'text-blue-400' : 'text-white'}`}>
+                            Medium
+                          </p>
+                          <p className="text-sm text-gray-400 mt-1">8-15 seconds</p>
+                          <p className="text-xs text-gray-500 mt-2">Balanced transition</p>
+                        </div>
+                      </div>
+                      {durationSize === 'medium' && (
+                        <div className="absolute top-3 right-3">
+                          <Check className="w-5 h-5 text-blue-400" />
+                        </div>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => handleDurationSizeChange('long')}
+                      className={`
+                        relative p-6 rounded-xl border-2 transition-all duration-200
+                        ${durationSize === 'long'
+                          ? 'border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/20'
+                          : 'border-gray-700 bg-gray-900 hover:border-gray-600 hover:bg-gray-800'
+                        }
+                      `}
+                    >
+                      <div className="flex flex-col items-center space-y-3">
+                        <div className={`
+                          w-12 h-12 rounded-full flex items-center justify-center
+                          ${durationSize === 'long' ? 'bg-purple-500' : 'bg-gray-700'}
+                        `}>
+                          <Timer className={`w-6 h-6 ${durationSize === 'long' ? 'text-white' : 'text-gray-400'}`} />
+                        </div>
+                        <div className="text-center">
+                          <p className={`text-lg font-bold ${durationSize === 'long' ? 'text-purple-400' : 'text-white'}`}>
+                            Long
+                          </p>
+                          <p className="text-sm text-gray-400 mt-1">16-25 seconds</p>
+                          <p className="text-xs text-gray-500 mt-2">Smooth, gradual blend</p>
+                        </div>
+                      </div>
+                      {durationSize === 'long' && (
+                        <div className="absolute top-3 right-3">
+                          <Check className="w-5 h-5 text-purple-400" />
+                        </div>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Waveform Preview Section */}
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Visual Timeline</h3>
+                  <div className="bg-gray-900 rounded-xl p-6 space-y-6">
+                    {/* Song A Waveform */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium text-gray-400">
+                          {songA.originalName} (Ending)
+                        </label>
+                        <span className="text-xs text-gray-500">Last {transitionDuration} seconds</span>
+                      </div>
+                      <div className="relative">
+                        <WaveformDisplay
+                          audioUrl={songA.url}
+                          height={80}
+                          color="#3b82f6"
+                          progressColor="#60a5fa"
+                        />
+                        <div className="absolute top-0 right-0 bottom-0 left-0 pointer-events-none">
+                          <div className="relative h-full">
+                            <div className="absolute right-0 top-0 bottom-0 w-1 bg-cyan-500 shadow-lg shadow-cyan-500/50" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Transition Zone Indicator */}
+                    <div className="flex items-center justify-center">
+                      <div className="flex items-center space-x-3 px-6 py-3 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-green-500/20 rounded-full border border-purple-500/30">
+                        <Sparkles className="w-5 h-5 text-purple-400" />
+                        <span className="text-sm font-medium text-purple-300">
+                          {transitionDuration}s Transition Blend
+                        </span>
+                        <Sparkles className="w-5 h-5 text-purple-400" />
+                      </div>
+                    </div>
+
+                    {/* Song B Waveform */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium text-gray-400">
+                          {songB.originalName} (Beginning)
+                        </label>
+                        <span className="text-xs text-gray-500">First {transitionDuration} seconds</span>
+                      </div>
+                      <div className="relative">
+                        <WaveformDisplay
+                          audioUrl={songB.url}
+                          height={80}
+                          color="#10b981"
+                          progressColor="#34d399"
+                        />
+                        <div className="absolute top-0 right-0 bottom-0 left-0 pointer-events-none">
+                          <div className="relative h-full">
+                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-500 shadow-lg shadow-green-500/50" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Template Info */}
+                    <div className="pt-4 border-t border-gray-800">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-gray-800/50 rounded-lg p-4">
+                          <p className="text-xs text-gray-500 mb-1">Template</p>
+                          <p className="text-white font-medium">{selectedTemplate.name}</p>
+                          <p className="text-xs text-gray-400 mt-1">{selectedTemplate.type}</p>
+                        </div>
+                        <div className="bg-gray-800/50 rounded-lg p-4">
+                          <p className="text-xs text-gray-500 mb-1">Duration</p>
+                          <p className="text-white font-medium capitalize">{durationSize}</p>
+                          <p className="text-xs text-gray-400 mt-1">{transitionDuration} seconds</p>
+                        </div>
+                      </div>
+                    </div>
 
                     <div className="bg-cyan-900/20 border border-cyan-700/50 rounded-lg p-4">
                       <p className="text-cyan-300 text-sm">
-                        <strong>Note:</strong> Advanced timeline editing will be available after saving.
-                        Click "Save Transition" to create your transition draft.
+                        <strong>Ready to create!</strong> Click "Save Transition" to save your configuration. You can fine-tune the timing later in the editor.
                       </p>
                     </div>
                   </div>
