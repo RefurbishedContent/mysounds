@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Music, Search, Filter, Upload, Folder, Clock, Star, Grid3X3, List, Heart, MoreVertical, Shuffle, Plus, Sparkles, Download, Play } from 'lucide-react';
+import { Music, Search, Filter, Upload, Folder, Clock, Star, Grid3x3 as Grid3X3, List, Heart, MoreVertical, Shuffle, Plus, Sparkles, Download, Play } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { storageService, UploadResult } from '../lib/storage';
 import { blendExportService, BlendData } from '../lib/blendExportService';
