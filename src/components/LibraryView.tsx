@@ -16,39 +16,11 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
-  const [isScrolled, setIsScrolled] = useState(false);
   const [songs, setSongs] = useState<UploadResult[]>([]);
   const [blends, setBlends] = useState<BlendData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUploader, setShowUploader] = useState(false);
   const [selectedSong, setSelectedSong] = useState<UploadResult | null>(null);
-
-  useEffect(() => {
-    const scrollContainer = document.querySelector('.main-content-scroll');
-    if (!scrollContainer) return;
-
-    let ticking = false;
-
-    const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const scrollTop = scrollContainer.scrollTop;
-          const shouldBeScrolled = scrollTop > 20;
-          setIsScrolled(prev => {
-            if (prev !== shouldBeScrolled) {
-              return shouldBeScrolled;
-            }
-            return prev;
-          });
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-
-    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
-    return () => scrollContainer.removeEventListener('scroll', handleScroll);
-  }, []);
 
   useEffect(() => {
     loadData();
@@ -109,111 +81,105 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
   return (
     <div className="h-full flex flex-col p-3 sm:p-4 md:p-6">
       {/* Header */}
-      {!isScrolled && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 transition-all duration-300">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Music Library</h1>
-            <p className="text-gray-400">Organize and manage your audio collection</p>
-          </div>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">Music Library</h1>
+          <p className="text-gray-400">Organize and manage your audio collection</p>
+        </div>
 
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center space-x-1 bg-gray-800 rounded-lg p-1">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-md transition-all duration-200 ${
-                  viewMode === 'grid'
-                    ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-700'
-                }`}
-              >
-                <Grid3X3 size={18} />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded-md transition-all duration-200 ${
-                  viewMode === 'list'
-                    ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-700'
-                }`}
-              >
-                <List size={18} />
-              </button>
-            </div>
-
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-1 bg-gray-800 rounded-lg p-1">
             <button
-              onClick={() => setShowUploader(true)}
-              className="px-6 py-3 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105"
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-md transition-all duration-200 ${
+                viewMode === 'grid'
+                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-700'
+              }`}
             >
-              <Upload size={20} />
-              <span>Upload Music</span>
+              <Grid3X3 size={18} />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-2 rounded-md transition-all duration-200 ${
+                viewMode === 'list'
+                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-700'
+              }`}
+            >
+              <List size={18} />
             </button>
           </div>
+
+          <button
+            onClick={() => setShowUploader(true)}
+            className="px-6 py-3 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105"
+          >
+            <Upload size={20} />
+            <span>Upload Music</span>
+          </button>
         </div>
-      )}
+      </div>
 
       {/* Tabs */}
-      {!isScrolled && (
-        <div className="flex items-center space-x-2 mb-6">
-          <button
-            onClick={() => setCurrentTab('songs')}
-            className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 ${
-              currentTab === 'songs'
-                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg'
-                : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
-            }`}
-          >
-            <Music size={18} />
-            <span>Songs</span>
-            <span className="px-2 py-0.5 bg-white/20 rounded-full text-xs">{songs.length}</span>
-          </button>
-          <button
-            onClick={() => setCurrentTab('blends')}
-            className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 ${
-              currentTab === 'blends'
-                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg'
-                : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
-            }`}
-          >
-            <Sparkles size={18} />
-            <span>Blends</span>
-            <span className="px-2 py-0.5 bg-white/20 rounded-full text-xs">{blends.length}</span>
-          </button>
-        </div>
-      )}
+      <div className="flex items-center space-x-2 mb-6">
+        <button
+          onClick={() => setCurrentTab('songs')}
+          className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 ${
+            currentTab === 'songs'
+              ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg'
+              : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
+          }`}
+        >
+          <Music size={18} />
+          <span>Songs</span>
+          <span className="px-2 py-0.5 bg-white/20 rounded-full text-xs">{songs.length}</span>
+        </button>
+        <button
+          onClick={() => setCurrentTab('blends')}
+          className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 ${
+            currentTab === 'blends'
+              ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg'
+              : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
+          }`}
+        >
+          <Sparkles size={18} />
+          <span>Blends</span>
+          <span className="px-2 py-0.5 bg-white/20 rounded-full text-xs">{blends.length}</span>
+        </button>
+      </div>
 
       {/* Search & Filters */}
-      {!isScrolled && (
-        <div className="flex flex-col sm:flex-row gap-4 mb-6 transition-all duration-300">
-          <div className="relative flex-1">
-            <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search your music library..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
-            />
-          </div>
-
-          <div className="flex items-center space-x-4">
-            <Filter size={18} className="text-gray-500" />
-            <select
-              value={selectedFilter}
-              onChange={(e) => setSelectedFilter(e.target.value)}
-              className="px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
-            >
-              {filters.map(filter => (
-                <option key={filter.value} value={filter.value}>
-                  {filter.label}
-                </option>
-              ))}
-            </select>
-          </div>
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Search your music library..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
+          />
         </div>
-      )}
+
+        <div className="flex items-center space-x-4">
+          <Filter size={18} className="text-gray-500" />
+          <select
+            value={selectedFilter}
+            onChange={(e) => setSelectedFilter(e.target.value)}
+            className="px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
+          >
+            {filters.map(filter => (
+              <option key={filter.value} value={filter.value}>
+                {filter.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       {/* Content: Songs or Blends */}
-      <div className="flex-1">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-center space-y-4">
