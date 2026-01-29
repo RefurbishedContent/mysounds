@@ -42,6 +42,8 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const scrollIntervalRef = useRef<number | null>(null);
+  const lastScrollTopRef = useRef(0);
+  const scrollTimeoutRef = useRef<number | null>(null);
 
   const categories = ['electronic', 'hip-hop', 'house', 'techno', 'trance', 'dubstep', 'ambient'];
   const difficulties = ['beginner', 'intermediate', 'advanced'];
@@ -78,11 +80,35 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
 
     const handleScroll = () => {
       const scrollTop = scrollContainer.scrollTop;
-      setIsScrolled(scrollTop > 150);
+      const scrollDifference = scrollTop - lastScrollTopRef.current;
+
+      // Clear any existing timeout
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+
+      // Debounce the scroll state change
+      scrollTimeoutRef.current = window.setTimeout(() => {
+        // Only hide if scrolling down and past threshold
+        if (scrollTop > 100 && scrollDifference > 0) {
+          setIsScrolled(true);
+        }
+        // Only show if scrolling up or at top
+        else if (scrollTop < 50 || scrollDifference < 0) {
+          setIsScrolled(false);
+        }
+
+        lastScrollTopRef.current = scrollTop;
+      }, 100); // Debounce by 100ms for smooth transitions
     };
 
-    scrollContainer.addEventListener('scroll', handleScroll);
-    return () => scrollContainer.removeEventListener('scroll', handleScroll);
+    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      scrollContainer.removeEventListener('scroll', handleScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
   }, []);
 
   const getDurationSize = (duration: number): 'short' | 'medium' | 'long' => {
@@ -289,19 +315,19 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
   };
 
   return (
-    <div className={`h-full flex flex-col ${compact ? '' : 'p-3 sm:p-4 md:p-6'}`} data-onboarding="templates">
+    <div className={`h-full flex flex-col ${compact ? '' : 'p-2 sm:p-3 md:p-4'}`} data-onboarding="templates">
       {/* Header */}
       {!compact && (
-        <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all duration-300 overflow-hidden ${
-          isScrolled ? 'max-h-0 opacity-0 mb-0' : 'max-h-32 opacity-100 mb-8'
+        <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all duration-500 ease-in-out ${
+          isScrolled ? 'max-h-0 opacity-0 mb-0 pointer-events-none' : 'max-h-32 opacity-100 mb-3'
         }`}>
           <div>
-            <h1 className="font-bold text-white transition-all duration-300 text-3xl mb-2">
+            <h1 className="font-bold text-white transition-all duration-500 text-xl mb-1">
               Template Gallery
             </h1>
-            <p className="text-gray-400 transition-opacity duration-300">Professional mixing templates created by top DJs</p>
+            <p className="text-sm text-gray-400 transition-opacity duration-500">Professional mixing templates created by top DJs</p>
           </div>
-          <div className="flex items-center space-x-2 text-sm text-gray-400 transition-all duration-300">
+          <div className="flex items-center space-x-2 text-sm text-gray-400 transition-all duration-500">
             <span>{filteredTemplates.length} templates</span>
           </div>
         </div>
@@ -309,19 +335,19 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
 
       {/* Filters */}
       {!compact && (
-        <div className={`transition-all duration-300 ${
-          isScrolled ? 'max-h-0 opacity-0 mb-0 overflow-hidden' : 'opacity-100 mb-6'
+        <div className={`transition-all duration-500 ease-in-out ${
+          isScrolled ? 'max-h-0 opacity-0 mb-0 overflow-hidden pointer-events-none' : 'opacity-100 mb-3'
         }`}>
           <div className="space-y-4">
             {/* Search Bar - Always Visible */}
             <div className="relative">
-              <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+              <Search size={16} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-500" />
               <input
                 type="text"
                 placeholder="Search templates, authors..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
+                className="w-full pl-9 pr-3 py-2 text-sm bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
               />
             </div>
 
@@ -329,36 +355,36 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
             <div>
               <button
                 onClick={() => setFiltersExpanded(!filtersExpanded)}
-                className="w-full flex items-center justify-between px-4 py-3 bg-gray-800/50 hover:bg-gray-800 border border-gray-600 rounded-lg transition-all duration-200 group"
+                className="w-full flex items-center justify-between px-3 py-2 bg-gray-800/50 hover:bg-gray-800 border border-gray-600 rounded-lg transition-all duration-200 group"
               >
-                <div className="flex items-center space-x-3">
-                  <Filter size={18} className="text-cyan-500" />
-                  <span className="text-white font-medium">
+                <div className="flex items-center space-x-2">
+                  <Filter size={16} className="text-cyan-500" />
+                  <span className="text-sm text-white font-medium">
                     {filtersExpanded ? 'Hide Filters' : 'Show Filters'}
                   </span>
                   {hasActiveFilters && !filtersExpanded && (
-                    <span className="px-2 py-0.5 bg-cyan-600 text-white text-xs rounded-full">
+                    <span className="px-1.5 py-0.5 bg-cyan-600 text-white text-xs rounded-full">
                       {selectedCategories.length + selectedDifficulties.length + selectedDurations.length +
                        selectedBPMRanges.length + selectedEnergyLevels.length + selectedMoods.length +
                        selectedStyles.length + (sortBy ? 1 : 0) + (showPremiumOnly ? 1 : 0)} active
                     </span>
                   )}
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1.5">
                   {hasActiveFilters && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         clearAllFilters();
                       }}
-                      className="flex items-center space-x-1 px-2 py-1 text-xs text-cyan-400 hover:text-cyan-300 bg-gray-700 hover:bg-gray-600 rounded transition-colors duration-200"
+                      className="flex items-center space-x-1 px-1.5 py-0.5 text-xs text-cyan-400 hover:text-cyan-300 bg-gray-700 hover:bg-gray-600 rounded transition-colors duration-200"
                     >
                       <X size={12} />
                       <span>Clear</span>
                     </button>
                   )}
                   <ChevronRight
-                    size={20}
+                    size={18}
                     className={`text-gray-400 transition-transform duration-300 ${filtersExpanded ? 'rotate-90' : ''}`}
                   />
                 </div>
@@ -599,7 +625,7 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
             <p className="text-gray-400">Try adjusting your search or filters</p>
           </div>
         ) : (
-          <div className={compact ? 'flex space-x-3 overflow-x-auto pb-2' : 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3'}>
+          <div className={compact ? 'flex space-x-3 overflow-x-auto pb-2' : 'grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2.5'}>
             {filteredTemplates.map((template) => (
               <div
                 key={template.id}
