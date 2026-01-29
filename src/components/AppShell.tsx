@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Home, Music, Disc3, Headphones, Settings, Folder, AudioWaveform as Waveform, Sliders, FileAudio, User, Bell, Search, Menu, X, Activity, HelpCircle, Plus, Sparkles, Wand2, Video, Mic, Grid3X3, Clock, Share2, ListMusic, Zap, Brain, FlaskConical } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useOnboarding } from '../hooks/useOnboarding';
@@ -50,7 +50,8 @@ const AppShell: React.FC = () => {
   const [editingProjectId, setEditingProjectId] = useState<string | undefined>();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isTopBarVisible, setIsTopBarVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  const lastScrollYRef = useRef(0);
+  const scrollTimeoutRef = useRef<number | null>(null);
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
   const [transitionSongA, setTransitionSongA] = useState<UploadResult | undefined>();
@@ -226,19 +227,36 @@ const AppShell: React.FC = () => {
 
     const handleScroll = () => {
       const scrollY = mainContent.scrollTop;
+      const scrollDifference = scrollY - lastScrollYRef.current;
 
-      if (scrollY > lastScrollY && scrollY > 50) {
-        setIsTopBarVisible(false);
-      } else if (scrollY < lastScrollY) {
-        setIsTopBarVisible(true);
+      // Clear any existing timeout
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
       }
 
-      setLastScrollY(scrollY);
+      // Debounce the scroll state change
+      scrollTimeoutRef.current = window.setTimeout(() => {
+        // Hide top bar if scrolling down and past threshold
+        if (scrollY > 80 && scrollDifference > 0) {
+          setIsTopBarVisible(false);
+        }
+        // Show top bar if scrolling up or near top
+        else if (scrollY < 30 || scrollDifference < 0) {
+          setIsTopBarVisible(true);
+        }
+
+        lastScrollYRef.current = scrollY;
+      }, 100); // Debounce by 100ms
     };
 
-    mainContent.addEventListener('scroll', handleScroll);
-    return () => mainContent.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
+    mainContent.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      mainContent.removeEventListener('scroll', handleScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const renderContent = () => {
     switch (currentView) {
@@ -372,7 +390,7 @@ const AppShell: React.FC = () => {
   return (
     <div className="h-screen bg-gray-900 flex flex-col overflow-hidden">
       {/* Top Bar - Hidden on Mobile */}
-      <div className={`bg-gray-800 border-b border-gray-700 px-3 sm:px-4 py-2 sm:py-3 flex-shrink-0 transition-transform duration-300 ${isTopBarVisible ? 'translate-y-0' : '-translate-y-full'} ${isMobile ? 'hidden' : ''}`}>
+      <div className={`bg-gray-800 border-b border-gray-700 px-3 sm:px-4 py-2 sm:py-3 flex-shrink-0 transition-transform duration-500 ease-in-out ${isTopBarVisible ? 'translate-y-0' : '-translate-y-full'} ${isMobile ? 'hidden' : ''}`}>
         <div className="flex items-center justify-between gap-2">
           {/* Left Section */}
           <div className="flex items-center space-x-2 sm:space-x-4">
