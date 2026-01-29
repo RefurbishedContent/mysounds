@@ -79,95 +79,95 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
   ];
 
   return (
-    <div className="h-full flex flex-col p-3 sm:p-4 md:p-6">
+    <div className="h-full flex flex-col p-2 sm:p-3 md:p-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Music Library</h1>
-          <p className="text-gray-400">Organize and manage your audio collection</p>
+          <h1 className="text-xl font-bold text-white mb-1">Music Library</h1>
+          <p className="text-sm text-gray-400">Organize and manage your audio collection</p>
         </div>
 
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-1 bg-gray-800 rounded-lg p-1">
+        <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-0.5 bg-gray-800 rounded-lg p-0.5">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-md transition-all duration-200 ${
+              className={`p-1.5 rounded-md transition-all duration-200 ${
                 viewMode === 'grid'
                   ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white'
                   : 'text-gray-400 hover:text-white hover:bg-gray-700'
               }`}
             >
-              <Grid3X3 size={18} />
+              <Grid3X3 size={16} />
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-2 rounded-md transition-all duration-200 ${
+              className={`p-1.5 rounded-md transition-all duration-200 ${
                 viewMode === 'list'
                   ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white'
                   : 'text-gray-400 hover:text-white hover:bg-gray-700'
               }`}
             >
-              <List size={18} />
+              <List size={16} />
             </button>
           </div>
 
           <button
             onClick={() => setShowUploader(true)}
-            className="px-6 py-3 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105"
+            className="px-4 py-2 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105"
           >
-            <Upload size={20} />
-            <span>Upload Music</span>
+            <Upload size={16} />
+            <span className="text-sm">Upload Music</span>
           </button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center space-x-2 mb-6">
+      <div className="flex items-center space-x-1.5 mb-3">
         <button
           onClick={() => setCurrentTab('songs')}
-          className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 ${
+          className={`px-4 py-2 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-1.5 text-sm ${
             currentTab === 'songs'
               ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg'
               : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
           }`}
         >
-          <Music size={18} />
+          <Music size={16} />
           <span>Songs</span>
-          <span className="px-2 py-0.5 bg-white/20 rounded-full text-xs">{songs.length}</span>
+          <span className="px-1.5 py-0.5 bg-white/20 rounded-full text-xs">{songs.length}</span>
         </button>
         <button
           onClick={() => setCurrentTab('blends')}
-          className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 ${
+          className={`px-4 py-2 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-1.5 text-sm ${
             currentTab === 'blends'
               ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg'
               : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
           }`}
         >
-          <Sparkles size={18} />
+          <Sparkles size={16} />
           <span>Blends</span>
-          <span className="px-2 py-0.5 bg-white/20 rounded-full text-xs">{blends.length}</span>
+          <span className="px-1.5 py-0.5 bg-white/20 rounded-full text-xs">{blends.length}</span>
         </button>
       </div>
 
       {/* Search & Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row gap-2 mb-3">
         <div className="relative flex-1">
-          <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+          <Search size={16} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-500" />
           <input
             type="text"
             placeholder="Search your music library..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
+            className="w-full pl-9 pr-3 py-2 text-sm bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
           />
         </div>
 
-        <div className="flex items-center space-x-4">
-          <Filter size={18} className="text-gray-500" />
+        <div className="flex items-center space-x-2">
+          <Filter size={16} className="text-gray-500" />
           <select
             value={selectedFilter}
             onChange={(e) => setSelectedFilter(e.target.value)}
-            className="px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
+            className="px-3 py-2 text-sm bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
           >
             {filters.map(filter => (
               <option key={filter.value} value={filter.value}>
@@ -189,34 +189,34 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
           </div>
         ) : currentTab === 'songs' && filteredSongs.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
-            <div className="text-center space-y-6 max-w-md">
-              <div className="w-24 h-24 bg-gradient-to-r from-cyan-600/20 via-blue-600/20 to-purple-600/20 rounded-2xl flex items-center justify-center mx-auto">
-                <Music size={48} className="text-cyan-400" />
+            <div className="text-center space-y-4 max-w-md">
+              <div className="w-16 h-16 bg-gradient-to-r from-cyan-600/20 via-blue-600/20 to-purple-600/20 rounded-xl flex items-center justify-center mx-auto">
+                <Music size={32} className="text-cyan-400" />
               </div>
-              <div className="space-y-3">
-                <h2 className="text-2xl font-bold text-white">Your Library is Empty</h2>
-                <p className="text-gray-400 leading-relaxed">
+              <div className="space-y-2">
+                <h2 className="text-lg font-bold text-white">Your Library is Empty</h2>
+                <p className="text-sm text-gray-400 leading-relaxed">
                   Start building your music collection by uploading audio files.
                 </p>
               </div>
               <button
                 onClick={() => setShowUploader(true)}
-                className="w-full px-6 py-4 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105"
+                className="w-full px-4 py-2.5 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105"
               >
-                <Upload size={20} />
-                <span>Upload Your First Track</span>
+                <Upload size={16} />
+                <span className="text-sm">Upload Your First Track</span>
               </button>
             </div>
           </div>
         ) : currentTab === 'blends' && blends.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
-            <div className="text-center space-y-6 max-w-md">
-              <div className="w-24 h-24 bg-gradient-to-r from-purple-600/20 via-cyan-600/20 to-blue-600/20 rounded-2xl flex items-center justify-center mx-auto">
-                <Sparkles size={48} className="text-purple-400" />
+            <div className="text-center space-y-4 max-w-md">
+              <div className="w-16 h-16 bg-gradient-to-r from-purple-600/20 via-cyan-600/20 to-blue-600/20 rounded-xl flex items-center justify-center mx-auto">
+                <Sparkles size={32} className="text-purple-400" />
               </div>
-              <div className="space-y-3">
-                <h2 className="text-2xl font-bold text-white">No Blends Yet</h2>
-                <p className="text-gray-400 leading-relaxed">
+              <div className="space-y-2">
+                <h2 className="text-lg font-bold text-white">No Blends Yet</h2>
+                <p className="text-sm text-gray-400 leading-relaxed">
                   Create your first transition blend by selecting songs from your library and using the Transitions section.
                 </p>
               </div>
@@ -225,17 +225,17 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
         ) : currentTab === 'songs' ? (
           <>
             {viewMode === 'grid' ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                 {filteredSongs.map((song) => (
                   <div
                     key={song.id}
                     onClick={() => handleSongClick(song)}
-                    className="group bg-gray-800 rounded-lg p-4 transition-all duration-200 hover:bg-gray-750 hover:shadow-lg relative cursor-pointer"
+                    className="group bg-gray-800 rounded-lg p-3 transition-all duration-200 hover:bg-gray-750 hover:shadow-lg relative cursor-pointer"
                   >
-                    <div className="w-full aspect-square bg-gradient-to-br from-cyan-600/20 to-purple-600/20 rounded-lg mb-3 flex items-center justify-center relative">
-                      <Music className="w-12 h-12 text-cyan-400" />
+                    <div className="w-full aspect-square bg-gradient-to-br from-cyan-600/20 to-purple-600/20 rounded-lg mb-2 flex items-center justify-center relative">
+                      <Music className="w-10 h-10 text-cyan-400" />
                     </div>
-                    <h3 className="text-white font-medium text-sm truncate mb-1">
+                    <h3 className="text-white font-medium text-xs truncate mb-0.5">
                       {song.originalName}
                     </h3>
                     <p className="text-gray-400 text-xs">
@@ -245,19 +245,19 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
                 ))}
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {filteredSongs.map((song) => (
                   <div
                     key={song.id}
                     onClick={() => handleSongClick(song)}
-                    className="group flex items-center space-x-4 bg-gray-800 rounded-lg p-4 transition-all duration-200 hover:bg-gray-750 cursor-pointer"
+                    className="group flex items-center space-x-3 bg-gray-800 rounded-lg p-3 transition-all duration-200 hover:bg-gray-750 cursor-pointer"
                   >
-                    <div className="w-12 h-12 bg-gradient-to-br from-cyan-600/20 to-purple-600/20 rounded flex items-center justify-center flex-shrink-0">
-                      <Music className="w-6 h-6 text-cyan-400" />
+                    <div className="w-10 h-10 bg-gradient-to-br from-cyan-600/20 to-purple-600/20 rounded flex items-center justify-center flex-shrink-0">
+                      <Music className="w-5 h-5 text-cyan-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-white font-medium truncate">{song.originalName}</h3>
-                      <p className="text-gray-400 text-sm">
+                      <h3 className="text-white font-medium text-sm truncate">{song.originalName}</h3>
+                      <p className="text-gray-400 text-xs">
                         {song.analysis?.bpm ? `${song.analysis.bpm} BPM` : 'Not analyzed'}
                       </p>
                     </div>
@@ -267,16 +267,16 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
             )}
           </>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {blends.map((blend) => (
               <div
                 key={blend.id}
-                className="group bg-gray-800 rounded-lg p-6 transition-all duration-200 hover:bg-gray-750 hover:shadow-lg border border-gray-700 hover:border-cyan-500"
+                className="group bg-gray-800 rounded-lg p-4 transition-all duration-200 hover:bg-gray-750 hover:shadow-lg border border-gray-700 hover:border-cyan-500"
               >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-2">
-                    <Sparkles className="w-5 h-5 text-purple-400" />
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-1.5">
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
                       blend.status === 'completed' ? 'bg-green-500/20 text-green-400' :
                       blend.status === 'processing' ? 'bg-yellow-500/20 text-yellow-400' :
                       'bg-red-500/20 text-red-400'
@@ -289,36 +289,36 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
                       href={blend.url}
                       download
                       onClick={(e) => e.stopPropagation()}
-                      className="p-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg transition-colors"
+                      className="p-1.5 bg-cyan-600 hover:bg-cyan-500 rounded-lg transition-colors"
                     >
-                      <Download className="w-4 h-4 text-white" />
+                      <Download className="w-3.5 h-3.5 text-white" />
                     </a>
                   )}
                 </div>
 
-                <h3 className="text-white font-semibold text-lg mb-2 truncate">
+                <h3 className="text-white font-semibold text-sm mb-2 truncate">
                   {blend.name}
                 </h3>
 
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center justify-between text-sm">
+                <div className="space-y-1.5 mb-3">
+                  <div className="flex items-center justify-between text-xs">
                     <span className="text-gray-400">Duration:</span>
                     <span className="text-white font-mono">{Math.floor(blend.duration / 60)}:{(blend.duration % 60).toString().padStart(2, '0')}</span>
                   </div>
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between text-xs">
                     <span className="text-gray-400">Format:</span>
                     <span className="text-white uppercase">{blend.format}</span>
                   </div>
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between text-xs">
                     <span className="text-gray-400">Quality:</span>
                     <span className="text-white capitalize">{blend.quality}</span>
                   </div>
                 </div>
 
                 {blend.templateName && (
-                  <div className="pt-3 border-t border-gray-700">
-                    <div className="flex items-center space-x-2 text-sm text-gray-400">
-                      <Clock size={14} />
+                  <div className="pt-2 border-t border-gray-700">
+                    <div className="flex items-center space-x-1.5 text-xs text-gray-400">
+                      <Clock size={12} />
                       <span>Template: {blend.templateName}</span>
                     </div>
                   </div>

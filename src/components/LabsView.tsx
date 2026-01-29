@@ -60,27 +60,27 @@ const LabsView: React.FC<LabsViewProps> = ({ onSelectTool }) => {
   return (
     <div className="h-full flex flex-col bg-gray-900">
       <div className="flex-1 overflow-y-auto pb-20">
-        <div className="bg-gradient-to-br from-purple-500/10 via-blue-500/10 to-cyan-600/10 p-6 md:p-8 border-b border-gray-700">
+        <div className="bg-gradient-to-br from-purple-500/10 via-blue-500/10 to-cyan-600/10 p-3 md:p-4 border-b border-gray-700">
           <div className="max-w-4xl mx-auto">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30">
-                <FlaskConical size={24} className="text-white" />
+            <div className="flex items-center space-x-2 mb-2">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/30">
+                <FlaskConical size={20} className="text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-white">Labs</h1>
-                <p className="text-sm text-gray-400">Professional editing & mixing tools</p>
+                <h1 className="text-xl font-bold text-white">Labs</h1>
+                <p className="text-xs text-gray-400">Professional editing & mixing tools</p>
               </div>
             </div>
-            <p className="text-gray-300 leading-relaxed">
+            <p className="text-sm text-gray-300 leading-relaxed">
               Access powerful editing and mixing tools to craft the perfect transitions.
               Experiment with advanced features to achieve professional-quality results.
             </p>
           </div>
         </div>
 
-        <div className="p-4 md:p-6">
+        <div className="p-3 md:p-4">
           <div className="max-w-4xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {tools.map((tool) => {
                 const Icon = tool.icon;
                 return (
@@ -88,25 +88,25 @@ const LabsView: React.FC<LabsViewProps> = ({ onSelectTool }) => {
                     key={tool.id}
                     onClick={tool.comingSoon ? undefined : tool.action}
                     disabled={tool.comingSoon}
-                    className={`relative overflow-hidden text-left p-6 bg-gray-800 border border-gray-700 rounded-xl transition-all duration-200 ${
+                    className={`relative overflow-hidden text-left p-4 bg-gray-800 border border-gray-700 rounded-lg transition-all duration-200 ${
                       tool.comingSoon
                         ? 'opacity-60 cursor-not-allowed'
                         : 'hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/20 hover:scale-105'
                     }`}
                   >
                     <div className="relative z-10">
-                      <div className={`w-12 h-12 bg-gradient-to-r ${tool.gradient} rounded-lg flex items-center justify-center mb-4 shadow-lg`}>
-                        <Icon size={24} className="text-white" />
+                      <div className={`w-10 h-10 bg-gradient-to-r ${tool.gradient} rounded-lg flex items-center justify-center mb-3 shadow-lg`}>
+                        <Icon size={20} className="text-white" />
                       </div>
-                      <h3 className="text-xl font-bold text-white mb-2 flex items-center space-x-2">
+                      <h3 className="text-base font-bold text-white mb-1.5 flex items-center space-x-1.5">
                         <span>{tool.title}</span>
                         {tool.comingSoon && (
-                          <span className="text-xs px-2 py-1 bg-gray-700 rounded text-gray-400">
-                            Coming Soon
+                          <span className="text-xs px-1.5 py-0.5 bg-gray-700 rounded text-gray-400">
+                            Soon
                           </span>
                         )}
                       </h3>
-                      <p className="text-gray-400 text-sm leading-relaxed">
+                      <p className="text-gray-400 text-xs leading-relaxed">
                         {tool.description}
                       </p>
                     </div>

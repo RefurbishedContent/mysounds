@@ -244,22 +244,22 @@ const AppShell: React.FC = () => {
     switch (currentView) {
       case 'home':
         return (
-          <div className="h-full flex flex-col p-6">
+          <div className="h-full flex flex-col p-4">
             <div className="flex-1 flex items-center justify-center">
-              <div className="text-center space-y-6 max-w-2xl">
-                <div className="w-24 h-24 bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto shadow-2xl shadow-cyan-500/50">
-                  <Music size={48} className="text-white" />
+              <div className="text-center space-y-4 max-w-2xl">
+                <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto shadow-2xl shadow-cyan-500/50">
+                  <Music size={32} className="text-white" />
                 </div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
                   Welcome to MySounds.ai
                 </h1>
-                <p className="text-gray-400 text-lg leading-relaxed">
+                <p className="text-sm text-gray-400 leading-relaxed">
                   Create seamless transitions between your songs using AI-powered templates.
                   Upload your music library and start blending tracks like a pro.
                 </p>
                 <button
                   onClick={() => setCurrentView('library')}
-                  className="px-8 py-4 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105"
+                  className="px-6 py-3 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105"
                 >
                   Get Started
                 </button>
@@ -284,12 +284,12 @@ const AppShell: React.FC = () => {
       case 'share-schedule':
         return (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-2xl flex items-center justify-center mx-auto">
-                <Share2 size={32} className="text-white" />
+            <div className="text-center space-y-3">
+              <div className="w-14 h-14 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-xl flex items-center justify-center mx-auto">
+                <Share2 size={24} className="text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-white">Coming Soon</h2>
-              <p className="text-gray-400">Share and schedule your transitions</p>
+              <h2 className="text-lg font-bold text-white">Coming Soon</h2>
+              <p className="text-sm text-gray-400">Share and schedule your transitions</p>
             </div>
           </div>
         );

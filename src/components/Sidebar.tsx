@@ -20,28 +20,28 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
   return (
     <div className={`
       bg-gray-800 border-r border-gray-700 transition-all duration-300 ease-in-out
-      ${isCollapsed ? 'w-16' : 'w-64'}
+      ${isCollapsed ? 'w-14' : 'w-50'}
     `}>
       <div className="h-full flex flex-col">
         {/* Navigation */}
-        <nav className="flex-1 px-2 py-4 space-y-1">
+        <nav className="flex-1 px-2 py-3 space-y-0.5">
           {menuItems.map((item, index) => {
             const Icon = item.icon;
             return (
               <button
                 key={index}
                 className={`
-                  w-full flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200
-                  ${item.active 
-                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg' 
+                  w-full flex items-center px-2 py-1.5 text-sm rounded-lg transition-all duration-200
+                  ${item.active
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
                     : 'text-gray-400 hover:text-white hover:bg-gray-700'
                   }
                   ${isCollapsed ? 'justify-center' : 'justify-start'}
                 `}
               >
-                <Icon size={20} className="flex-shrink-0" />
+                <Icon size={18} className="flex-shrink-0" />
                 {!isCollapsed && (
-                  <span className="ml-3 font-medium">{item.label}</span>
+                  <span className="ml-2.5 font-medium">{item.label}</span>
                 )}
               </button>
             );
@@ -49,14 +49,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
         </nav>
 
         {/* Bottom Section */}
-        <div className="p-4 border-t border-gray-700">
+        <div className="p-2.5 border-t border-gray-700">
           <button className={`
-            w-full flex items-center px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all duration-200
+            w-full flex items-center px-2 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all duration-200
             ${isCollapsed ? 'justify-center' : 'justify-start'}
           `}>
-            <Settings size={20} className="flex-shrink-0" />
+            <Settings size={18} className="flex-shrink-0" />
             {!isCollapsed && (
-              <span className="ml-3 font-medium">Settings</span>
+              <span className="ml-2.5 font-medium">Settings</span>
             )}
           </button>
         </div>

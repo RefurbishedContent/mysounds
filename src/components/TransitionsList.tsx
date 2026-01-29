@@ -79,51 +79,47 @@ const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition, onE
   };
 
   return (
-    <div className="h-full flex flex-col p-3 sm:p-4 md:p-6">
-      {!isScrolled && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 transition-all duration-300">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">My Transitions</h1>
-            <p className="text-gray-400">View and manage your saved song transitions</p>
-          </div>
+    <div className="h-full flex flex-col p-2 sm:p-3 md:p-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
+        <div>
+          <h1 className="text-xl font-bold text-white mb-1">My Transitions</h1>
+          <p className="text-sm text-gray-400">View and manage your saved song transitions</p>
+        </div>
 
-          <button
-            onClick={onCreateNew}
-            className="px-6 py-3 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105"
+        <button
+          onClick={onCreateNew}
+          className="px-4 py-2 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105"
+        >
+          <Plus size={16} />
+          <span className="text-sm">Create New Transition</span>
+        </button>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-2 mb-3">
+        <div className="relative flex-1">
+          <Search size={16} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Search transitions..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 text-sm bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200"
+          />
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Filter size={16} className="text-gray-500" />
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value as any)}
+            className="px-3 py-2 text-sm bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200"
           >
-            <Plus size={20} />
-            <span>Create New Transition</span>
-          </button>
+            <option value="all">All Status</option>
+            <option value="draft">Draft</option>
+            <option value="ready">Ready</option>
+          </select>
         </div>
-      )}
-
-      {!isScrolled && (
-        <div className="flex flex-col sm:flex-row gap-4 mb-6 transition-all duration-300">
-          <div className="relative flex-1">
-            <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search transitions..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200"
-            />
-          </div>
-
-          <div className="flex items-center space-x-4">
-            <Filter size={18} className="text-gray-500" />
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
-              className="px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200"
-            >
-              <option value="all">All Status</option>
-              <option value="draft">Draft</option>
-              <option value="ready">Ready</option>
-            </select>
-          </div>
-        </div>
-      )}
+      </div>
 
       <div className="flex-1 overflow-y-auto">
         {loading ? (
@@ -135,44 +131,44 @@ const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition, onE
           </div>
         ) : filteredTransitions.length === 0 ? (
           <div className="flex items-center justify-center h-64">
-            <div className="text-center space-y-4">
-              <div className="w-24 h-24 bg-gradient-to-r from-cyan-600/20 via-blue-600/20 to-purple-600/20 rounded-2xl flex items-center justify-center mx-auto">
-                <Sparkles size={48} className="text-cyan-400" />
+            <div className="text-center space-y-3">
+              <div className="w-16 h-16 bg-gradient-to-r from-cyan-600/20 via-blue-600/20 to-purple-600/20 rounded-xl flex items-center justify-center mx-auto">
+                <Sparkles size={32} className="text-cyan-400" />
               </div>
-              <div className="space-y-2">
-                <h2 className="text-2xl font-bold text-white">No Transitions Yet</h2>
-                <p className="text-gray-400">
+              <div className="space-y-1.5">
+                <h2 className="text-lg font-bold text-white">No Transitions Yet</h2>
+                <p className="text-sm text-gray-400">
                   Create your first transition by blending two songs together
                 </p>
               </div>
               <button
                 onClick={onCreateNew}
-                className="px-8 py-4 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-xl font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105"
+                className="px-4 py-2.5 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105 mx-auto"
               >
-                <Plus size={20} />
-                <span>Create New Transition</span>
+                <Plus size={16} />
+                <span className="text-sm">Create New Transition</span>
               </button>
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {filteredTransitions.map((transition) => (
               <div
                 key={transition.id}
-                className="bg-gray-800 rounded-xl border border-gray-700 p-6 hover:border-gray-600 transition-all duration-200"
+                className="bg-gray-800 rounded-lg border border-gray-700 p-4 hover:border-gray-600 transition-all duration-200"
               >
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-white font-semibold text-lg mb-2 truncate">
+                    <h3 className="text-white font-semibold text-sm mb-1.5 truncate">
                       {transition.name}
                     </h3>
-                    <div className="flex items-center space-x-2 text-sm text-gray-400 mb-3">
-                      <Clock size={14} />
+                    <div className="flex items-center space-x-1.5 text-xs text-gray-400 mb-2">
+                      <Clock size={12} />
                       <span>{formatDate(transition.createdAt)}</span>
                     </div>
                   </div>
                   <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                       transition.status === 'ready'
                         ? 'bg-green-900/30 text-green-400'
                         : transition.status === 'draft'
@@ -184,42 +180,42 @@ const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition, onE
                   </span>
                 </div>
 
-                <div className="space-y-3 mb-4">
-                  <div className="flex items-center space-x-3 bg-gray-900/50 rounded-lg p-3">
-                    <Music className="w-5 h-5 text-blue-400 flex-shrink-0" />
+                <div className="space-y-2 mb-3">
+                  <div className="flex items-center space-x-2 bg-gray-900/50 rounded-lg p-2">
+                    <Music className="w-4 h-4 text-blue-400 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-gray-500">Song A (Ending)</p>
-                      <p className="text-sm text-white truncate">
+                      <p className="text-xs text-white truncate">
                         {transition.metadata?.songAName || 'Unknown'}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-center">
-                    <div className="flex items-center space-x-2 text-purple-400">
-                      <div className="w-8 h-0.5 bg-purple-500"></div>
-                      <Sparkles className="w-4 h-4" />
-                      <div className="w-8 h-0.5 bg-purple-500"></div>
+                    <div className="flex items-center space-x-1.5 text-purple-400">
+                      <div className="w-6 h-0.5 bg-purple-500"></div>
+                      <Sparkles className="w-3 h-3" />
+                      <div className="w-6 h-0.5 bg-purple-500"></div>
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-3 bg-gray-900/50 rounded-lg p-3">
-                    <Music className="w-5 h-5 text-green-400 flex-shrink-0" />
+                  <div className="flex items-center space-x-2 bg-gray-900/50 rounded-lg p-2">
+                    <Music className="w-4 h-4 text-green-400 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-gray-500">Song B (Beginning)</p>
-                      <p className="text-sm text-white truncate">
+                      <p className="text-xs text-white truncate">
                         {transition.metadata?.songBName || 'Unknown'}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-gray-900/50 rounded-lg p-3 mb-4">
-                  <div className="flex items-center justify-between text-sm">
+                <div className="bg-gray-900/50 rounded-lg p-2 mb-3">
+                  <div className="flex items-center justify-between text-xs">
                     <span className="text-gray-400">Transition Duration</span>
                     <span className="text-white font-medium">{transition.transitionDuration}s</span>
                   </div>
-                  <div className="flex items-center justify-between text-sm mt-2">
+                  <div className="flex items-center justify-between text-xs mt-1.5">
                     <span className="text-gray-400">Template</span>
                     <span className="text-white font-medium truncate ml-2">
                       {transition.metadata?.templateName || 'Unknown'}
@@ -227,26 +223,26 @@ const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition, onE
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1.5">
                   <button
                     onClick={() => onEditTransition?.(transition.id)}
-                    className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all duration-200 flex items-center justify-center space-x-2"
+                    className="flex-1 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all duration-200 flex items-center justify-center space-x-1.5 text-xs"
                   >
-                    <Edit size={16} />
+                    <Edit size={14} />
                     <span>Edit</span>
                   </button>
                   <button
                     onClick={() => onPlayTransition?.(transition.id)}
-                    className="flex-1 px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg transition-all duration-200 flex items-center justify-center space-x-2"
+                    className="flex-1 px-3 py-1.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg transition-all duration-200 flex items-center justify-center space-x-1.5 text-xs"
                   >
-                    <Play size={16} />
+                    <Play size={14} />
                     <span>Preview</span>
                   </button>
                   <button
                     onClick={() => handleDelete(transition.id)}
-                    className="p-2 bg-red-900/30 hover:bg-red-900/50 text-red-400 rounded-lg transition-all duration-200"
+                    className="p-1.5 bg-red-900/30 hover:bg-red-900/50 text-red-400 rounded-lg transition-all duration-200"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={14} />
                   </button>
                 </div>
               </div>
