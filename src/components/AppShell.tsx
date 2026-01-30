@@ -20,9 +20,10 @@ import ProfileView from './ProfileView';
 import AIFusionView from './AIFusionView';
 import LabsView from './LabsView';
 import MobileBottomNav, { MobileNavView } from './MobileBottomNav';
+import ProjectCreationWizard from './ProjectCreationWizard';
 import { UploadResult } from '../lib/storage';
 
-type AppView = 'home' | 'create-with-ai' | 'ai-design' | 'ai-video' | 'ai-voice' | 'all-tools' | 'templates' | 'recent-projects' | 'share-schedule' | 'create-transition' | 'editor' | 'template-manager' | 'library' | 'mixer' | 'preview' | 'files' | 'transition-editor' | 'transitions' | 'playlists' | 'profile';
+type AppView = 'home' | 'create-with-ai' | 'ai-design' | 'ai-video' | 'ai-voice' | 'all-tools' | 'templates' | 'recent-projects' | 'share-schedule' | 'create-transition' | 'editor' | 'template-manager' | 'library' | 'mixer' | 'preview' | 'files' | 'transition-editor' | 'transitions' | 'playlists' | 'profile' | 'project-wizard';
 
 interface MenuItem {
   id: string;
@@ -59,7 +60,7 @@ const AppShell: React.FC = () => {
   const [editingTransitionId, setEditingTransitionId] = useState<string | undefined>();
 
   const handleCreateNew = () => {
-    setCurrentView('library');
+    setCurrentView('project-wizard');
   };
 
   const menuSections: MenuSection[] = [
@@ -201,6 +202,21 @@ const AppShell: React.FC = () => {
 
   const handleLabToolSelect = (tool: string) => {
     setCurrentView(tool as AppView);
+  };
+
+  const handleWizardComplete = (projectType: 'transition' | 'mixer', projectData: any) => {
+    if (projectType === 'transition') {
+      setTransitionSongA(projectData.songA);
+      setTransitionSongB(projectData.songB);
+      setEditingTransitionId(projectData.transitionId);
+      setCurrentView('transition-editor');
+    } else if (projectType === 'mixer') {
+      setCurrentView('mixer');
+    }
+  };
+
+  const handleWizardCancel = () => {
+    setCurrentView('library');
   };
 
   // Sync mobile nav view with current view
@@ -370,6 +386,13 @@ const AppShell: React.FC = () => {
               onboarding.resetOnboarding();
               setCurrentView('editor');
             }}
+          />
+        );
+      case 'project-wizard':
+        return (
+          <ProjectCreationWizard
+            onComplete={handleWizardComplete}
+            onCancel={handleWizardCancel}
           />
         );
       default:
