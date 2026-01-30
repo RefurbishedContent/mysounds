@@ -81,11 +81,11 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
 
     return (
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
-          <div className="max-w-6xl mx-auto space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-3xl font-bold text-white">Select Your Songs</h2>
-              <p className="text-gray-400">Choose two songs to create a seamless transition</p>
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
+          <div className="max-w-6xl mx-auto space-y-4">
+            <div className="text-center space-y-1">
+              <h2 className="text-xl font-bold text-white">Select Your Songs</h2>
+              <p className="text-sm text-gray-400">Choose two songs to create a seamless transition</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -211,11 +211,11 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
-        <div className="max-w-6xl mx-auto space-y-6">
-          <div className="text-center space-y-2">
-            <h2 className="text-3xl font-bold text-white">Select Your Tracks</h2>
-            <p className="text-gray-400">Choose one or more tracks for your mixer project</p>
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
+        <div className="max-w-6xl mx-auto space-y-4">
+          <div className="text-center space-y-1">
+            <h2 className="text-xl font-bold text-white">Select Your Tracks</h2>
+            <p className="text-sm text-gray-400">Choose one or more tracks for your mixer project</p>
           </div>
 
           {selectedSongs.length > 0 && (

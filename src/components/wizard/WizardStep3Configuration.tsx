@@ -69,11 +69,11 @@ const WizardStep3Configuration: React.FC<WizardStep3ConfigurationProps> = ({
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
-        <div className="max-w-4xl mx-auto space-y-6">
-          <div className="text-center space-y-2">
-            <h2 className="text-3xl font-bold text-white">Configure Your Project</h2>
-            <p className="text-gray-400">Name your project and adjust settings</p>
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
+        <div className="max-w-4xl mx-auto space-y-4">
+          <div className="text-center space-y-1">
+            <h2 className="text-xl font-bold text-white">Configure Your Project</h2>
+            <p className="text-sm text-gray-400">Name your project and adjust settings</p>
           </div>
 
           <div className="space-y-4">

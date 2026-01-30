@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, Music, Disc3, Headphones, Settings, Folder, AudioWaveform as Waveform, Sliders, FileAudio, User, Bell, Search, Menu, X, Activity, HelpCircle, Plus, Sparkles, Wand2, Video, Mic, Grid3X3, Clock, Share2, ListMusic, Zap, Brain, FlaskConical } from 'lucide-react';
+import { Home, Music, Disc3, Headphones, Settings, Folder, AudioWaveform as Waveform, Sliders, FileAudio, User, Bell, Search, Menu, X, Activity, HelpCircle, Plus, Sparkles, Wand2, Video, Mic, Grid3X3, Clock, Share2, ListMusic, Zap, Brain, FlaskConical, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -527,13 +527,25 @@ const AppShell: React.FC = () => {
 
         {/* Sidebar - Hidden on Mobile (bottom nav replaces it) */}
         <div className={`
-          bg-gray-800 border-r border-gray-700 transition-all duration-300 ease-in-out
+          bg-gray-800 border-r border-gray-700 transition-all duration-300 ease-in-out relative
           ${isMobile ? 'hidden' : ''}
           md:translate-x-0
           md:relative inset-y-0 left-0 z-50
           md:w-auto
           ${isSidebarCollapsed ? 'md:w-16' : 'md:w-64'}
         `}>
+          <button
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            className="hidden md:flex absolute -right-3 top-6 z-50 w-6 h-6 bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-full items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl"
+            title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {isSidebarCollapsed ? (
+              <ChevronRight size={14} className="text-gray-300" />
+            ) : (
+              <ChevronLeft size={14} className="text-gray-300" />
+            )}
+          </button>
+
           <div className="h-full flex flex-col">
             {/* Mobile Close Button */}
             <div className="md:hidden flex items-center justify-between p-4 border-b border-gray-700">

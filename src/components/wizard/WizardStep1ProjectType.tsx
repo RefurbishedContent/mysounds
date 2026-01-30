@@ -31,23 +31,18 @@ const WizardStep1ProjectType: React.FC<WizardStep1ProjectTypeProps> = ({ onSelec
   ];
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 overflow-y-auto">
-      <div className="max-w-5xl w-full space-y-8">
-        <div className="text-center space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <div className="flex items-center justify-center space-x-3">
-            <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-cyan-500/50 animate-in zoom-in duration-500">
-              <div className="w-10 h-10 bg-gradient-to-br from-white to-cyan-100 rounded-lg opacity-90"></div>
-            </div>
-          </div>
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+    <div className="flex-1 flex flex-col p-4 md:p-6 overflow-y-auto">
+      <div className="max-w-5xl w-full mx-auto space-y-6">
+        <div className="text-center space-y-2">
+          <h1 className="text-2xl md:text-3xl font-bold text-white">
             Create a New Project
           </h1>
-          <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed">
-            Choose your project type to get started. We'll guide you through each step to create something amazing.
+          <p className="text-sm text-gray-400">
+            Choose your project type to get started
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {projectTypes.map((type, index) => {
             const Icon = type.icon;
             return (
@@ -100,10 +95,6 @@ const WizardStep1ProjectType: React.FC<WizardStep1ProjectTypeProps> = ({ onSelec
               </button>
             );
           })}
-        </div>
-
-        <div className="text-center text-sm text-gray-500 animate-in fade-in duration-700 delay-300">
-          <p>Don't worry, you can always create more projects later!</p>
         </div>
       </div>
     </div>
