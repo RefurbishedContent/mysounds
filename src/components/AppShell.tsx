@@ -490,7 +490,7 @@ const AppShell: React.FC = () => {
 
               {/* User Menu */}
               {showUserMenu && (
-                <div className="absolute top-full right-0 mt-2 w-48 bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-50">
+                <div className="absolute top-full right-0 mt-2 w-48 bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-[100]">
                   <div className="py-1">
                     <a href="#" className="flex items-center space-x-2 px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-700 transition-colors duration-200">
                       <User size={16} />
