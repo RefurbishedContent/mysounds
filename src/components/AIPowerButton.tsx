@@ -76,7 +76,7 @@ export const AIPowerButton: React.FC<AIPowerButtonProps> = ({
         onClick={handleClick}
         disabled={!canAnalyze || isAnalyzing}
         className={`
-          group relative px-6 py-3 rounded-lg font-semibold transition-all duration-200
+          group relative px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200
           ${canAnalyze && !isAnalyzing
             ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-500 hover:via-pink-500 hover:to-blue-500 text-white shadow-lg shadow-purple-500/50 hover:shadow-xl hover:shadow-purple-500/60 hover:scale-105'
             : 'bg-gray-700 text-gray-400 cursor-not-allowed'
@@ -84,22 +84,22 @@ export const AIPowerButton: React.FC<AIPowerButtonProps> = ({
           ${className}
         `}
       >
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1.5">
           {isAnalyzing ? (
             <>
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" />
               <span>Analyzing...</span>
             </>
           ) : analysisComplete ? (
             <>
-              <CheckCircle className="w-5 h-5" />
+              <CheckCircle className="w-4 h-4" />
               <span>Complete!</span>
             </>
           ) : (
             <>
-              <Sparkles className="w-5 h-5" />
+              <Sparkles className="w-4 h-4" />
               <span>AI Match Templates</span>
-              <div className="flex items-center space-x-1 px-2 py-0.5 bg-white/20 rounded-full text-xs">
+              <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-white/20 rounded-full text-xs">
                 <Zap className="w-3 h-3" />
                 <span>{creditsNeeded}</span>
               </div>
@@ -108,8 +108,8 @@ export const AIPowerButton: React.FC<AIPowerButtonProps> = ({
         </div>
 
         {!hasEnoughCredits && !isAnalyzing && (
-          <div className="absolute -top-2 -right-2">
-            <Crown className="w-5 h-5 text-yellow-400" />
+          <div className="absolute -top-1 -right-1">
+            <Crown className="w-4 h-4 text-yellow-400" />
           </div>
         )}
       </button>
