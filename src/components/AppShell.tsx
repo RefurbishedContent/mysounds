@@ -53,6 +53,7 @@ const AppShell: React.FC = () => {
   const [isTopBarVisible, setIsTopBarVisible] = useState(true);
   const lastScrollYRef = useRef(0);
   const scrollTimeoutRef = useRef<number | null>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
   const [transitionSongA, setTransitionSongA] = useState<UploadResult | undefined>();
@@ -274,6 +275,22 @@ const AppShell: React.FC = () => {
     };
   }, []);
 
+  // Handle click outside user menu
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    if (showUserMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showUserMenu]);
+
   const renderContent = () => {
     switch (currentView) {
       case 'home':
@@ -413,7 +430,7 @@ const AppShell: React.FC = () => {
   return (
     <div className="h-screen bg-gray-900 flex flex-col overflow-hidden">
       {/* Top Bar - Hidden on Mobile */}
-      <div className={`bg-gray-800 border-b border-gray-700 px-3 sm:px-4 py-2 sm:py-3 flex-shrink-0 transition-transform duration-500 ease-in-out ${isTopBarVisible ? 'translate-y-0' : '-translate-y-full'} ${isMobile ? 'hidden' : ''}`}>
+      <div className={`bg-gray-800 border-b border-gray-700 px-3 sm:px-4 py-2 sm:py-3 flex-shrink-0 transition-transform duration-500 ease-in-out z-[60] relative ${isTopBarVisible ? 'translate-y-0' : '-translate-y-full'} ${isMobile ? 'hidden' : ''}`}>
         <div className="flex items-center justify-between gap-2">
           {/* Left Section */}
           <div className="flex items-center space-x-2 sm:space-x-4">
@@ -470,7 +487,7 @@ const AppShell: React.FC = () => {
             </button>
 
             {/* User Profile */}
-            <div className="relative">
+            <div ref={userMenuRef} className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center space-x-3 pl-3 border-l border-gray-600 hover:bg-gray-700 rounded-lg p-2 transition-all duration-200"
@@ -490,7 +507,7 @@ const AppShell: React.FC = () => {
 
               {/* User Menu */}
               {showUserMenu && (
-                <div className="absolute top-full right-0 mt-2 w-48 bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-[100]">
+                <div className="absolute top-full right-0 mt-2 w-48 bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-[200]">
                   <div className="py-1">
                     <a href="#" className="flex items-center space-x-2 px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-700 transition-colors duration-200">
                       <User size={16} />
