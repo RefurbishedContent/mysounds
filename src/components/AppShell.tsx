@@ -517,17 +517,30 @@ const AppShell: React.FC = () => {
           inset-y-0 left-0
           ${isSidebarCollapsed ? 'md:relative md:w-16 z-30' : 'md:fixed md:w-64 z-50'}
         `}>
-          <button
-            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="hidden md:flex absolute -right-3 top-6 z-50 w-6 h-6 bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-full items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl"
-            title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {isSidebarCollapsed ? (
+          {isSidebarCollapsed ? (
+            <button
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="hidden md:flex absolute -right-3 top-6 z-50 w-6 h-6 bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-full items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl"
+              title="Expand sidebar"
+            >
               <ChevronRight size={14} className="text-gray-300" />
-            ) : (
-              <ChevronLeft size={14} className="text-gray-300" />
-            )}
-          </button>
+            </button>
+          ) : (
+            <button
+              onClick={() => setIsSidebarCollapsed(true)}
+              className="hidden md:flex absolute -right-4 top-1/2 z-50 flex-col items-center justify-center px-1.5 py-6 bg-gradient-to-b from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 rounded-r-xl shadow-2xl hover:shadow-cyan-500/50 group border-l-0 border-2 border-cyan-500/50 animate-slide-hint hover:animate-none"
+              style={{ transform: 'translateY(-50%)' }}
+              title="Close sidebar"
+            >
+              <ChevronLeft size={20} className="text-white mb-1 group-hover:scale-110 transition-transform" />
+              <div className="flex flex-col gap-1">
+                <div className="w-0.5 h-3 bg-white/60 rounded-full group-hover:bg-white transition-colors"></div>
+                <div className="w-0.5 h-3 bg-white/40 rounded-full group-hover:bg-white/80 transition-colors"></div>
+                <div className="w-0.5 h-3 bg-white/60 rounded-full group-hover:bg-white transition-colors"></div>
+              </div>
+              <ChevronLeft size={20} className="text-white mt-1 group-hover:scale-110 transition-transform" />
+            </button>
+          )}
 
           <div className="h-full flex flex-col">
             {/* Mobile Close Button */}
