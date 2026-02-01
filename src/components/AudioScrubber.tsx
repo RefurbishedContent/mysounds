@@ -18,6 +18,8 @@ interface AudioScrubberProps {
   onSeek?: (time: number) => void;
   onSetInMarker?: (time: number) => void;
   onSetEndMarker?: (time: number) => void;
+  inMarkerLabel?: string;
+  endMarkerLabel?: string;
   isPlaying: boolean;
   markerTime?: number;
   markerColor?: string;
@@ -31,6 +33,8 @@ export function AudioScrubber({
   onSeek,
   onSetInMarker,
   onSetEndMarker,
+  inMarkerLabel = 'Set IN',
+  endMarkerLabel = 'Set END',
   isPlaying: externalIsPlaying,
   markerTime,
   markerColor = '#06b6d4',
@@ -231,14 +235,14 @@ export function AudioScrubber({
             className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg transition-colors text-white text-sm font-medium shadow-lg shadow-green-500/20"
           >
             <MapPin className="w-4 h-4" />
-            <span>Set IN</span>
+            <span>{inMarkerLabel}</span>
           </button>
           <button
             onClick={handleSetEndMarker}
             className="flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg transition-colors text-white text-sm font-medium shadow-lg shadow-red-500/20"
           >
             <Square className="w-4 h-4" />
-            <span>Set END</span>
+            <span>{endMarkerLabel}</span>
           </button>
         </div>
       </div>

@@ -774,13 +774,15 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                     const minEnd = songAStartMarker + 5;
                     setSongAMarkerPoint(Math.max(minEnd, Math.min(time, songADuration)));
                   }}
+                  inMarkerLabel="Set START"
+                  endMarkerLabel="Set OUT"
                   isPlaying={isPlayingA}
                   markers={[
                     {
                       id: 'song-a-start',
                       time: songAStartMarker,
                       color: '#10b981',
-                      label: 'IN',
+                      label: 'START',
                       onDrag: (newTime) => {
                         const maxStart = songAMarkerPoint - 5;
                         setSongAStartMarker(Math.max(0, Math.min(newTime, maxStart)));
@@ -804,7 +806,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                     <div className="flex items-center space-x-3">
                       <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                       <span className="text-sm text-gray-300">
-                        Extraction Range: <span className="text-green-400 font-mono">{formatTime(songAStartMarker)}</span> (IN) to <span className="text-red-400 font-mono">{formatTime(songAMarkerPoint)}</span> (OUT)
+                        Extraction Range: <span className="text-green-400 font-mono">{formatTime(songAStartMarker)}</span> (START) to <span className="text-red-400 font-mono">{formatTime(songAMarkerPoint)}</span> (OUT)
                       </span>
                     </div>
                     <span className="text-xs text-gray-500">({formatTime(songAMarkerPoint - songAStartMarker)} clip)</span>
@@ -852,6 +854,8 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                     const minEnd = songBMarkerPoint + 5;
                     setSongBEndMarker(Math.max(minEnd, Math.min(time, songBDuration)));
                   }}
+                  inMarkerLabel="Set IN"
+                  endMarkerLabel="Set END"
                   isPlaying={isPlayingB}
                   markers={[
                     {
