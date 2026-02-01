@@ -532,7 +532,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   return (
     <div className="h-screen bg-gray-900 flex flex-col">
       <div className="bg-gray-800 border-b border-gray-700 px-3 py-2 flex-shrink-0">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col space-y-2">
           <div className="flex items-center space-x-2">
             <button
               onClick={handleBackClick}
@@ -540,7 +540,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
             >
               <ArrowLeft className="w-4 h-4 text-gray-400" />
             </button>
-            <div>
+            <div className="flex-1">
               <h1 className="text-sm font-bold text-white">Professional Timeline Editor</h1>
               <p className="text-[10px] text-gray-400">
                 {songA.originalName} → {songB.originalName}
@@ -548,7 +548,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center justify-end space-x-2">
             <AIPowerButton
               uploadIdA={songA.id}
               uploadIdB={songB.id}
@@ -560,20 +560,6 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                 alert(errorMsg);
               }}
             />
-            <button
-              onClick={() => setShowExportDialog(true)}
-              disabled={!selectedTemplate || transition?.status !== 'ready'}
-              className={`
-                px-3 py-1.5 rounded text-xs font-semibold transition-all duration-200 flex items-center space-x-1
-                ${selectedTemplate && transition?.status === 'ready'
-                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white'
-                  : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                }
-              `}
-            >
-              <Download className="w-3 h-3" />
-              <span>Export</span>
-            </button>
             <button
               onClick={handleSave}
               disabled={!selectedTemplate || saving}

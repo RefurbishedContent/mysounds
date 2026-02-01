@@ -98,7 +98,7 @@ export const AIPowerButton: React.FC<AIPowerButtonProps> = ({
           ) : (
             <>
               <Sparkles className="w-4 h-4" />
-              <span>AI Match Templates</span>
+              <span>AI MATCH</span>
               <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-white/20 rounded-full text-xs">
                 <Zap className="w-3 h-3" />
                 <span>{creditsNeeded}</span>
