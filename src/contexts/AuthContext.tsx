@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { AuthState, User, UserCredits } from '../types';
 import { databaseService } from '../lib/database';
 import { supabase } from '../lib/supabase';
@@ -28,8 +28,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading: true,
   });
   const [credits, setCredits] = useState<UserCredits | null>(null);
+  const lastUserIdRef = useRef<string | null>(null);
 
-  const refreshCredits = async () => {
+  const refreshCredits = useCallback(async () => {
     if (!authState.user) {
       setCredits(null);
       return;
@@ -42,7 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Failed to fetch user credits:', error);
       setCredits(null);
     }
-  };
+  }, [authState.user]);
 
   useEffect(() => {
     let mounted = true;
@@ -179,7 +180,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Handle session events that should maintain authentication
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
           if (session?.user) {
+            // Skip state update on TOKEN_REFRESHED if user hasn't changed
+            if (event === 'TOKEN_REFRESHED' && lastUserIdRef.current === session.user.id) {
+              console.log('Token refreshed for same user, skipping state update');
+              return;
+            }
+
             console.log('User session active:', session.user.email, 'Event:', event);
+            lastUserIdRef.current = session.user.id;
 
             // Set auth state immediately with basic user data to avoid blocking
             const basicUser: User = {
@@ -234,6 +242,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } else if (event === 'SIGNED_OUT') {
           console.log('User signed out');
+          lastUserIdRef.current = null;
           setAuthState({
             isAuthenticated: false,
             user: null,

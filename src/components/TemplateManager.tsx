@@ -23,20 +23,20 @@ const TemplateManager: React.FC = () => {
   const isAdmin = user?.plan === 'admin';
 
   // Load templates
-  useEffect(() => {
-    const loadTemplates = async () => {
-      try {
-        setLoading(true);
-        const templatesData = await databaseService.getTemplates();
-        setTemplates(templatesData);
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load templates');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadTemplates = async () => {
+    try {
+      setLoading(true);
+      const templatesData = await databaseService.getTemplates();
+      setTemplates(templatesData);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load templates');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadTemplates();
   }, []);
 
@@ -205,7 +205,7 @@ const TemplateManager: React.FC = () => {
             <h3 className="text-xl font-semibold text-white mb-2">Failed to Load Templates</h3>
             <p className="text-gray-400 mb-4">{error}</p>
             <button
-              onClick={() => window.location.reload()}
+              onClick={loadTemplates}
               className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-all duration-200"
             >
               Retry

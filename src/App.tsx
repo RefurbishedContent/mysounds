@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AuthGateway from './components/AuthGateway';
 import AppShell from './components/AppShell';
@@ -9,6 +9,18 @@ const AppContent: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
   const [currentView, setCurrentView] = useState<'landing' | 'app'>('landing');
   const [showAuthGateway, setShowAuthGateway] = useState(false);
+  const isInitialMount = useRef(true);
+
+  // Only auto-navigate to app on initial mount if already authenticated
+  useEffect(() => {
+    if (isInitialMount.current && !loading && isAuthenticated) {
+      console.log('Auto-navigating to app - user already authenticated');
+      setCurrentView('app');
+      isInitialMount.current = false;
+    } else if (!loading) {
+      isInitialMount.current = false;
+    }
+  }, [isAuthenticated, loading]);
 
   if (loading) {
     return (

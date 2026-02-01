@@ -19,6 +19,7 @@ import {
   Settings
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 interface ActivityLog {
   id: string;
@@ -83,83 +84,83 @@ const ActivityLogsScreen: React.FC = () => {
   ];
 
   // Load logs
-  useEffect(() => {
-    const loadLogs = async () => {
-      if (!isAdmin) return;
-      
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Calculate date filter
-        const now = new Date();
-        const hoursBack = {
-          '1h': 1,
-          '24h': 24,
-          '7d': 24 * 7,
-          '30d': 24 * 30
-        }[dateRange] || 24;
-        
-        const fromDate = new Date(now.getTime() - hoursBack * 60 * 60 * 1000);
-        
-        if (activeTab === 'activity') {
-          const { data, error } = await supabase
-            .from('activity_logs')
-            .select(`
-              *,
-              user:users(name, email)
-            `)
-            .gte('created_at', fromDate.toISOString())
-            .order('created_at', { ascending: false })
-            .limit(500);
-            
-          if (error) throw error;
-          
-          setActivityLogs(data.map((log: any) => ({
-            id: log.id,
-            userId: log.user_id,
-            userName: log.user?.name,
-            userEmail: log.user?.email,
-            eventType: log.event_type,
-            eventData: log.event_data || {},
-            ipAddress: log.ip_address,
-            userAgent: log.user_agent,
-            sessionId: log.session_id,
-            createdAt: log.created_at
-          })));
-        } else {
-          const { data, error } = await supabase
-            .from('analytics_events')
-            .select(`
-              *,
-              user:users(name, email)
-            `)
-            .gte('created_at', fromDate.toISOString())
-            .order('created_at', { ascending: false })
-            .limit(500);
-            
-          if (error) throw error;
-          
-          setAnalyticsEvents(data.map((event: any) => ({
-            id: event.id,
-            userId: event.user_id,
-            userName: event.user?.name,
-            eventName: event.event_name,
-            properties: event.properties || {},
-            sessionId: event.session_id,
-            pageUrl: event.page_url,
-            referrer: event.referrer,
-            createdAt: event.created_at
-          })));
-        }
-        
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load logs');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadLogs = async () => {
+    if (!isAdmin) return;
 
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Calculate date filter
+      const now = new Date();
+      const hoursBack = {
+        '1h': 1,
+        '24h': 24,
+        '7d': 24 * 7,
+        '30d': 24 * 30
+      }[dateRange] || 24;
+
+      const fromDate = new Date(now.getTime() - hoursBack * 60 * 60 * 1000);
+
+      if (activeTab === 'activity') {
+        const { data, error } = await supabase
+          .from('activity_logs')
+          .select(`
+            *,
+            user:users(name, email)
+          `)
+          .gte('created_at', fromDate.toISOString())
+          .order('created_at', { ascending: false })
+          .limit(500);
+
+        if (error) throw error;
+
+        setActivityLogs(data.map((log: any) => ({
+          id: log.id,
+          userId: log.user_id,
+          userName: log.user?.name,
+          userEmail: log.user?.email,
+          eventType: log.event_type,
+          eventData: log.event_data || {},
+          ipAddress: log.ip_address,
+          userAgent: log.user_agent,
+          sessionId: log.session_id,
+          createdAt: log.created_at
+        })));
+      } else {
+        const { data, error } = await supabase
+          .from('analytics_events')
+          .select(`
+            *,
+            user:users(name, email)
+          `)
+          .gte('created_at', fromDate.toISOString())
+          .order('created_at', { ascending: false })
+          .limit(500);
+
+        if (error) throw error;
+
+        setAnalyticsEvents(data.map((event: any) => ({
+          id: event.id,
+          userId: event.user_id,
+          userName: event.user?.name,
+          eventName: event.event_name,
+          properties: event.properties || {},
+          sessionId: event.session_id,
+          pageUrl: event.page_url,
+          referrer: event.referrer,
+          createdAt: event.created_at
+        })));
+      }
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load logs');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadLogs();
   }, [isAdmin, activeTab, dateRange]);
 
@@ -296,7 +297,7 @@ const ActivityLogsScreen: React.FC = () => {
         </div>
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => window.location.reload()}
+            onClick={loadLogs}
             className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white border border-gray-600 hover:border-gray-500 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2"
           >
             <RefreshCw size={16} />
@@ -411,7 +412,7 @@ const ActivityLogsScreen: React.FC = () => {
             <h3 className="text-xl font-semibold text-white mb-2">Failed to Load Logs</h3>
             <p className="text-gray-400 mb-4">{error}</p>
             <button
-              onClick={() => window.location.reload()}
+              onClick={loadLogs}
               className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-all duration-200"
             >
               Retry

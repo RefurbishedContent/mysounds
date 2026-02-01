@@ -51,21 +51,21 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
   const sortOptions = ['popular', 'rating', 'downloads', 'newest'];
 
   // Load templates from database
-  useEffect(() => {
-    const loadTemplates = async () => {
-      try {
-        setLoading(true);
-        const templatesData = await databaseService.getTemplates();
-        setTemplates(templatesData);
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load templates');
-        console.error('Failed to load templates:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadTemplates = async () => {
+    try {
+      setLoading(true);
+      const templatesData = await databaseService.getTemplates();
+      setTemplates(templatesData);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load templates');
+      console.error('Failed to load templates:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadTemplates();
   }, []);
 
@@ -566,7 +566,7 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
             <h3 className="text-xl font-semibold text-white mb-2">Failed to Load Templates</h3>
             <p className="text-gray-400 mb-4">{error}</p>
             <button
-              onClick={() => window.location.reload()}
+              onClick={loadTemplates}
               className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white rounded-lg font-medium transition-all duration-200 hover:shadow-lg hover:shadow-cyan-500/30"
             >
               Retry
