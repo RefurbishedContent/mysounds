@@ -299,9 +299,11 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
 
   const handleRestart = async () => {
     const confirmed = window.confirm(
-      'Are you sure you want to restart? This will reload the original transition settings and reset all unsaved changes.'
+      'Are you sure you want to start fresh? This will reset the transition timeline to default settings while keeping your marker points (START, OUT, IN, END).'
     );
     if (confirmed) {
+      if (!transition) return;
+
       setCurrentTime(0);
       setIsPlaying(false);
       setIsPlayingSongA(false);
@@ -312,7 +314,44 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       playerBRef.current?.stop();
       playerTransitionRef.current?.stop();
 
-      await loadData();
+      const defaultKeyframesA = [
+        { position: 0, value: 1 },
+        { position: 0.7, value: 1 },
+        { position: 1, value: 0 }
+      ];
+      const defaultKeyframesB = [
+        { position: 0, value: 0 },
+        { position: 0.3, value: 1 },
+        { position: 1, value: 1 }
+      ];
+
+      setSongAKeyframes(defaultKeyframesA);
+      setSongBKeyframes(defaultKeyframesB);
+      setSongAFadeCurve('smooth');
+      setSongBFadeCurve('smooth');
+      setSelectedTemplate(null);
+      setDurationSize('medium');
+      setTransitionDuration(12);
+
+      try {
+        await transitionsService.updateTransition(transitionId, {
+          templateId: null,
+          transitionDuration: 12,
+          metadata: {
+            songAKeyframes: defaultKeyframesA,
+            songBKeyframes: defaultKeyframesB,
+            songAFadeCurve: 'smooth',
+            songBFadeCurve: 'smooth',
+            durationSize: 'medium'
+          }
+        });
+
+        const updatedTransition = await transitionsService.getTransition(transitionId);
+        setTransition(updatedTransition);
+      } catch (error) {
+        console.error('Failed to reset transition:', error);
+        alert('Failed to reset transition');
+      }
     }
   };
 
