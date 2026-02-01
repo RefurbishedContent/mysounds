@@ -44,6 +44,7 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
   const scrollIntervalRef = useRef<number | null>(null);
   const lastScrollTopRef = useRef(0);
   const scrollTimeoutRef = useRef<number | null>(null);
+  const lastStateChangeRef = useRef(0);
 
   const categories = ['electronic', 'hip-hop', 'house', 'techno', 'trance', 'dubstep', 'ambient'];
   const difficulties = ['beginner', 'intermediate', 'advanced'];
@@ -81,6 +82,17 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
     const handleScroll = () => {
       const scrollTop = scrollContainer.scrollTop;
       const scrollDifference = scrollTop - lastScrollTopRef.current;
+      const now = Date.now();
+
+      // Prevent rapid state changes (cooldown period of 300ms)
+      if (now - lastStateChangeRef.current < 300) {
+        return;
+      }
+
+      // Only process significant scroll movements (threshold of 50px)
+      if (Math.abs(scrollDifference) < 50) {
+        return;
+      }
 
       // Clear any existing timeout
       if (scrollTimeoutRef.current) {
@@ -89,17 +101,35 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
 
       // Debounce the scroll state change
       scrollTimeoutRef.current = window.setTimeout(() => {
-        // Only hide if scrolling down and past threshold
-        if (scrollTop > 100 && scrollDifference > 0) {
-          setIsScrolled(true);
-        }
-        // Only show if scrolling up or at top
-        else if (scrollTop < 50 || scrollDifference < 0) {
-          setIsScrolled(false);
+        const currentScroll = scrollContainer.scrollTop;
+        const currentDifference = currentScroll - lastScrollTopRef.current;
+
+        // Update last scroll position
+        lastScrollTopRef.current = currentScroll;
+
+        // Determine desired state based on scroll position and direction
+        let shouldBeScrolled = false;
+
+        if (currentScroll > 100 && currentDifference > 0) {
+          // Scrolling down significantly, hide header
+          shouldBeScrolled = true;
+        } else if (currentScroll < 50 || currentDifference < -50) {
+          // Near top or scrolling up significantly, show header
+          shouldBeScrolled = false;
+        } else {
+          // No change needed
+          return;
         }
 
-        lastScrollTopRef.current = scrollTop;
-      }, 100); // Debounce by 100ms for smooth transitions
+        // Only update state if it's actually changing
+        setIsScrolled((prev) => {
+          if (prev !== shouldBeScrolled) {
+            lastStateChangeRef.current = Date.now();
+            return shouldBeScrolled;
+          }
+          return prev;
+        });
+      }, 150); // Increased debounce to 150ms
     };
 
     scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
