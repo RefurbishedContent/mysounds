@@ -579,13 +579,13 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
             <p className="text-gray-400">Try adjusting your search or filters</p>
           </div>
         ) : (
-          <div className={compact ? 'flex space-x-3 overflow-x-auto pb-2' : 'grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2.5'}>
+          <div className={compact ? 'flex flex-col space-y-3' : 'grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2.5'}>
             {filteredTemplates.map((template) => (
               <div
                 key={template.id}
                 className={`group relative transition-all duration-300 cursor-grab active:cursor-grabbing ${
                   compact
-                    ? 'flex-shrink-0 w-64 bg-gray-800/50 backdrop-blur-sm border border-cyan-500/20 hover:border-cyan-400/40 rounded-xl p-3 flex items-center space-x-3'
+                    ? 'bg-gray-800/50 backdrop-blur-sm border border-cyan-500/20 hover:border-cyan-400/40 rounded-xl p-3 flex items-center space-x-3'
                     : 'bg-gray-800/40 backdrop-blur-sm border border-cyan-500/10 hover:border-cyan-400/30 rounded-lg overflow-hidden hover:shadow-lg hover:shadow-cyan-500/20 hover:scale-[1.02]'
                 }`}
                 draggable

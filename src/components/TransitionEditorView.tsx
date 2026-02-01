@@ -799,29 +799,6 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                       />
                     </div>
                   </div>
-                  <div className="mt-1 flex items-center justify-between text-[10px]">
-                    <span className="text-gray-500">Fade Curve:</span>
-                    <div className="flex space-x-1">
-                      <button
-                        onClick={() => handleFadeCurveChange('songA', 'linear')}
-                        className={`px-2 py-0.5 rounded ${songAFadeCurve === 'linear' ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-400'}`}
-                      >
-                        Linear
-                      </button>
-                      <button
-                        onClick={() => handleFadeCurveChange('songA', 'smooth')}
-                        className={`px-2 py-0.5 rounded ${songAFadeCurve === 'smooth' ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-400'}`}
-                      >
-                        Smooth
-                      </button>
-                      <button
-                        onClick={() => handleFadeCurveChange('songA', 'fast')}
-                        className={`px-2 py-0.5 rounded ${songAFadeCurve === 'fast' ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-400'}`}
-                      >
-                        Fast
-                      </button>
-                    </div>
-                  </div>
                 </div>
 
                 <div style={{ height: `${Math.max(80, trackHeight * 0.6)}px` }} className="relative">
@@ -924,29 +901,6 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                         direction="fadeIn"
                         height={trackHeight - 32}
                       />
-                    </div>
-                  </div>
-                  <div className="mt-1 flex items-center justify-between text-[10px]">
-                    <span className="text-gray-500">Fade Curve:</span>
-                    <div className="flex space-x-1">
-                      <button
-                        onClick={() => handleFadeCurveChange('songB', 'linear')}
-                        className={`px-2 py-0.5 rounded ${songBFadeCurve === 'linear' ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400'}`}
-                      >
-                        Linear
-                      </button>
-                      <button
-                        onClick={() => handleFadeCurveChange('songB', 'smooth')}
-                        className={`px-2 py-0.5 rounded ${songBFadeCurve === 'smooth' ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400'}`}
-                      >
-                        Smooth
-                      </button>
-                      <button
-                        onClick={() => handleFadeCurveChange('songB', 'fast')}
-                        className={`px-2 py-0.5 rounded ${songBFadeCurve === 'fast' ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400'}`}
-                      >
-                        Fast
-                      </button>
                     </div>
                   </div>
                 </div>
