@@ -97,7 +97,7 @@ const AppShell: React.FC = () => {
       items: [
         { id: 'templates', icon: FileAudio, label: 'Templates', view: 'templates' },
         { id: 'recent-projects', icon: Clock, label: 'Recent projects', view: 'recent-projects' },
-        { id: 'share-schedule', icon: Share2, label: 'Share and schedule', view: 'share-schedule' },
+        { id: 'share-schedule', icon: Share2, label: 'Share', view: 'share-schedule' },
       ]
     },
     ...(user?.plan === 'admin' ? [{
@@ -299,7 +299,7 @@ const AppShell: React.FC = () => {
                 <Share2 size={24} className="text-white" />
               </div>
               <h2 className="text-lg font-bold text-white">Coming Soon</h2>
-              <p className="text-sm text-gray-400">Share and schedule your transitions</p>
+              <p className="text-sm text-gray-400">Share your transitions</p>
             </div>
           </div>
         );
