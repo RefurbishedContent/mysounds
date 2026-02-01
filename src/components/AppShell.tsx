@@ -501,14 +501,21 @@ const AppShell: React.FC = () => {
           />
         )}
 
+        {/* Desktop Sidebar Overlay Backdrop */}
+        {!isSidebarCollapsed && !isMobile && (
+          <div
+            className="hidden md:block fixed inset-0 bg-black bg-opacity-30 z-40"
+            onClick={() => setIsSidebarCollapsed(true)}
+          />
+        )}
+
         {/* Sidebar - Hidden on Mobile (bottom nav replaces it) */}
         <div className={`
-          bg-gray-800 border-r border-gray-700 transition-all duration-300 ease-in-out relative
+          bg-gray-800 border-r border-gray-700 transition-all duration-300 ease-in-out
           ${isMobile ? 'hidden' : ''}
           md:translate-x-0
-          md:relative inset-y-0 left-0 z-50
-          md:w-auto
-          ${isSidebarCollapsed ? 'md:w-16' : 'md:w-64'}
+          inset-y-0 left-0
+          ${isSidebarCollapsed ? 'md:relative md:w-16 z-30' : 'md:fixed md:w-64 z-50'}
         `}>
           <button
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
@@ -634,8 +641,8 @@ const AppShell: React.FC = () => {
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 w-full flex flex-col min-w-0">
+        {/* Main Content - Always sized for collapsed sidebar */}
+        <div className={`flex-1 flex flex-col min-w-0 ${isMobile ? 'w-full' : 'md:ml-16'}`} style={{ maxWidth: isMobile ? '100%' : 'calc(100vw - 64px)' }}>
           <div className={`flex-1 overflow-y-auto overflow-x-hidden main-content-scroll ${isMobile ? 'pb-20' : ''}`} style={{ WebkitOverflowScrolling: 'touch' }}>
             {renderContent()}
           </div>
