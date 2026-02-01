@@ -869,12 +869,10 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                       </>
                     ) : (
                       <>
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-700/5 to-transparent animate-pulse" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-700/5 to-transparent" />
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="text-center space-y-2">
-                            <Sparkles className="w-8 h-8 text-gray-600 mx-auto animate-pulse" />
-                            <p className="text-sm font-medium text-gray-400">Select a template below to begin</p>
-                            <p className="text-xs text-gray-600">Choose your transition style</p>
+                          <div className="text-center">
+                            <div className="text-xs text-gray-500">{transitionDuration}s transition</div>
                           </div>
                         </div>
                       </>
