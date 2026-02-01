@@ -88,10 +88,10 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
               <p className="text-sm text-gray-400">Choose two songs to create a seamless transition</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-              <div className="space-y-4 min-w-0">
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-3 min-w-0">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg md:text-xl font-semibold text-white">Song A</h3>
+                  <h3 className="text-lg md:text-xl font-semibold text-white">Song A (Ending)</h3>
                   {songA && (
                     <button
                       onClick={() => onClearSong(0)}
@@ -126,15 +126,15 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
                     </div>
                   </div>
                 ) : (
-                  <div className="p-8 border-2 border-dashed border-gray-600 rounded-xl text-center">
+                  <div className="p-6 border-2 border-dashed border-gray-600 rounded-xl text-center">
                     <p className="text-gray-500">Select Song A from below</p>
                   </div>
                 )}
               </div>
 
-              <div className="space-y-4 min-w-0">
+              <div className="space-y-3 min-w-0">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg md:text-xl font-semibold text-white">Song B</h3>
+                  <h3 className="text-lg md:text-xl font-semibold text-white">Song B (Beginning)</h3>
                   {songB && (
                     <button
                       onClick={() => onClearSong(1)}
@@ -169,7 +169,7 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
                     </div>
                   </div>
                 ) : (
-                  <div className="p-8 border-2 border-dashed border-gray-600 rounded-xl text-center">
+                  <div className="p-6 border-2 border-dashed border-gray-600 rounded-xl text-center">
                     <p className="text-gray-500">Select Song B from below</p>
                   </div>
                 )}
