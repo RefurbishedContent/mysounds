@@ -38,13 +38,8 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [showSearchOverlay, setShowSearchOverlay] = useState(false);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const scrollIntervalRef = useRef<number | null>(null);
-  const lastScrollTopRef = useRef(0);
-  const scrollTimeoutRef = useRef<number | null>(null);
-  const lastStateChangeRef = useRef(0);
 
   const categories = ['electronic', 'hip-hop', 'house', 'techno', 'trance', 'dubstep', 'ambient'];
   const difficulties = ['beginner', 'intermediate', 'advanced'];
@@ -72,73 +67,6 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
     };
 
     loadTemplates();
-  }, []);
-
-  // Handle scroll for minimizing header (listen to parent scroll)
-  useEffect(() => {
-    const scrollContainer = document.querySelector('.main-content-scroll');
-    if (!scrollContainer) return;
-
-    const handleScroll = () => {
-      const scrollTop = scrollContainer.scrollTop;
-      const scrollDifference = scrollTop - lastScrollTopRef.current;
-      const now = Date.now();
-
-      // Prevent rapid state changes (cooldown period of 300ms)
-      if (now - lastStateChangeRef.current < 300) {
-        return;
-      }
-
-      // Only process significant scroll movements (threshold of 50px)
-      if (Math.abs(scrollDifference) < 50) {
-        return;
-      }
-
-      // Clear any existing timeout
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-
-      // Debounce the scroll state change
-      scrollTimeoutRef.current = window.setTimeout(() => {
-        const currentScroll = scrollContainer.scrollTop;
-        const currentDifference = currentScroll - lastScrollTopRef.current;
-
-        // Update last scroll position
-        lastScrollTopRef.current = currentScroll;
-
-        // Determine desired state based on scroll position and direction
-        let shouldBeScrolled = false;
-
-        if (currentScroll > 100 && currentDifference > 0) {
-          // Scrolling down significantly, hide header
-          shouldBeScrolled = true;
-        } else if (currentScroll < 50 || currentDifference < -50) {
-          // Near top or scrolling up significantly, show header
-          shouldBeScrolled = false;
-        } else {
-          // No change needed
-          return;
-        }
-
-        // Only update state if it's actually changing
-        setIsScrolled((prev) => {
-          if (prev !== shouldBeScrolled) {
-            lastStateChangeRef.current = Date.now();
-            return shouldBeScrolled;
-          }
-          return prev;
-        });
-      }, 150); // Increased debounce to 150ms
-    };
-
-    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      scrollContainer.removeEventListener('scroll', handleScroll);
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-    };
   }, []);
 
   const getDurationSize = (duration: number): 'short' | 'medium' | 'long' => {
@@ -348,9 +276,7 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
     <div className={`h-full flex flex-col ${compact ? '' : 'p-2 sm:p-3 md:p-4'}`} data-onboarding="templates">
       {/* Header */}
       {!compact && (
-        <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all duration-500 ease-in-out ${
-          isScrolled ? 'max-h-0 opacity-0 mb-0 pointer-events-none' : 'max-h-32 opacity-100 mb-3'
-        }`}>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-3">
           <div>
             <h1 className="font-bold text-white transition-all duration-500 text-xl mb-1">
               Template Gallery
@@ -365,9 +291,7 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
 
       {/* Filters */}
       {!compact && (
-        <div className={`transition-all duration-500 ease-in-out ${
-          isScrolled ? 'max-h-0 opacity-0 mb-0 overflow-hidden pointer-events-none' : 'opacity-100 mb-3'
-        }`}>
+        <div className="mb-3">
           <div className="space-y-4">
             {/* Search Bar - Always Visible */}
             <div className="relative">
@@ -762,18 +686,8 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
         )}
       </div>
 
-      {/* Floating Search Button - visible when scrolled and not in compact mode */}
-      {!compact && isScrolled && (
-        <button
-          onClick={() => setShowSearchOverlay(true)}
-          className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 rounded-full shadow-2xl shadow-cyan-500/50 flex items-center justify-center text-white hover:scale-110 transition-all duration-200 animate-fade-in"
-        >
-          <Search size={24} />
-        </button>
-      )}
-
-      {/* Search Overlay */}
-      {showSearchOverlay && (
+      {/* Search Overlay - Removed as search is always visible in header */}
+      {false && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start justify-center pt-10 px-4 overflow-y-auto">
           <div className="w-full max-w-3xl bg-gray-800 rounded-2xl border border-gray-600 shadow-2xl my-10">
             <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">

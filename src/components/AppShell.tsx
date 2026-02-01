@@ -50,10 +50,6 @@ const AppShell: React.FC = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateData | undefined>();
   const [editingProjectId, setEditingProjectId] = useState<string | undefined>();
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [isTopBarVisible, setIsTopBarVisible] = useState(true);
-  const lastScrollYRef = useRef(0);
-  const scrollTimeoutRef = useRef<number | null>(null);
-  const lastStateChangeRef = useRef(0);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
@@ -238,73 +234,6 @@ const AppShell: React.FC = () => {
     }
   }, [currentView, isMobile]);
 
-  // Handle scroll to hide/show top bar
-  useEffect(() => {
-    const mainContent = document.querySelector('.main-content-scroll');
-    if (!mainContent) return;
-
-    const handleScroll = () => {
-      const scrollY = mainContent.scrollTop;
-      const scrollDifference = scrollY - lastScrollYRef.current;
-      const now = Date.now();
-
-      // Prevent rapid state changes (cooldown period of 300ms)
-      if (now - lastStateChangeRef.current < 300) {
-        return;
-      }
-
-      // Only process significant scroll movements (threshold of 50px)
-      if (Math.abs(scrollDifference) < 50) {
-        return;
-      }
-
-      // Clear any existing timeout
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-
-      // Debounce the scroll state change
-      scrollTimeoutRef.current = window.setTimeout(() => {
-        const currentScroll = mainContent.scrollTop;
-        const currentDifference = currentScroll - lastScrollYRef.current;
-
-        // Update last scroll position
-        lastScrollYRef.current = currentScroll;
-
-        // Determine desired state based on scroll position and direction
-        let shouldBeVisible = true;
-
-        if (currentScroll > 100 && currentDifference > 0) {
-          // Scrolling down significantly, hide bar
-          shouldBeVisible = false;
-        } else if (currentScroll < 50 || currentDifference < -50) {
-          // Near top or scrolling up significantly, show bar
-          shouldBeVisible = true;
-        } else {
-          // No change needed
-          return;
-        }
-
-        // Only update state if it's actually changing
-        setIsTopBarVisible((prev) => {
-          if (prev !== shouldBeVisible) {
-            lastStateChangeRef.current = Date.now();
-            return shouldBeVisible;
-          }
-          return prev;
-        });
-      }, 150); // Increased debounce to 150ms
-    };
-
-    mainContent.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      mainContent.removeEventListener('scroll', handleScroll);
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-    };
-  }, []);
-
   // Handle click outside user menu
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -460,7 +389,7 @@ const AppShell: React.FC = () => {
   return (
     <div className="h-screen bg-gray-900 flex flex-col overflow-hidden">
       {/* Top Bar - Hidden on Mobile */}
-      <div className={`bg-gray-800 border-b border-gray-700 px-3 sm:px-4 py-2 sm:py-3 flex-shrink-0 transition-transform duration-500 ease-in-out z-[60] relative ${isTopBarVisible ? 'translate-y-0' : '-translate-y-full'} ${isMobile ? 'hidden' : ''}`}>
+      <div className={`bg-gray-800 border-b border-gray-700 px-3 sm:px-4 py-2 sm:py-3 flex-shrink-0 z-[60] relative ${isMobile ? 'hidden' : ''}`}>
         <div className="flex items-center justify-between gap-2">
           {/* Left Section */}
           <div className="flex items-center space-x-2 sm:space-x-4">
@@ -719,27 +648,6 @@ const AppShell: React.FC = () => {
           currentView={mobileNavView}
           onNavigate={handleMobileNavigation}
         />
-      )}
-
-      {/* Floating Action Buttons - visible when top bar is hidden on desktop only */}
-      {!isTopBarVisible && !isMobile && (
-        <>
-          {/* Floating Menu Button - Desktop */}
-          <button
-            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="fixed top-4 left-4 z-50 w-12 h-12 bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 rounded-full shadow-2xl shadow-cyan-500/50 flex items-center justify-center text-white hover:scale-110 transition-transform duration-200"
-          >
-            <Menu size={20} />
-          </button>
-
-          {/* Floating Search Button */}
-          <button
-            onClick={() => setShowSearchOverlay(true)}
-            className="fixed top-4 right-4 z-50 w-12 h-12 bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 rounded-full shadow-2xl shadow-cyan-500/50 flex items-center justify-center text-white hover:scale-110 transition-transform duration-200"
-          >
-            <Search size={20} />
-          </button>
-        </>
       )}
 
       {/* Global Search Overlay */}
