@@ -45,6 +45,40 @@ const getDurationForSize = (size: DurationSize): number => {
   return DURATION_RANGES[size].default;
 };
 
+const applyVolumeAutomation = (
+  volumeNode: Tone.Volume,
+  keyframes: FadeKeyframe[],
+  duration: number,
+  curveType: FadeCurveType
+) => {
+  if (keyframes.length === 0) return;
+
+  volumeNode.volume.cancelScheduledValues(0);
+
+  const sortedKeyframes = [...keyframes].sort((a, b) => a.position - b.position);
+
+  sortedKeyframes.forEach((keyframe, index) => {
+    const time = keyframe.position * duration;
+    const volumeDb = keyframe.value === 0 ? -60 : (keyframe.value - 1) * 60;
+
+    if (index === 0) {
+      volumeNode.volume.setValueAtTime(volumeDb, Tone.now() + time);
+    } else {
+      const prevKeyframe = sortedKeyframes[index - 1];
+      const prevTime = prevKeyframe.position * duration;
+      const timeDiff = time - prevTime;
+
+      if (curveType === 'linear') {
+        volumeNode.volume.linearRampToValueAtTime(volumeDb, Tone.now() + time);
+      } else if (curveType === 'fast') {
+        volumeNode.volume.exponentialRampToValueAtTime(Math.max(volumeDb, -60), Tone.now() + time);
+      } else {
+        volumeNode.volume.exponentialRampToValueAtTime(Math.max(volumeDb, -60), Tone.now() + time);
+      }
+    }
+  });
+};
+
 export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   songA,
   songB,
@@ -61,6 +95,8 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   const [isPlayingTransition, setIsPlayingTransition] = useState(false);
   const [isPlayingSongB, setIsPlayingSongB] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const [playbackProgressA, setPlaybackProgressA] = useState(0);
+  const [playbackProgressB, setPlaybackProgressB] = useState(0);
   const [durationSize, setDurationSize] = useState<DurationSize>('medium');
   const [transitionDuration, setTransitionDuration] = useState(12);
   const [aiRecommendations, setAiRecommendations] = useState<TemplateRecommendation[]>([]);
@@ -99,6 +135,12 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   const playerARef = useRef<Tone.Player | null>(null);
   const playerBRef = useRef<Tone.Player | null>(null);
   const playerTransitionRef = useRef<Tone.Player | null>(null);
+  const volumeNodeARef = useRef<Tone.Volume | null>(null);
+  const volumeNodeBRef = useRef<Tone.Volume | null>(null);
+  const animationFrameARef = useRef<number | null>(null);
+  const animationFrameBRef = useRef<number | null>(null);
+  const startTimeARef = useRef<number>(0);
+  const startTimeBRef = useRef<number>(0);
 
   useEffect(() => {
     loadData();
@@ -181,9 +223,17 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
 
   useEffect(() => {
     return () => {
+      if (animationFrameARef.current) {
+        cancelAnimationFrame(animationFrameARef.current);
+      }
+      if (animationFrameBRef.current) {
+        cancelAnimationFrame(animationFrameBRef.current);
+      }
       playerARef.current?.dispose();
       playerBRef.current?.dispose();
       playerTransitionRef.current?.dispose();
+      volumeNodeARef.current?.dispose();
+      volumeNodeBRef.current?.dispose();
     };
   }, []);
 
@@ -309,10 +359,23 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       setIsPlayingSongA(false);
       setIsPlayingTransition(false);
       setIsPlayingSongB(false);
+      setPlaybackProgressA(0);
+      setPlaybackProgressB(0);
+
+      if (animationFrameARef.current) {
+        cancelAnimationFrame(animationFrameARef.current);
+        animationFrameARef.current = null;
+      }
+      if (animationFrameBRef.current) {
+        cancelAnimationFrame(animationFrameBRef.current);
+        animationFrameBRef.current = null;
+      }
 
       playerARef.current?.stop();
       playerBRef.current?.stop();
       playerTransitionRef.current?.stop();
+      volumeNodeARef.current?.dispose();
+      volumeNodeBRef.current?.dispose();
 
       const defaultKeyframesA = [
         { position: 0, value: 1 },
@@ -363,12 +426,22 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     await Tone.start();
 
     if (isPlayingSongA) {
+      if (animationFrameARef.current) {
+        cancelAnimationFrame(animationFrameARef.current);
+        animationFrameARef.current = null;
+      }
       if (playerARef.current) {
         playerARef.current.stop();
         playerARef.current.dispose();
         playerARef.current = null;
       }
+      if (volumeNodeARef.current) {
+        volumeNodeARef.current.dispose();
+        volumeNodeARef.current = null;
+      }
       setIsPlayingSongA(false);
+      setPlaybackProgressA(0);
+      Tone.Transport.stop();
       return;
     }
 
@@ -377,28 +450,55 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     }
 
     try {
+      const volumeNode = new Tone.Volume(0).toDestination();
+      volumeNodeARef.current = volumeNode;
+
       const player = new Tone.Player(songA.url, () => {
         const clipStart = transition.songAClipStart!;
         const clipEnd = transition.songAMarkerPoint!;
         const clipDuration = clipEnd - clipStart;
 
+        applyVolumeAutomation(volumeNode, songAKeyframes, clipDuration, songAFadeCurve);
+
+        player.connect(volumeNode);
         player.sync().start(0, clipStart, clipDuration);
         Tone.Transport.start();
 
-        setTimeout(() => {
-          player.stop();
-          player.dispose();
-          playerARef.current = null;
-          setIsPlayingSongA(false);
-          Tone.Transport.stop();
-        }, clipDuration * 1000);
-      }).toDestination();
+        startTimeARef.current = Tone.now();
+        setPlaybackProgressA(0);
+
+        const updateProgress = () => {
+          const elapsed = Tone.now() - startTimeARef.current;
+          const progress = Math.min(elapsed / clipDuration, 1);
+          setPlaybackProgressA(progress);
+
+          if (progress < 1 && isPlayingSongA) {
+            animationFrameARef.current = requestAnimationFrame(updateProgress);
+          } else {
+            if (animationFrameARef.current) {
+              cancelAnimationFrame(animationFrameARef.current);
+              animationFrameARef.current = null;
+            }
+            player.stop();
+            player.dispose();
+            volumeNode.dispose();
+            playerARef.current = null;
+            volumeNodeARef.current = null;
+            setIsPlayingSongA(false);
+            setPlaybackProgressA(0);
+            Tone.Transport.stop();
+          }
+        };
+
+        animationFrameARef.current = requestAnimationFrame(updateProgress);
+      });
 
       playerARef.current = player;
       setIsPlayingSongA(true);
     } catch (error) {
       console.error('Failed to play Song A:', error);
       setIsPlayingSongA(false);
+      setPlaybackProgressA(0);
     }
   };
 
@@ -433,12 +533,22 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     await Tone.start();
 
     if (isPlayingSongB) {
+      if (animationFrameBRef.current) {
+        cancelAnimationFrame(animationFrameBRef.current);
+        animationFrameBRef.current = null;
+      }
       if (playerBRef.current) {
         playerBRef.current.stop();
         playerBRef.current.dispose();
         playerBRef.current = null;
       }
+      if (volumeNodeBRef.current) {
+        volumeNodeBRef.current.dispose();
+        volumeNodeBRef.current = null;
+      }
       setIsPlayingSongB(false);
+      setPlaybackProgressB(0);
+      Tone.Transport.stop();
       return;
     }
 
@@ -447,41 +557,84 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     }
 
     try {
+      const volumeNode = new Tone.Volume(0).toDestination();
+      volumeNodeBRef.current = volumeNode;
+
       const player = new Tone.Player(songB.url, () => {
         const clipStart = transition.songBMarkerPoint!;
         const clipEnd = transition.songBClipEnd!;
         const clipDuration = clipEnd - clipStart;
 
+        applyVolumeAutomation(volumeNode, songBKeyframes, clipDuration, songBFadeCurve);
+
+        player.connect(volumeNode);
         player.sync().start(0, clipStart, clipDuration);
         Tone.Transport.start();
 
-        setTimeout(() => {
-          player.stop();
-          player.dispose();
-          playerBRef.current = null;
-          setIsPlayingSongB(false);
-          Tone.Transport.stop();
-        }, clipDuration * 1000);
-      }).toDestination();
+        startTimeBRef.current = Tone.now();
+        setPlaybackProgressB(0);
+
+        const updateProgress = () => {
+          const elapsed = Tone.now() - startTimeBRef.current;
+          const progress = Math.min(elapsed / clipDuration, 1);
+          setPlaybackProgressB(progress);
+
+          if (progress < 1 && isPlayingSongB) {
+            animationFrameBRef.current = requestAnimationFrame(updateProgress);
+          } else {
+            if (animationFrameBRef.current) {
+              cancelAnimationFrame(animationFrameBRef.current);
+              animationFrameBRef.current = null;
+            }
+            player.stop();
+            player.dispose();
+            volumeNode.dispose();
+            playerBRef.current = null;
+            volumeNodeBRef.current = null;
+            setIsPlayingSongB(false);
+            setPlaybackProgressB(0);
+            Tone.Transport.stop();
+          }
+        };
+
+        animationFrameBRef.current = requestAnimationFrame(updateProgress);
+      });
 
       playerBRef.current = player;
       setIsPlayingSongB(true);
     } catch (error) {
       console.error('Failed to play Song B:', error);
       setIsPlayingSongB(false);
+      setPlaybackProgressB(0);
     }
   };
 
   const handleStopAll = () => {
+    if (animationFrameARef.current) {
+      cancelAnimationFrame(animationFrameARef.current);
+      animationFrameARef.current = null;
+    }
+    if (animationFrameBRef.current) {
+      cancelAnimationFrame(animationFrameBRef.current);
+      animationFrameBRef.current = null;
+    }
     if (playerARef.current) {
       playerARef.current.stop();
       playerARef.current.dispose();
       playerARef.current = null;
     }
+    if (volumeNodeARef.current) {
+      volumeNodeARef.current.dispose();
+      volumeNodeARef.current = null;
+    }
     if (playerBRef.current) {
       playerBRef.current.stop();
       playerBRef.current.dispose();
       playerBRef.current = null;
+    }
+    if (volumeNodeBRef.current) {
+      volumeNodeBRef.current.dispose();
+      volumeNodeBRef.current = null;
     }
     if (playerTransitionRef.current) {
       playerTransitionRef.current.stop();
@@ -491,6 +644,8 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     setIsPlayingSongA(false);
     setIsPlayingSongB(false);
     setIsPlayingTransition(false);
+    setPlaybackProgressA(0);
+    setPlaybackProgressB(0);
     Tone.Transport.stop();
   };
 
@@ -508,8 +663,8 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
         status: 'ready',
         metadata: {
           ...transition.metadata,
-          songAFadeStart,
-          songBFadeEnd,
+          songAKeyframes,
+          songBKeyframes,
           songAFadeCurve,
           songBFadeCurve
         }
@@ -526,7 +681,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   };
 
   const handleBackClick = () => {
-    if (selectedTemplate || songAFadeStart !== 0.7 || songBFadeEnd !== 0.3) {
+    if (selectedTemplate) {
       setShowBackDialog(true);
     } else {
       onBack();
@@ -791,7 +946,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
             <div className="flex-1 bg-gray-800 rounded-lg border border-gray-700 p-4">
               <div className="space-y-4">
                 <div style={{ height: `${trackHeight}px` }} className="relative">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center mb-2 space-x-2">
                     <div className="text-xs font-semibold text-cyan-400">Song A (Ending - Fade Out)</div>
                     <button
                       onClick={handlePlaySongA}
@@ -810,6 +965,8 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                         color="#3b82f6"
                         progressColor="#60a5fa"
                         zoom={zoomLevel / 100}
+                        progress={playbackProgressA}
+                        showScrubber={true}
                       />
                     ) : (
                       <WaveformDisplay
@@ -895,7 +1052,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                 </div>
 
                 <div style={{ height: `${trackHeight}px` }} className="relative">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center mb-2 space-x-2">
                     <div className="text-xs font-semibold text-green-400">Song B (Beginning - Fade In)</div>
                     <button
                       onClick={handlePlaySongB}
@@ -914,6 +1071,8 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                         color="#10b981"
                         progressColor="#34d399"
                         zoom={zoomLevel / 100}
+                        progress={playbackProgressB}
+                        showScrubber={true}
                       />
                     ) : (
                       <WaveformDisplay
