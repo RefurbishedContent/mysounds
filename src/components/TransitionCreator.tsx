@@ -766,13 +766,21 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                   onSeek={(time) => {
                     setSongACurrentTime(time);
                   }}
+                  onSetInMarker={(time) => {
+                    const maxStart = songAMarkerPoint - 5;
+                    setSongAStartMarker(Math.max(0, Math.min(time, maxStart)));
+                  }}
+                  onSetEndMarker={(time) => {
+                    const minEnd = songAStartMarker + 5;
+                    setSongAMarkerPoint(Math.max(minEnd, Math.min(time, songADuration)));
+                  }}
                   isPlaying={isPlayingA}
                   markers={[
                     {
                       id: 'song-a-start',
                       time: songAStartMarker,
-                      color: '#06b6d4',
-                      label: 'Start',
+                      color: '#10b981',
+                      label: 'IN',
                       onDrag: (newTime) => {
                         const maxStart = songAMarkerPoint - 5;
                         setSongAStartMarker(Math.max(0, Math.min(newTime, maxStart)));
@@ -781,8 +789,8 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                     {
                       id: 'song-a-end',
                       time: songAMarkerPoint,
-                      color: '#3b82f6',
-                      label: 'Out',
+                      color: '#ef4444',
+                      label: 'OUT',
                       onDrag: (newTime) => {
                         const minEnd = songAStartMarker + 5;
                         setSongAMarkerPoint(Math.max(minEnd, Math.min(newTime, songADuration)));
@@ -791,12 +799,12 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                   ]}
                 />
 
-                <div className="mt-4 bg-gray-900 rounded-lg p-4 border border-blue-500/30">
+                <div className="mt-4 bg-gray-900 rounded-lg p-4 border border-red-500/30">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                       <span className="text-sm text-gray-300">
-                        Extraction Range: <span className="text-cyan-400 font-mono">{formatTime(songAStartMarker)}</span> (Start) to <span className="text-blue-400 font-mono">{formatTime(songAMarkerPoint)}</span> (Fade Out)
+                        Extraction Range: <span className="text-green-400 font-mono">{formatTime(songAStartMarker)}</span> (IN) to <span className="text-red-400 font-mono">{formatTime(songAMarkerPoint)}</span> (OUT)
                       </span>
                     </div>
                     <span className="text-xs text-gray-500">({formatTime(songAMarkerPoint - songAStartMarker)} clip)</span>
@@ -836,13 +844,21 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                   onSeek={(time) => {
                     setSongBCurrentTime(time);
                   }}
+                  onSetInMarker={(time) => {
+                    const maxStart = songBEndMarker - 5;
+                    setSongBMarkerPoint(Math.max(0, Math.min(time, maxStart)));
+                  }}
+                  onSetEndMarker={(time) => {
+                    const minEnd = songBMarkerPoint + 5;
+                    setSongBEndMarker(Math.max(minEnd, Math.min(time, songBDuration)));
+                  }}
                   isPlaying={isPlayingB}
                   markers={[
                     {
                       id: 'song-b-start',
                       time: songBMarkerPoint,
                       color: '#10b981',
-                      label: 'In',
+                      label: 'IN',
                       onDrag: (newTime) => {
                         const maxStart = songBEndMarker - 5;
                         setSongBMarkerPoint(Math.max(0, Math.min(newTime, maxStart)));
@@ -851,8 +867,8 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                     {
                       id: 'song-b-end',
                       time: songBEndMarker,
-                      color: '#059669',
-                      label: 'End',
+                      color: '#ef4444',
+                      label: 'END',
                       onDrag: (newTime) => {
                         const minEnd = songBMarkerPoint + 5;
                         setSongBEndMarker(Math.max(minEnd, Math.min(newTime, songBDuration)));
@@ -861,12 +877,12 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                   ]}
                 />
 
-                <div className="mt-4 bg-gray-900 rounded-lg p-4 border border-green-500/30">
+                <div className="mt-4 bg-gray-900 rounded-lg p-4 border border-red-500/30">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                       <span className="text-sm text-gray-300">
-                        Extraction Range: <span className="text-green-400 font-mono">{formatTime(songBMarkerPoint)}</span> (Fade In) to <span className="text-emerald-400 font-mono">{formatTime(songBEndMarker)}</span> (End)
+                        Extraction Range: <span className="text-green-400 font-mono">{formatTime(songBMarkerPoint)}</span> (IN) to <span className="text-red-400 font-mono">{formatTime(songBEndMarker)}</span> (END)
                       </span>
                     </div>
                     <span className="text-xs text-gray-500">({formatTime(songBEndMarker - songBMarkerPoint)} clip)</span>

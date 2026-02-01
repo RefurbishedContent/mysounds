@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import * as Tone from 'tone';
 import { WaveformDisplay } from './WaveformDisplay';
-import { Play, Pause, MapPin } from 'lucide-react';
+import { Play, Pause, MapPin, Square } from 'lucide-react';
 
 export interface AudioMarker {
   id: string;
@@ -15,7 +15,9 @@ interface AudioScrubberProps {
   audioUrl: string;
   currentTime: number;
   duration: number;
-  onSeek: (time: number) => void;
+  onSeek?: (time: number) => void;
+  onSetInMarker?: (time: number) => void;
+  onSetEndMarker?: (time: number) => void;
   isPlaying: boolean;
   markerTime?: number;
   markerColor?: string;
@@ -27,6 +29,8 @@ export function AudioScrubber({
   currentTime,
   duration,
   onSeek,
+  onSetInMarker,
+  onSetEndMarker,
   isPlaying: externalIsPlaying,
   markerTime,
   markerColor = '#06b6d4',
@@ -150,12 +154,20 @@ export function AudioScrubber({
     [duration]
   );
 
-  const handleSetMarker = () => {
+  const handleSetInMarker = () => {
     if (playerRef.current && isPlaying) {
       playerRef.current.stop();
       setIsPlaying(false);
     }
-    onSeek(playbackTime);
+    onSetInMarker?.(playbackTime);
+  };
+
+  const handleSetEndMarker = () => {
+    if (playerRef.current && isPlaying) {
+      playerRef.current.stop();
+      setIsPlaying(false);
+    }
+    onSetEndMarker?.(playbackTime);
   };
 
   const handleMarkerMouseDown = useCallback((markerId: string, e: React.MouseEvent) => {
@@ -213,13 +225,22 @@ export function AudioScrubber({
             {formatTime(playbackTime)} / {formatTime(duration)}
           </div>
         </div>
-        <button
-          onClick={handleSetMarker}
-          className="flex items-center space-x-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg transition-colors text-white text-sm font-medium"
-        >
-          <MapPin className="w-4 h-4" />
-          <span>Set Marker Here</span>
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={handleSetInMarker}
+            className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg transition-colors text-white text-sm font-medium shadow-lg shadow-green-500/20"
+          >
+            <MapPin className="w-4 h-4" />
+            <span>Set IN</span>
+          </button>
+          <button
+            onClick={handleSetEndMarker}
+            className="flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg transition-colors text-white text-sm font-medium shadow-lg shadow-red-500/20"
+          >
+            <Square className="w-4 h-4" />
+            <span>Set END</span>
+          </button>
+        </div>
       </div>
 
       <div className="relative" ref={waveformContainerRef}>
