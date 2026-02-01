@@ -299,10 +299,12 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
 
   const handleRestart = () => {
     const confirmed = window.confirm(
-      'Are you sure you want to restart? This will reset all changes and return to the previous section.'
+      'Are you sure you want to restart? This will reload the editor and reset all changes to start fresh.'
     );
     if (confirmed) {
-      onBack();
+      setCurrentTime(0);
+      setIsPlaying(false);
+      window.location.reload();
     }
   };
 
@@ -721,7 +723,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                   className="w-full px-3 py-2.5 bg-gray-700 hover:bg-gray-600 border-2 border-yellow-600/40 hover:border-yellow-500/60 rounded transition-all flex items-center justify-center space-x-2 text-yellow-400 hover:text-yellow-300 font-semibold text-xs"
                 >
                   <RotateCcw className="w-4 h-4" />
-                  <span>Reset & Go Back</span>
+                  <span>Start Fresh</span>
                 </button>
               </div>
             </div>
