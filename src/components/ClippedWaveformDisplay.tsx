@@ -183,7 +183,7 @@ export function ClippedWaveformDisplay({
   }, [isDragging]);
 
   return (
-    <div ref={containerRef} className="relative w-full overflow-x-auto" style={{ height }}>
+    <div ref={containerRef} className="relative w-full overflow-x-scroll" style={{ height }}>
       {isLoading ? (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-800 rounded">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
@@ -196,7 +196,7 @@ export function ClippedWaveformDisplay({
           className={`h-full rounded ${
             onSeek ? 'cursor-pointer' : ''
           } ${isDragging ? 'cursor-grabbing' : ''}`}
-          style={{ width: zoom > 1 ? `${containerWidth * zoom}px` : '100%' }}
+          style={{ width: `${containerWidth * zoom}px`, minWidth: '100%' }}
           onClick={handleClick}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}

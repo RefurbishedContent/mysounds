@@ -52,9 +52,7 @@ export const KeyframeFadeEditor: React.FC<KeyframeFadeEditorProps> = ({
 
     sortedKeyframes.forEach((kf, index) => {
       const x = kf.position * canvas.width;
-      const y = direction === 'fadeOut'
-        ? (1 - kf.value) * canvas.height
-        : kf.value * canvas.height;
+      const y = (1 - kf.value) * canvas.height;
 
       if (index === 0) {
         ctx.moveTo(x, y);
@@ -70,9 +68,7 @@ export const KeyframeFadeEditor: React.FC<KeyframeFadeEditorProps> = ({
     ctx.moveTo(sortedKeyframes[0].position * canvas.width, canvas.height);
     sortedKeyframes.forEach(kf => {
       const x = kf.position * canvas.width;
-      const y = direction === 'fadeOut'
-        ? (1 - kf.value) * canvas.height
-        : kf.value * canvas.height;
+      const y = (1 - kf.value) * canvas.height;
       ctx.lineTo(x, y);
     });
     ctx.lineTo(sortedKeyframes[sortedKeyframes.length - 1].position * canvas.width, canvas.height);
@@ -92,9 +88,7 @@ export const KeyframeFadeEditor: React.FC<KeyframeFadeEditorProps> = ({
     const y = e.clientY - rect.top;
 
     const position = Math.max(0, Math.min(1, x / rect.width));
-    const value = direction === 'fadeOut'
-      ? 1 - Math.max(0, Math.min(1, y / rect.height))
-      : Math.max(0, Math.min(1, y / rect.height));
+    const value = 1 - Math.max(0, Math.min(1, y / rect.height));
 
     const newKeyframes = [...keyframes];
 
@@ -121,15 +115,11 @@ export const KeyframeFadeEditor: React.FC<KeyframeFadeEditorProps> = ({
     const y = e.clientY - rect.top;
 
     const position = Math.max(0, Math.min(1, x / rect.width));
-    const value = direction === 'fadeOut'
-      ? 1 - Math.max(0, Math.min(1, y / rect.height))
-      : Math.max(0, Math.min(1, y / rect.height));
+    const value = 1 - Math.max(0, Math.min(1, y / rect.height));
 
     const clickedOnExisting = keyframes.some((kf, index) => {
       const kfX = kf.position * rect.width;
-      const kfY = direction === 'fadeOut'
-        ? (1 - kf.value) * rect.height
-        : kf.value * rect.height;
+      const kfY = (1 - kf.value) * rect.height;
       const distance = Math.sqrt(Math.pow(x - kfX, 2) + Math.pow(y - kfY, 2));
       return distance < 10;
     });
@@ -177,9 +167,7 @@ export const KeyframeFadeEditor: React.FC<KeyframeFadeEditorProps> = ({
 
       {keyframes.map((kf, index) => {
         const x = kf.position * 100;
-        const y = direction === 'fadeOut'
-          ? (1 - kf.value) * 100
-          : kf.value * 100;
+        const y = (1 - kf.value) * 100;
 
         const isEndpoint = index === 0 || index === keyframes.length - 1;
         const isDragging = draggingIndex === index;

@@ -298,8 +298,12 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   };
 
   const handleRestart = () => {
-    setCurrentTime(0);
-    setIsPlaying(false);
+    const confirmed = window.confirm(
+      'Are you sure you want to restart? This will reset all changes and return to the previous section.'
+    );
+    if (confirmed) {
+      onBack();
+    }
   };
 
   const handlePlaySongA = async () => {
@@ -581,30 +585,16 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       <div className="flex-1 flex overflow-hidden">
         {!isLeftPanelCollapsed && (
           <div
-            className="bg-gray-800 border-r border-gray-700 flex-shrink-0 overflow-y-auto"
+            className="bg-gray-800 border-r border-gray-700 flex-shrink-0 overflow-y-auto relative"
             style={{ width: `${leftPanelWidth}px` }}
           >
+            <button
+              onClick={() => setIsLeftPanelCollapsed(!isLeftPanelCollapsed)}
+              className="absolute right-2 top-4 z-20 bg-cyan-600 hover:bg-cyan-500 rounded p-1.5 transition-all shadow-lg"
+            >
+              <ChevronLeft className="w-3 h-3 text-white" />
+            </button>
             <div className="p-3 space-y-2">
-              <div>
-                <h3 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Transport</h3>
-                <div className="flex flex-col space-y-1.5">
-                  <button
-                    onClick={handlePlayPause}
-                    className="w-full px-2 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 rounded transition-all duration-200 flex items-center justify-center space-x-1.5 text-white font-semibold text-xs"
-                  >
-                    {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                    <span>{isPlaying ? 'Pause' : 'Play All'}</span>
-                  </button>
-                  <button
-                    onClick={handleRestart}
-                    className="w-full px-2 py-1.5 bg-gray-700 hover:bg-gray-600 rounded transition-colors flex items-center justify-center space-x-1.5 text-gray-300 text-xs"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    <span>Restart</span>
-                  </button>
-                </div>
-              </div>
-
               <div>
                 <h3 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Transition Duration</h3>
                 <div className="space-y-1.5">
@@ -724,17 +714,29 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                   />
                 </div>
               )}
+
+              <div className="mt-4 pt-4 border-t border-gray-700">
+                <button
+                  onClick={handleRestart}
+                  className="w-full px-3 py-2.5 bg-gray-700 hover:bg-gray-600 border-2 border-yellow-600/40 hover:border-yellow-500/60 rounded transition-all flex items-center justify-center space-x-2 text-yellow-400 hover:text-yellow-300 font-semibold text-xs"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>Reset & Go Back</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
 
         <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden relative">
-          <button
-            onClick={() => setIsLeftPanelCollapsed(!isLeftPanelCollapsed)}
-            className="absolute left-2 top-4 z-10 bg-gray-800 border border-gray-700 rounded p-1.5 hover:bg-gray-700 transition-colors"
-          >
-            {isLeftPanelCollapsed ? <ChevronRight className="w-3 h-3 text-gray-400" /> : <ChevronLeft className="w-3 h-3 text-gray-400" />}
-          </button>
+          {isLeftPanelCollapsed && (
+            <button
+              onClick={() => setIsLeftPanelCollapsed(!isLeftPanelCollapsed)}
+              className="absolute left-2 top-4 z-10 bg-cyan-600 hover:bg-cyan-500 rounded p-1.5 transition-all shadow-lg"
+            >
+              <ChevronRight className="w-3 h-3 text-white" />
+            </button>
+          )}
 
           <div className="flex-1 flex flex-col p-4 overflow-auto">
             <div className="flex-1 bg-gray-800 rounded-lg border border-gray-700 p-4">
