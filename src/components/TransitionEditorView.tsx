@@ -472,7 +472,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
           const progress = Math.min(elapsed / clipDuration, 1);
           setPlaybackProgressA(progress);
 
-          if (progress < 1 && isPlayingSongA) {
+          if (progress < 1) {
             animationFrameARef.current = requestAnimationFrame(updateProgress);
           } else {
             if (animationFrameARef.current) {
@@ -579,7 +579,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
           const progress = Math.min(elapsed / clipDuration, 1);
           setPlaybackProgressB(progress);
 
-          if (progress < 1 && isPlayingSongB) {
+          if (progress < 1) {
             animationFrameBRef.current = requestAnimationFrame(updateProgress);
           } else {
             if (animationFrameBRef.current) {
@@ -943,8 +943,8 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
           )}
 
           <div className="flex-1 flex flex-col p-4 overflow-auto">
-            <div className="flex-1 bg-gray-800 rounded-lg border border-gray-700 p-4">
-              <div className="space-y-4">
+            <div className="flex-1 bg-gray-800 rounded-lg border border-gray-700 p-6">
+              <div className="space-y-8">
                 <div style={{ height: `${trackHeight}px` }} className="relative">
                   <div className="flex items-center mb-2 space-x-2">
                     <div className="text-xs font-semibold text-cyan-400">Song A (Ending - Fade Out)</div>
