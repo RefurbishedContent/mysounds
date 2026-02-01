@@ -297,14 +297,22 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     setIsPlaying(!isPlaying);
   };
 
-  const handleRestart = () => {
+  const handleRestart = async () => {
     const confirmed = window.confirm(
-      'Are you sure you want to restart? This will reload the editor and reset all changes to start fresh.'
+      'Are you sure you want to restart? This will reload the original transition settings and reset all unsaved changes.'
     );
     if (confirmed) {
       setCurrentTime(0);
       setIsPlaying(false);
-      window.location.reload();
+      setIsPlayingSongA(false);
+      setIsPlayingTransition(false);
+      setIsPlayingSongB(false);
+
+      playerARef.current?.stop();
+      playerBRef.current?.stop();
+      playerTransitionRef.current?.stop();
+
+      await loadData();
     }
   };
 
