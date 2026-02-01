@@ -17,6 +17,8 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [selectedGenre, setSelectedGenre] = useState('all');
+  const [sortBy, setSortBy] = useState<'recent' | 'name' | 'bpm'>('recent');
   const [songs, setSongs] = useState<UploadResult[]>([]);
   const [blends, setBlends] = useState<BlendData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,17 +65,31 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
     onCreateTransitionWithSong?.(song);
   };
 
-  const filteredSongs = songs.filter(song => {
-    const matchesSearch = song.originalName?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = selectedFilter === 'all' ||
-      song.mimeType?.includes(selectedFilter);
-    return matchesSearch && matchesFilter;
-  });
+  const uniqueGenres = Array.from(new Set(songs.map(song =>
+    (song as any).manualGenre || song.analysis?.genre
+  ).filter(Boolean))).sort();
+
+  const filteredAndSortedSongs = songs
+    .filter(song => {
+      const matchesSearch = song.originalName?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesFileType = selectedFilter === 'all' || song.mimeType?.includes(selectedFilter);
+      const songGenre = (song as any).manualGenre || song.analysis?.genre;
+      const matchesGenre = selectedGenre === 'all' || songGenre === selectedGenre;
+      return matchesSearch && matchesFileType && matchesGenre;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name') {
+        return a.originalName.localeCompare(b.originalName);
+      } else if (sortBy === 'bpm') {
+        const bpmA = a.analysis?.bpm || 0;
+        const bpmB = b.analysis?.bpm || 0;
+        return bpmB - bpmA;
+      }
+      return 0;
+    });
 
   const filters = [
     { value: 'all', label: 'All Files' },
-    { value: 'recent', label: 'Recently Added' },
-    { value: 'favorites', label: 'Favorites' },
     { value: 'mp3', label: 'MP3' },
     { value: 'wav', label: 'WAV' },
     { value: 'flac', label: 'FLAC' }
@@ -151,30 +167,60 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
       </div>
 
       {/* Search & Filters */}
-      <div className="flex flex-col sm:flex-row gap-2 mb-3">
-        <div className="relative flex-1">
-          <Search size={16} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-500" />
-          <input
-            type="text"
-            placeholder="Search your music library..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
-          />
+      <div className="flex flex-col gap-2 mb-3">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-500" />
+            <input
+              type="text"
+              placeholder="Search your music library..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 text-sm bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
+            />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Filter size={16} className="text-gray-500" />
+            <select
+              value={selectedFilter}
+              onChange={(e) => setSelectedFilter(e.target.value)}
+              className="px-3 py-2 text-sm bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
+            >
+              {filters.map(filter => (
+                <option key={filter.value} value={filter.value}>
+                  {filter.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        <div className="flex items-center space-x-2">
-          <Filter size={16} className="text-gray-500" />
+        <div className="flex flex-col sm:flex-row gap-2">
           <select
-            value={selectedFilter}
-            onChange={(e) => setSelectedFilter(e.target.value)}
+            value={selectedGenre}
+            onChange={(e) => setSelectedGenre(e.target.value)}
             className="px-3 py-2 text-sm bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
           >
-            {filters.map(filter => (
-              <option key={filter.value} value={filter.value}>
-                {filter.label}
-              </option>
-            ))}
+            <option value="all">All Genres ({songs.length})</option>
+            {uniqueGenres.map(genre => {
+              const count = songs.filter(s => ((s as any).manualGenre || s.analysis?.genre) === genre).length;
+              return (
+                <option key={genre} value={genre}>
+                  {genre} ({count})
+                </option>
+              );
+            })}
+          </select>
+
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'recent' | 'name' | 'bpm')}
+            className="px-3 py-2 text-sm bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
+          >
+            <option value="recent">Sort: Recent</option>
+            <option value="name">Sort: Name</option>
+            <option value="bpm">Sort: BPM</option>
           </select>
         </div>
       </div>
@@ -188,7 +234,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
               <p className="text-gray-400">Loading {currentTab === 'songs' ? 'your music library' : 'your blends'}...</p>
             </div>
           </div>
-        ) : currentTab === 'songs' && filteredSongs.length === 0 ? (
+        ) : currentTab === 'songs' && filteredAndSortedSongs.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center space-y-4 max-w-md">
               <div className="w-16 h-16 bg-gradient-to-r from-cyan-600/20 via-blue-600/20 to-purple-600/20 rounded-xl flex items-center justify-center mx-auto">
@@ -227,7 +273,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
           <>
             {viewMode === 'grid' ? (
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                {filteredSongs.map((song) => {
+                {filteredAndSortedSongs.map((song) => {
                   const hasFullAnalysis = song.analysis?.bpm && song.analysis?.key;
                   const isAnalyzing = song.status === 'processing';
 
@@ -289,7 +335,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
               </div>
             ) : (
               <div className="space-y-1.5">
-                {filteredSongs.map((song) => {
+                {filteredAndSortedSongs.map((song) => {
                   const hasFullAnalysis = song.analysis?.bpm && song.analysis?.key;
                   const isAnalyzing = song.status === 'processing';
 

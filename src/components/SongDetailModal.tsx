@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Music, X, Play, Pause, Zap, Clock, FileAudio, TrendingUp, BarChart3, Gauge, Sparkles, Activity, ChevronDown, ChevronUp, Hash, Headphones, Mic, Waves, RefreshCw, CheckCircle, AlertCircle, Loader, Radio, Key, Disc, Volume2 } from 'lucide-react';
+import { Music, X, Play, Pause, Zap, Clock, FileAudio, TrendingUp, BarChart3, Gauge, Sparkles, Activity, ChevronDown, ChevronUp, Hash, Headphones, Mic, Waves, RefreshCw, CheckCircle, AlertCircle, Loader, Radio, Key, Disc, Volume2, Edit3, Save } from 'lucide-react';
 import { UploadResult } from '../lib/storage';
 import { audioPlayer } from '../lib/audioPlayer';
 import { songAnalyzer } from '../lib/songAnalyzer';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 interface SongDetailModalProps {
   song: UploadResult;
@@ -17,6 +18,10 @@ const SongDetailModal: React.FC<SongDetailModalProps> = ({ song, onClose, onCrea
   const [showAdvancedMetrics, setShowAdvancedMetrics] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [currentSong, setCurrentSong] = useState(song);
+  const [isEditingGenre, setIsEditingGenre] = useState(false);
+  const [manualGenre, setManualGenre] = useState('');
+  const [savingGenre, setSavingGenre] = useState(false);
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
 
   useEffect(() => {
     setCurrentSong(song);
@@ -70,12 +75,46 @@ const SongDetailModal: React.FC<SongDetailModalProps> = ({ song, onClose, onCrea
     setAnalyzing(true);
     try {
       await songAnalyzer.analyzeSong(currentSong.id, user.id);
+      setShowSuccessAnimation(true);
+      setTimeout(() => setShowSuccessAnimation(false), 2000);
     } catch (error) {
       console.error('Analysis failed:', error);
       alert(error instanceof Error ? error.message : 'Analysis failed');
       setAnalyzing(false);
     }
   };
+
+  const handleSaveGenre = async () => {
+    if (!manualGenre.trim()) return;
+
+    setSavingGenre(true);
+    try {
+      const { error } = await supabase
+        .from('uploads')
+        .update({ manual_genre: manualGenre.trim() })
+        .eq('id', currentSong.id);
+
+      if (error) throw error;
+
+      setCurrentSong(prev => ({ ...prev, manualGenre: manualGenre.trim() }));
+      setIsEditingGenre(false);
+      setShowSuccessAnimation(true);
+      setTimeout(() => setShowSuccessAnimation(false), 2000);
+    } catch (error) {
+      console.error('Failed to save genre:', error);
+      alert('Failed to save genre');
+    } finally {
+      setSavingGenre(false);
+    }
+  };
+
+  const displayGenre = (currentSong as any).manualGenre || currentSong.analysis?.genre;
+
+  const genreOptions = [
+    'Pop', 'Rock', 'Hip-Hop', 'Electronic', 'Dance', 'House', 'Techno', 'Dubstep',
+    'Drum & Bass', 'Trance', 'Ambient', 'Jazz', 'Classical', 'Country', 'Blues',
+    'R&B', 'Soul', 'Funk', 'Reggae', 'Metal', 'Punk', 'Indie', 'Alternative'
+  ];
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + ' B';
@@ -137,10 +176,60 @@ const SongDetailModal: React.FC<SongDetailModalProps> = ({ song, onClose, onCrea
                       <span>Analyzed</span>
                     </span>
                   )}
-                  {currentSong.analysis?.genre && (
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                      {currentSong.analysis.genre}
-                    </span>
+                  {displayGenre && !isEditingGenre && (
+                    <div className="flex items-center space-x-1">
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        (currentSong as any).manualGenre
+                          ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                          : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                      }`}>
+                        {displayGenre}
+                        {(currentSong as any).manualGenre && ' ✓'}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setIsEditingGenre(true);
+                          setManualGenre(displayGenre);
+                        }}
+                        className="p-1 rounded-full hover:bg-gray-700 transition-colors"
+                        title="Edit genre"
+                      >
+                        <Edit3 size={12} className="text-gray-400 hover:text-cyan-400" />
+                      </button>
+                    </div>
+                  )}
+                  {isEditingGenre && (
+                    <div className="flex items-center space-x-1">
+                      <select
+                        value={manualGenre}
+                        onChange={(e) => setManualGenre(e.target.value)}
+                        className="px-2 py-1 text-xs bg-gray-800 border border-cyan-500 rounded text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      >
+                        <option value="">Select genre...</option>
+                        {genreOptions.map(genre => (
+                          <option key={genre} value={genre}>{genre}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={handleSaveGenre}
+                        disabled={savingGenre || !manualGenre.trim()}
+                        className="p-1 rounded-full bg-green-600 hover:bg-green-500 disabled:bg-gray-600 transition-colors"
+                        title="Save genre"
+                      >
+                        {savingGenre ? (
+                          <Loader size={12} className="text-white animate-spin" />
+                        ) : (
+                          <Save size={12} className="text-white" />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => setIsEditingGenre(false)}
+                        className="p-1 rounded-full hover:bg-gray-700 transition-colors"
+                        title="Cancel"
+                      >
+                        <X size={12} className="text-gray-400 hover:text-red-400" />
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -366,7 +455,7 @@ const SongDetailModal: React.FC<SongDetailModalProps> = ({ song, onClose, onCrea
             </div>
 
             {!hasFullAnalysis && currentSong.status !== 'processing' && (
-              <div className="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 rounded-lg p-4 border border-yellow-500/30">
+              <div className="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 rounded-lg p-4 border border-yellow-500/30 animate-pulse">
                 <div className="flex items-start space-x-3">
                   <AlertCircle size={20} className="text-yellow-400 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
@@ -375,6 +464,15 @@ const SongDetailModal: React.FC<SongDetailModalProps> = ({ song, onClose, onCrea
                       Run a comprehensive analysis to unlock BPM, key detection, genre classification, mood analysis, and more.
                     </p>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {showSuccessAnimation && (
+              <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-lg p-4 border border-green-500/30 animate-fadeIn">
+                <div className="flex items-center space-x-3">
+                  <CheckCircle size={20} className="text-green-400" />
+                  <span className="text-sm font-semibold text-green-300">Success!</span>
                 </div>
               </div>
             )}
@@ -412,7 +510,7 @@ const SongDetailModal: React.FC<SongDetailModalProps> = ({ song, onClose, onCrea
                 )}
               </button>
 
-              {!hasFullAnalysis && currentSong.status !== 'processing' && (
+              {currentSong.status !== 'processing' && (
                 <button
                   onClick={handleAnalyze}
                   disabled={analyzing}
@@ -424,6 +522,11 @@ const SongDetailModal: React.FC<SongDetailModalProps> = ({ song, onClose, onCrea
                       <>
                         <Loader size={20} className="animate-spin" />
                         <span>Analyzing...</span>
+                      </>
+                    ) : hasFullAnalysis ? (
+                      <>
+                        <RefreshCw size={20} />
+                        <span>Re-Analyze</span>
                       </>
                     ) : (
                       <>
@@ -449,7 +552,7 @@ const SongDetailModal: React.FC<SongDetailModalProps> = ({ song, onClose, onCrea
 
             <p className="text-center text-xs text-gray-500">
               {hasFullAnalysis
-                ? 'Song has been analyzed and is ready for professional mixing'
+                ? 'Click Re-Analyze to update the analysis with the latest algorithms'
                 : 'Analyze this track to unlock advanced AI-powered features'}
             </p>
           </div>

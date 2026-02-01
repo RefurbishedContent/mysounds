@@ -10,12 +10,18 @@ export interface UploadResult {
   size: number;
   status: 'uploading' | 'processing' | 'ready' | 'error';
   analysis?: AudioAnalysis;
+  manualGenre?: string;
+  genreConfidence?: number;
+  lastAnalyzedAt?: string;
   metadata: {
     filename: string;
     size: number;
     mimeType: string;
     duration?: number;
     analysis?: AudioAnalysis;
+    artist?: string;
+    title?: string;
+    album?: string;
   };
 }
 
@@ -94,12 +100,18 @@ class StorageService {
         size: existingUpload.size,
         status: existingUpload.status || 'ready',
         analysis: existingUpload.analysis,
+        manualGenre: existingUpload.manual_genre,
+        genreConfidence: existingUpload.genre_confidence,
+        lastAnalyzedAt: existingUpload.last_analyzed_at,
         metadata: {
           filename: existingUpload.original_name,
           size: existingUpload.size,
           mimeType: existingUpload.mime_type || 'audio/mpeg',
           duration: existingUpload.analysis?.duration,
-          analysis: existingUpload.analysis
+          analysis: existingUpload.analysis,
+          artist: existingUpload.metadata?.artist,
+          title: existingUpload.metadata?.title,
+          album: existingUpload.metadata?.album
         }
       };
     }
@@ -301,12 +313,18 @@ class StorageService {
       size: upload.size,
       status: upload.status || 'ready',
       analysis: upload.analysis,
+      manualGenre: upload.manual_genre,
+      genreConfidence: upload.genre_confidence,
+      lastAnalyzedAt: upload.last_analyzed_at,
       metadata: {
         filename: upload.original_name,
         size: upload.size,
         mimeType: upload.mime_type || 'audio/mpeg',
         duration: upload.analysis?.duration,
-        analysis: upload.analysis
+        analysis: upload.analysis,
+        artist: upload.metadata?.artist,
+        title: upload.metadata?.title,
+        album: upload.metadata?.album
       }
     }));
 

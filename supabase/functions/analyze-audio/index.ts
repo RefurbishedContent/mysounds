@@ -246,9 +246,12 @@ function classifyGenre(bpm: number, audioBuffer: ArrayBuffer): string {
   let midEnergy = 0;
   let highEnergy = 0;
   let rhythmicConsistency = 0;
+  let totalEnergy = 0;
+  let dynamicVariation = 0;
 
   for (let i = 0; i < samples.length; i++) {
     const value = Math.abs(samples[i] - 128);
+    totalEnergy += value;
 
     if (i % 8 < 2) {
       bassEnergy += value;
@@ -264,48 +267,76 @@ function classifyGenre(bpm: number, audioBuffer: ArrayBuffer): string {
         rhythmicConsistency++;
       }
     }
+
+    if (i > 0) {
+      dynamicVariation += Math.abs(samples[i] - samples[i - 1]);
+    }
   }
 
   bassEnergy = bassEnergy / (samples.length * 0.25);
   midEnergy = midEnergy / (samples.length * 0.375);
   highEnergy = highEnergy / (samples.length * 0.375);
   rhythmicConsistency = rhythmicConsistency / (samples.length / 441);
+  const avgEnergy = totalEnergy / samples.length;
+  const avgDynamicVar = dynamicVariation / samples.length;
 
-  const isBassHeavy = bassEnergy > midEnergy * 1.3 && bassEnergy > highEnergy * 1.3;
-  const isMidHeavy = midEnergy > bassEnergy && midEnergy > highEnergy;
-  const isHighHeavy = highEnergy > bassEnergy && highEnergy > midEnergy;
+  const isBassHeavy = bassEnergy > midEnergy * 1.4 && bassEnergy > highEnergy * 1.4;
+  const isMidHeavy = midEnergy > bassEnergy * 1.2 && midEnergy > highEnergy;
+  const isHighHeavy = highEnergy > bassEnergy && highEnergy > midEnergy * 1.2;
   const isRhythmic = rhythmicConsistency > 0.6;
+  const isHighEnergy = avgEnergy > 40;
+  const isHighDynamic = avgDynamicVar > 15;
 
-  if (isBassHeavy && bpm >= 135 && bpm <= 145 && !isRhythmic) {
-    return 'Dubstep';
-  }
-
-  if (isBassHeavy && bpm >= 170 && bpm <= 180 && isRhythmic) {
-    return 'Drum & Bass';
-  }
-
-  if (isRhythmic && bpm >= 128 && bpm <= 138 && midEnergy > 20) {
-    return 'House';
-  }
-
-  if (isRhythmic && bpm >= 140 && bpm <= 150) {
-    return 'Techno';
-  }
-
-  if (isBassHeavy && bpm >= 80 && bpm <= 100) {
-    return 'Hip-Hop';
-  }
-
-  if (!isRhythmic && bpm >= 60 && bpm <= 90) {
+  if (bpm >= 60 && bpm <= 90 && !isRhythmic && avgEnergy < 25) {
     return 'Ambient';
   }
 
-  if (bpm < 80) {
-    return 'Slow';
+  if (bpm >= 80 && bpm <= 110 && isBassHeavy && !isHighDynamic) {
+    return 'Hip-Hop';
   }
 
-  if (bpm > 150) {
-    return 'Fast';
+  if (bpm >= 95 && bpm <= 130 && isMidHeavy && isRhythmic) {
+    return 'Pop';
+  }
+
+  if (bpm >= 110 && bpm <= 140 && isHighEnergy && isHighDynamic && !isBassHeavy) {
+    return 'Rock';
+  }
+
+  if (bpm >= 128 && bpm <= 135 && isRhythmic && bassEnergy > 25 && midEnergy > 20) {
+    return 'House';
+  }
+
+  if (bpm >= 135 && bpm <= 145 && isBassHeavy && bassEnergy > 35) {
+    return 'Dubstep';
+  }
+
+  if (bpm >= 140 && bpm <= 150 && isRhythmic && isHighEnergy) {
+    return 'Techno';
+  }
+
+  if (bpm >= 150 && bpm <= 180 && isRhythmic && isBassHeavy) {
+    return 'Drum & Bass';
+  }
+
+  if (bpm >= 140 && bpm <= 200 && isHighEnergy && isHighDynamic) {
+    return 'Dance';
+  }
+
+  if (bpm >= 60 && bpm <= 100 && !isRhythmic && midEnergy > bassEnergy) {
+    return 'Jazz';
+  }
+
+  if (bpm >= 100 && bpm <= 130 && isMidHeavy) {
+    return 'Country';
+  }
+
+  if (bpm < 60 || (!isRhythmic && avgEnergy < 20)) {
+    return 'Classical';
+  }
+
+  if (bpm >= 90 && bpm <= 140) {
+    return 'Electronic';
   }
 
   return 'Unknown';
@@ -320,12 +351,16 @@ function getSubGenres(mainGenre: string, bpm: number): string[] {
     'Hip-Hop': ['Trap', 'Boom Bap', 'Lo-Fi Hip-Hop'],
     'Ambient': ['Drone', 'Dark Ambient', 'Space Ambient'],
     'Drum & Bass': ['Liquid DnB', 'Neurofunk', 'Jump Up'],
-    'Fast': ['High Energy', 'Uptempo'],
-    'Slow': ['Downtempo', 'Chill'],
-    'Unknown': ['Electronic', 'Experimental']
+    'Pop': ['Synth Pop', 'Indie Pop', 'Dance Pop'],
+    'Rock': ['Alternative Rock', 'Indie Rock', 'Classic Rock'],
+    'Dance': ['Trance', 'Hardstyle', 'Euro Dance'],
+    'Jazz': ['Smooth Jazz', 'Fusion', 'Bebop'],
+    'Country': ['Country Pop', 'Americana', 'Bluegrass'],
+    'Classical': ['Orchestral', 'Chamber', 'Contemporary Classical'],
+    'Unknown': ['General', 'Unclassified']
   };
 
-  const subGenres = subGenreMap[mainGenre] || ['Electronic'];
+  const subGenres = subGenreMap[mainGenre] || ['General'];
   return [subGenres[Math.floor(Math.random() * subGenres.length)]];
 }
 
