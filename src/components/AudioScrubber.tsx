@@ -3,6 +3,14 @@ import * as Tone from 'tone';
 import { WaveformDisplay } from './WaveformDisplay';
 import { Play, Pause, MapPin } from 'lucide-react';
 
+export interface AudioMarker {
+  id: string;
+  time: number;
+  color: string;
+  label: string;
+  onDrag?: (newTime: number) => void;
+}
+
 interface AudioScrubberProps {
   audioUrl: string;
   currentTime: number;
@@ -11,6 +19,7 @@ interface AudioScrubberProps {
   isPlaying: boolean;
   markerTime?: number;
   markerColor?: string;
+  markers?: AudioMarker[];
 }
 
 export function AudioScrubber({
@@ -20,14 +29,17 @@ export function AudioScrubber({
   onSeek,
   isPlaying: externalIsPlaying,
   markerTime,
-  markerColor = '#06b6d4'
+  markerColor = '#06b6d4',
+  markers = []
 }: AudioScrubberProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(currentTime);
+  const [draggingMarkerId, setDraggingMarkerId] = useState<string | null>(null);
   const playerRef = useRef<Tone.Player | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
   const pauseTimeRef = useRef<number>(0);
+  const waveformContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const initializePlayer = async () => {
@@ -146,6 +158,40 @@ export function AudioScrubber({
     onSeek(playbackTime);
   };
 
+  const handleMarkerMouseDown = useCallback((markerId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDraggingMarkerId(markerId);
+  }, []);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!draggingMarkerId || !waveformContainerRef.current) return;
+
+    const rect = waveformContainerRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+    const progress = x / rect.width;
+    const newTime = progress * duration;
+
+    const marker = markers.find(m => m.id === draggingMarkerId);
+    if (marker?.onDrag) {
+      marker.onDrag(newTime);
+    }
+  }, [draggingMarkerId, duration, markers]);
+
+  const handleMouseUp = useCallback(() => {
+    setDraggingMarkerId(null);
+  }, []);
+
+  useEffect(() => {
+    if (draggingMarkerId) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [draggingMarkerId, handleMouseMove, handleMouseUp]);
+
   const progress = playbackTime / duration;
 
   return (
@@ -176,7 +222,7 @@ export function AudioScrubber({
         </button>
       </div>
 
-      <div className="relative">
+      <div className="relative" ref={waveformContainerRef}>
         <WaveformDisplay
           audioUrl={audioUrl}
           progress={progress}
@@ -184,7 +230,7 @@ export function AudioScrubber({
           onSeek={handleWaveformClick}
           showScrubber={true}
         />
-        {markerTime !== undefined && markerTime > 0 && (
+        {markerTime !== undefined && markerTime > 0 && markers.length === 0 && (
           <div
             className="absolute top-0 bottom-0 pointer-events-none"
             style={{ left: `${(markerTime / duration) * 100}%` }}
@@ -207,6 +253,31 @@ export function AudioScrubber({
             </div>
           </div>
         )}
+        {markers.map((marker) => (
+          <div
+            key={marker.id}
+            className="absolute top-0 bottom-0 cursor-ew-resize"
+            style={{ left: `${(marker.time / duration) * 100}%` }}
+            onMouseDown={(e) => handleMarkerMouseDown(marker.id, e)}
+          >
+            <div
+              className="absolute -top-3 -bottom-3 transition-all hover:scale-110"
+              style={{
+                width: '3px',
+                boxShadow: `0 0 20px ${marker.color}, 0 0 40px ${marker.color}80`,
+                background: `linear-gradient(to bottom, ${marker.color}cc, ${marker.color}, ${marker.color}cc)`
+              }}
+            >
+              <div
+                className="absolute -top-8 left-1/2 -translate-x-1/2 text-white text-xs px-2 py-1 rounded whitespace-nowrap font-medium shadow-lg flex items-center space-x-1 cursor-ew-resize"
+                style={{ backgroundColor: marker.color }}
+              >
+                <MapPin className="w-3 h-3" />
+                <span>{marker.label}</span>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="mt-3 flex items-center justify-between text-xs text-gray-400">

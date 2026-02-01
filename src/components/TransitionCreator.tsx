@@ -16,6 +16,8 @@ interface TransitionCreatorProps {
 type CreatorStep = 'select-songs' | 'set-transition-points';
 
 const DEFAULT_TRANSITION_DURATION = 10;
+const MIN_CLIP_DURATION = 5;
+const MAX_CLIP_DURATION = 30;
 
 const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, initialSongA }) => {
   const { user } = useAuth();
@@ -29,8 +31,10 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
   const [bpmFilter, setBpmFilter] = useState<'all' | 'slow' | 'medium' | 'fast'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'recent' | 'bpm'>('recent');
 
+  const [songAStartMarker, setSongAStartMarker] = useState<number>(0);
   const [songAMarkerPoint, setSongAMarkerPoint] = useState<number>(0);
   const [songBMarkerPoint, setSongBMarkerPoint] = useState<number>(0);
+  const [songBEndMarker, setSongBEndMarker] = useState<number>(0);
   const [songACurrentTime, setSongACurrentTime] = useState(0);
   const [songBCurrentTime, setSongBCurrentTime] = useState(0);
   const [isPlayingA, setIsPlayingA] = useState(false);
@@ -55,7 +59,9 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
     if (songA) {
       const duration = songA.metadata?.duration || 300;
       setSongADuration(duration);
-      setSongAMarkerPoint(Math.max(DEFAULT_TRANSITION_DURATION, duration - DEFAULT_TRANSITION_DURATION));
+      const endMarker = Math.max(DEFAULT_TRANSITION_DURATION, duration - DEFAULT_TRANSITION_DURATION);
+      setSongAMarkerPoint(endMarker);
+      setSongAStartMarker(Math.max(0, endMarker - DEFAULT_TRANSITION_DURATION));
 
       const loadActualDuration = async () => {
         try {
@@ -64,7 +70,9 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
             player.dispose();
             if (actualDuration > 0) {
               setSongADuration(actualDuration);
-              setSongAMarkerPoint(Math.max(DEFAULT_TRANSITION_DURATION, actualDuration - DEFAULT_TRANSITION_DURATION));
+              const endMarker = Math.max(DEFAULT_TRANSITION_DURATION, actualDuration - DEFAULT_TRANSITION_DURATION);
+              setSongAMarkerPoint(endMarker);
+              setSongAStartMarker(Math.max(0, endMarker - DEFAULT_TRANSITION_DURATION));
             }
           });
         } catch (error) {
@@ -80,7 +88,9 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
     if (songB) {
       const duration = songB.metadata?.duration || 300;
       setSongBDuration(duration);
-      setSongBMarkerPoint(Math.min(DEFAULT_TRANSITION_DURATION, duration / 2));
+      const startMarker = Math.min(DEFAULT_TRANSITION_DURATION, duration / 2);
+      setSongBMarkerPoint(startMarker);
+      setSongBEndMarker(Math.min(duration, startMarker + DEFAULT_TRANSITION_DURATION));
 
       const loadActualDuration = async () => {
         try {
@@ -89,6 +99,9 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
             player.dispose();
             if (actualDuration > 0) {
               setSongBDuration(actualDuration);
+              const startMarker = Math.min(DEFAULT_TRANSITION_DURATION, actualDuration / 2);
+              setSongBMarkerPoint(startMarker);
+              setSongBEndMarker(Math.min(actualDuration, startMarker + DEFAULT_TRANSITION_DURATION));
             }
           });
         } catch (error) {
@@ -208,22 +221,19 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
 
     setSaving(true);
     try {
-      const songAClipStart = Math.max(0, songAMarkerPoint - DEFAULT_TRANSITION_DURATION);
-      const songBClipEnd = songBMarkerPoint + DEFAULT_TRANSITION_DURATION;
-
       const transition = await transitionsService.createTransition(user.id, {
         name: `${songA.originalName} → ${songB.originalName}`,
         songAId: songA.id,
         songBId: songB.id,
         templateId: null,
         transitionStartPoint: songAMarkerPoint,
-        DEFAULT_TRANSITION_DURATION: DEFAULT_TRANSITION_DURATION,
+        transitionDuration: DEFAULT_TRANSITION_DURATION,
         songAEndTime: songAMarkerPoint,
         songBStartTime: songBMarkerPoint,
         songAMarkerPoint: songAMarkerPoint,
         songBMarkerPoint: songBMarkerPoint,
-        songAClipStart: songAClipStart,
-        songBClipEnd: songBClipEnd,
+        songAClipStart: songAStartMarker,
+        songBClipEnd: songBEndMarker,
         metadata: {
           songAName: songA.originalName,
           songBName: songB.originalName
@@ -263,8 +273,36 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
     );
   }
 
-  const songAClipStart = Math.max(0, songAMarkerPoint - DEFAULT_TRANSITION_DURATION);
-  const songBClipEnd = songBMarkerPoint + DEFAULT_TRANSITION_DURATION;
+  const songAClipDuration = songAMarkerPoint - songAStartMarker;
+  const songBClipDuration = songBEndMarker - songBMarkerPoint;
+
+  const validationWarnings = [];
+  if (songA && songAClipDuration < MIN_CLIP_DURATION) {
+    validationWarnings.push({
+      type: 'error',
+      message: `Song A clip is too short (${formatTime(songAClipDuration)}). Minimum is ${MIN_CLIP_DURATION}s.`
+    });
+  }
+  if (songA && songAClipDuration > MAX_CLIP_DURATION) {
+    validationWarnings.push({
+      type: 'warning',
+      message: `Song A clip is quite long (${formatTime(songAClipDuration)}). Consider keeping it under ${MAX_CLIP_DURATION}s for better flow.`
+    });
+  }
+  if (songB && songBClipDuration < MIN_CLIP_DURATION) {
+    validationWarnings.push({
+      type: 'error',
+      message: `Song B clip is too short (${formatTime(songBClipDuration)}). Minimum is ${MIN_CLIP_DURATION}s.`
+    });
+  }
+  if (songB && songBClipDuration > MAX_CLIP_DURATION) {
+    validationWarnings.push({
+      type: 'warning',
+      message: `Song B clip is quite long (${formatTime(songBClipDuration)}). Consider keeping it under ${MAX_CLIP_DURATION}s for better flow.`
+    });
+  }
+
+  const hasErrors = validationWarnings.some(w => w.type === 'error');
 
   return (
     <div className="h-full flex flex-col bg-gray-900">
@@ -294,7 +332,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
           {currentStep === 'set-transition-points' && (
             <button
               onClick={handleBeginEditing}
-              disabled={saving || !songAMarkerPoint || !songBMarkerPoint}
+              disabled={saving || !songAMarkerPoint || !songBMarkerPoint || hasErrors}
               className="px-6 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2"
             >
               <Sparkles size={20} />
@@ -702,7 +740,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
           <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-white mb-2">Set Transition Points</h2>
-              <p className="text-gray-400">Choose where Song A ends and Song B begins</p>
+              <p className="text-gray-400">Drag markers to control when songs start, fade, and end</p>
             </div>
 
             <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 space-y-8">
@@ -710,13 +748,13 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h4 className="text-lg font-semibold text-white">{songA.originalName}</h4>
-                    <p className="text-sm text-gray-400">Select where Song A should END</p>
+                    <p className="text-sm text-gray-400">Drag markers to set Song A boundaries</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-gray-400">Marker at</p>
-                    <p className="text-xl font-bold text-blue-400">{formatTime(songAMarkerPoint)}</p>
+                    <p className="text-sm text-gray-400">Clip Duration</p>
+                    <p className="text-xl font-bold text-cyan-400">{formatTime(songAMarkerPoint - songAStartMarker)}</p>
                     <p className="text-xs text-gray-500 mt-1">
-                      Will use {DEFAULT_TRANSITION_DURATION}s before this point
+                      From {formatTime(songAStartMarker)} to {formatTime(songAMarkerPoint)}
                     </p>
                   </div>
                 </div>
@@ -727,11 +765,30 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                   duration={songADuration}
                   onSeek={(time) => {
                     setSongACurrentTime(time);
-                    setSongAMarkerPoint(time);
                   }}
                   isPlaying={isPlayingA}
-                  markerTime={songAMarkerPoint}
-                  markerColor="#3b82f6"
+                  markers={[
+                    {
+                      id: 'song-a-start',
+                      time: songAStartMarker,
+                      color: '#06b6d4',
+                      label: 'Start',
+                      onDrag: (newTime) => {
+                        const maxStart = songAMarkerPoint - 5;
+                        setSongAStartMarker(Math.max(0, Math.min(newTime, maxStart)));
+                      }
+                    },
+                    {
+                      id: 'song-a-end',
+                      time: songAMarkerPoint,
+                      color: '#3b82f6',
+                      label: 'Out',
+                      onDrag: (newTime) => {
+                        const minEnd = songAStartMarker + 5;
+                        setSongAMarkerPoint(Math.max(minEnd, Math.min(newTime, songADuration)));
+                      }
+                    }
+                  ]}
                 />
 
                 <div className="mt-4 bg-gray-900 rounded-lg p-4 border border-blue-500/30">
@@ -739,10 +796,10 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                     <div className="flex items-center space-x-3">
                       <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                       <span className="text-sm text-gray-300">
-                        Extraction Range: <span className="text-blue-400 font-mono">{formatTime(songAClipStart)}</span> to <span className="text-blue-400 font-mono">{formatTime(songAMarkerPoint)}</span>
+                        Extraction Range: <span className="text-cyan-400 font-mono">{formatTime(songAStartMarker)}</span> (Start) to <span className="text-blue-400 font-mono">{formatTime(songAMarkerPoint)}</span> (Fade Out)
                       </span>
                     </div>
-                    <span className="text-xs text-gray-500">({DEFAULT_TRANSITION_DURATION}s clip)</span>
+                    <span className="text-xs text-gray-500">({formatTime(songAMarkerPoint - songAStartMarker)} clip)</span>
                   </div>
                 </div>
               </div>
@@ -761,13 +818,13 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h4 className="text-lg font-semibold text-white">{songB.originalName}</h4>
-                    <p className="text-sm text-gray-400">Select where Song B should START</p>
+                    <p className="text-sm text-gray-400">Drag markers to set Song B boundaries</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-gray-400">Marker at</p>
-                    <p className="text-xl font-bold text-green-400">{formatTime(songBMarkerPoint)}</p>
+                    <p className="text-sm text-gray-400">Clip Duration</p>
+                    <p className="text-xl font-bold text-green-400">{formatTime(songBEndMarker - songBMarkerPoint)}</p>
                     <p className="text-xs text-gray-500 mt-1">
-                      Will use {DEFAULT_TRANSITION_DURATION}s after this point
+                      From {formatTime(songBMarkerPoint)} to {formatTime(songBEndMarker)}
                     </p>
                   </div>
                 </div>
@@ -778,11 +835,30 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                   duration={songBDuration}
                   onSeek={(time) => {
                     setSongBCurrentTime(time);
-                    setSongBMarkerPoint(time);
                   }}
                   isPlaying={isPlayingB}
-                  markerTime={songBMarkerPoint}
-                  markerColor="#10b981"
+                  markers={[
+                    {
+                      id: 'song-b-start',
+                      time: songBMarkerPoint,
+                      color: '#10b981',
+                      label: 'In',
+                      onDrag: (newTime) => {
+                        const maxStart = songBEndMarker - 5;
+                        setSongBMarkerPoint(Math.max(0, Math.min(newTime, maxStart)));
+                      }
+                    },
+                    {
+                      id: 'song-b-end',
+                      time: songBEndMarker,
+                      color: '#059669',
+                      label: 'End',
+                      onDrag: (newTime) => {
+                        const minEnd = songBMarkerPoint + 5;
+                        setSongBEndMarker(Math.max(minEnd, Math.min(newTime, songBDuration)));
+                      }
+                    }
+                  ]}
                 />
 
                 <div className="mt-4 bg-gray-900 rounded-lg p-4 border border-green-500/30">
@@ -790,14 +866,48 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                     <div className="flex items-center space-x-3">
                       <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                       <span className="text-sm text-gray-300">
-                        Extraction Range: <span className="text-green-400 font-mono">{formatTime(songBMarkerPoint)}</span> to <span className="text-green-400 font-mono">{formatTime(songBClipEnd)}</span>
+                        Extraction Range: <span className="text-green-400 font-mono">{formatTime(songBMarkerPoint)}</span> (Fade In) to <span className="text-emerald-400 font-mono">{formatTime(songBEndMarker)}</span> (End)
                       </span>
                     </div>
-                    <span className="text-xs text-gray-500">({DEFAULT_TRANSITION_DURATION}s clip)</span>
+                    <span className="text-xs text-gray-500">({formatTime(songBEndMarker - songBMarkerPoint)} clip)</span>
                   </div>
                 </div>
               </div>
             </div>
+
+            {validationWarnings.length > 0 && (
+              <div className="space-y-2">
+                {validationWarnings.map((warning, index) => (
+                  <div
+                    key={index}
+                    className={`rounded-lg p-4 border ${
+                      warning.type === 'error'
+                        ? 'bg-red-900/20 border-red-700/50'
+                        : 'bg-yellow-900/20 border-yellow-700/50'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                          warning.type === 'error' ? 'bg-red-500' : 'bg-yellow-500'
+                        }`}
+                      >
+                        <span className="text-white text-xs font-bold">
+                          {warning.type === 'error' ? '!' : 'i'}
+                        </span>
+                      </div>
+                      <p
+                        className={`text-sm ${
+                          warning.type === 'error' ? 'text-red-200' : 'text-yellow-200'
+                        }`}
+                      >
+                        {warning.message}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="bg-cyan-900/20 border border-cyan-700/50 rounded-lg p-6">
               <div className="flex items-start space-x-4">
