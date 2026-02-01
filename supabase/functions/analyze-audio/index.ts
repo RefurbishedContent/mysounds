@@ -240,15 +240,75 @@ function detectMusicalKey(audioBuffer: ArrayBuffer, bpm: number): string {
 }
 
 function classifyGenre(bpm: number, audioBuffer: ArrayBuffer): string {
-  if (bpm >= 170 && bpm <= 180) return 'Drum & Bass';
-  if (bpm >= 160 && bpm <= 170) return 'Dubstep';
-  if (bpm >= 140 && bpm <= 150) return 'Techno';
-  if (bpm >= 128 && bpm <= 138) return 'House';
-  if (bpm >= 120 && bpm <= 128) return 'Electronic';
-  if (bpm >= 80 && bpm <= 100) return 'Hip-Hop';
-  if (bpm >= 60 && bpm <= 90) return 'Ambient';
+  const samples = new Uint8Array(audioBuffer.slice(0, Math.min(audioBuffer.byteLength, 100000)));
 
-  return 'Electronic';
+  let bassEnergy = 0;
+  let midEnergy = 0;
+  let highEnergy = 0;
+  let rhythmicConsistency = 0;
+
+  for (let i = 0; i < samples.length; i++) {
+    const value = Math.abs(samples[i] - 128);
+
+    if (i % 8 < 2) {
+      bassEnergy += value;
+    } else if (i % 8 < 5) {
+      midEnergy += value;
+    } else {
+      highEnergy += value;
+    }
+
+    if (i > 0 && i % 441 === 0) {
+      const consistency = Math.abs(samples[i] - samples[i - 441]);
+      if (consistency < 30) {
+        rhythmicConsistency++;
+      }
+    }
+  }
+
+  bassEnergy = bassEnergy / (samples.length * 0.25);
+  midEnergy = midEnergy / (samples.length * 0.375);
+  highEnergy = highEnergy / (samples.length * 0.375);
+  rhythmicConsistency = rhythmicConsistency / (samples.length / 441);
+
+  const isBassHeavy = bassEnergy > midEnergy * 1.3 && bassEnergy > highEnergy * 1.3;
+  const isMidHeavy = midEnergy > bassEnergy && midEnergy > highEnergy;
+  const isHighHeavy = highEnergy > bassEnergy && highEnergy > midEnergy;
+  const isRhythmic = rhythmicConsistency > 0.6;
+
+  if (isBassHeavy && bpm >= 135 && bpm <= 145 && !isRhythmic) {
+    return 'Dubstep';
+  }
+
+  if (isBassHeavy && bpm >= 170 && bpm <= 180 && isRhythmic) {
+    return 'Drum & Bass';
+  }
+
+  if (isRhythmic && bpm >= 128 && bpm <= 138 && midEnergy > 20) {
+    return 'House';
+  }
+
+  if (isRhythmic && bpm >= 140 && bpm <= 150) {
+    return 'Techno';
+  }
+
+  if (isBassHeavy && bpm >= 80 && bpm <= 100) {
+    return 'Hip-Hop';
+  }
+
+  if (!isRhythmic && bpm >= 60 && bpm <= 90) {
+    return 'Ambient';
+  }
+
+  if (bpm < 80) {
+    return 'Slow';
+  }
+
+  if (bpm > 150) {
+    return 'Fast';
+  }
+
+  return 'Unknown';
 }
 
 function getSubGenres(mainGenre: string, bpm: number): string[] {
@@ -259,10 +319,13 @@ function getSubGenres(mainGenre: string, bpm: number): string[] {
     'Dubstep': ['Brostep', 'Deep Dubstep', 'Riddim'],
     'Hip-Hop': ['Trap', 'Boom Bap', 'Lo-Fi Hip-Hop'],
     'Ambient': ['Drone', 'Dark Ambient', 'Space Ambient'],
-    'Drum & Bass': ['Liquid DnB', 'Neurofunk', 'Jump Up']
+    'Drum & Bass': ['Liquid DnB', 'Neurofunk', 'Jump Up'],
+    'Fast': ['High Energy', 'Uptempo'],
+    'Slow': ['Downtempo', 'Chill'],
+    'Unknown': ['Electronic', 'Experimental']
   };
 
-  const subGenres = subGenreMap[mainGenre] || ['Electronic', 'Experimental'];
+  const subGenres = subGenreMap[mainGenre] || ['Electronic'];
   return [subGenres[Math.floor(Math.random() * subGenres.length)]];
 }
 
