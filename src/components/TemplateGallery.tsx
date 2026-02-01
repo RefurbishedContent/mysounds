@@ -579,7 +579,7 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
             <p className="text-gray-400">Try adjusting your search or filters</p>
           </div>
         ) : (
-          <div className={compact ? 'grid grid-cols-2 gap-3' : 'grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2.5'}>
+          <div className={compact ? 'grid grid-cols-3 md:grid-cols-5 gap-2' : 'grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2.5'}>
             {filteredTemplates.map((template) => (
               <div
                 key={template.id}
@@ -604,42 +604,44 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                   <div className="absolute inset-0 bg-gradient-to-t from-cyan-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
                   {/* Badges */}
-                  <div className="absolute flex gap-1 top-1.5 left-1.5">
+                  <div className={`absolute flex gap-1 ${compact ? 'top-1 left-1' : 'top-1.5 left-1.5'}`}>
                     {template.isPopular && (
-                      <span className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/30 w-5 h-5">
-                        <Star size={10} fill="white" />
+                      <span className={`bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/30 ${compact ? 'w-4 h-4' : 'w-5 h-5'}`}>
+                        <Star size={compact ? 8 : 10} fill="white" />
                       </span>
                     )}
                     {template.isPremium && (
-                      <span className="bg-gradient-to-r from-yellow-600 to-orange-600 text-white font-bold rounded-full flex items-center justify-center shadow-lg shadow-yellow-500/30 w-5 h-5">
-                        <Crown size={10} fill="white" />
+                      <span className={`bg-gradient-to-r from-yellow-600 to-orange-600 text-white font-bold rounded-full flex items-center justify-center shadow-lg shadow-yellow-500/30 ${compact ? 'w-4 h-4' : 'w-5 h-5'}`}>
+                        <Crown size={compact ? 8 : 10} fill="white" />
                       </span>
                     )}
                   </div>
 
                   {/* Duration */}
-                  <div className="absolute bottom-1.5 right-1.5">
-                    <span className="bg-black/80 backdrop-blur-sm text-white rounded px-1.5 py-0.5 text-[10px] font-medium">
+                  <div className={`absolute ${compact ? 'bottom-1 right-1' : 'bottom-1.5 right-1.5'}`}>
+                    <span className={`bg-black/80 backdrop-blur-sm text-white rounded px-1.5 py-0.5 font-medium ${compact ? 'text-[9px]' : 'text-[10px]'}`}>
                       {template.duration}s
                     </span>
                   </div>
                 </div>
 
                 {/* Content */}
-                <div className="p-2.5 space-y-1.5">
-                  <h3 className="text-sm font-semibold text-white truncate group-hover:text-cyan-400 transition-colors duration-200">
+                <div className={compact ? 'p-1.5 space-y-1' : 'p-2.5 space-y-1.5'}>
+                  <h3 className={`font-semibold text-white truncate group-hover:text-cyan-400 transition-colors duration-200 ${compact ? 'text-[11px]' : 'text-sm'}`}>
                     {template.name}
                   </h3>
-                  <p className="text-xs text-gray-400 line-clamp-2">
-                    {template.description}
-                  </p>
-                  <div className="flex items-center justify-between pt-1">
-                    <span className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${getDifficultyColor(template.difficulty)}`}>
-                      {template.difficulty}
+                  {!compact && (
+                    <p className="text-xs text-gray-400 line-clamp-2">
+                      {template.description}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-between pt-0.5">
+                    <span className={`px-1.5 py-0.5 text-[9px] font-medium rounded-full ${getDifficultyColor(template.difficulty)}`}>
+                      {compact ? template.difficulty.substring(0, 3) : template.difficulty}
                     </span>
-                    <div className="flex items-center gap-1 text-gray-500">
-                      <Star size={10} className="text-yellow-500" fill="currentColor" />
-                      <span className="text-[10px]">{template.rating}</span>
+                    <div className="flex items-center gap-0.5 text-gray-500">
+                      <Star size={8} className="text-yellow-500" fill="currentColor" />
+                      <span className="text-[9px]">{template.rating}</span>
                     </div>
                   </div>
                 </div>
