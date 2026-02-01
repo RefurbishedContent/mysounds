@@ -214,9 +214,9 @@ const LibraryUploader: React.FC<LibraryUploaderProps> = ({ onUploadComplete }) =
                 <li>You own the copyright to these audio files OR have obtained proper authorization from the copyright holder(s) to use and upload these files.</li>
                 <li>You will not upload any copyrighted material without proper permission, license, or legal right to do so.</li>
                 <li>You accept full legal responsibility for any copyright infringement or violations that may result from your uploads.</li>
-                <li>You agree to indemnify and hold harmless MySounds.ai, its operators, and affiliates from any legal claims, damages, or liabilities arising from your uploaded content.</li>
+                <li>You agree to indemnify and hold harmless MySounds.AI, its operators, and affiliates from any legal claims, damages, or liabilities arising from your uploaded content.</li>
                 <li>You understand that unauthorized use of copyrighted material may result in legal action, account termination, and removal of your content.</li>
-                <li>You grant MySounds.ai a limited, non-exclusive license to process and store your uploaded files solely for the purpose of providing the service to you.</li>
+                <li>You grant MySounds.AI a limited, non-exclusive license to process and store your uploaded files solely for the purpose of providing the service to you.</li>
               </ul>
             </div>
           </div>

@@ -63,7 +63,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onTryMixer }) => {
               </div>
               <div>
                 <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  MySounds.ai
+                  MySounds.AI
                 </h1>
               </div>
             </div>
@@ -253,7 +253,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onTryMixer }) => {
                   <div className="w-5 h-5 bg-gradient-to-br from-white to-cyan-100 rounded-sm opacity-90"></div>
                 </div>
                 <h3 className="text-xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  MySounds.ai
+                  MySounds.AI
                 </h3>
               </div>
               <p className="text-gray-400">

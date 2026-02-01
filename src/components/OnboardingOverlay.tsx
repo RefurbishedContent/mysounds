@@ -26,7 +26,7 @@ const OnboardingOverlay: React.FC<OnboardingOverlayProps> = ({ onComplete, onSki
   const steps: OnboardingStep[] = [
     {
       id: 'welcome',
-      title: 'Welcome to MySounds.ai!',
+      title: 'Welcome to MySounds.AI!',
       description: 'Let\'s fuse your first two songs with AI-powered templates in just 4 simple steps.',
       target: 'center',
       position: 'center',

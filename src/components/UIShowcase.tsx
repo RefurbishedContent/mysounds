@@ -46,7 +46,7 @@ const UIShowcase: React.FC = () => {
         {/* Header */}
         <div className="text-center space-y-4">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
-            MySounds.ai Design System
+            MySounds.AI Design System
           </h1>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto">
             A futuristic showcase of glowing cyan-blue components with advanced glassmorphism and neon effects.

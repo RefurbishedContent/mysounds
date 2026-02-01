@@ -105,7 +105,7 @@ const AuthGateway: React.FC<AuthGatewayProps> = ({ onClose }) => {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-white mb-2">
-              {isSignUp ? 'Join MySounds.ai' : 'Welcome Back'}
+              {isSignUp ? 'Join MySounds.AI' : 'Welcome Back'}
             </h1>
             <p className="text-gray-400">
               {isSignUp

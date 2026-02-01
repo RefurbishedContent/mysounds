@@ -302,7 +302,7 @@ const AppShell: React.FC = () => {
                   <Music size={32} className="text-white" />
                 </div>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  Welcome to MySounds.ai
+                  Welcome to MySounds.AI
                 </h1>
                 <p className="text-sm text-gray-400 leading-relaxed">
                   Create seamless transitions between your songs using AI-powered templates.
@@ -457,7 +457,7 @@ const AppShell: React.FC = () => {
               </div>
               <div className="hidden sm:block">
                 <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  MySounds.ai
+                  MySounds.AI
                 </h1>
                 <p className="text-xs text-gray-500">AI-Powered Song Fusion</p>
               </div>
