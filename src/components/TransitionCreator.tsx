@@ -329,75 +329,73 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
               className="sticky top-0 z-10 bg-gray-800 border-b border-gray-700 shadow-lg"
             >
               <div className="max-w-7xl mx-auto px-4 py-3">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className={`flex-1 bg-gray-900 rounded-lg p-3 border-2 transition-all ${
-                      songA ? 'border-cyan-500 bg-cyan-500/5' : 'border-dashed border-gray-700'
-                    }`}>
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                          songA ? 'bg-cyan-500' : 'bg-gray-700'
-                        }`}>
-                          <span className="text-white font-bold text-lg">A</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-gray-400 mb-0.5">Song A (Ending)</p>
-                          {songA ? (
-                            <p className="text-white font-medium text-sm truncate">{songA.originalName}</p>
-                          ) : (
-                            <p className="text-gray-500 text-sm">Select song...</p>
-                          )}
-                        </div>
-                        {songA && (
-                          <button
-                            onClick={() => setSongA(null)}
-                            className="p-1 hover:bg-gray-700 rounded transition-colors flex-shrink-0"
-                          >
-                            <X size={16} className="text-gray-400" />
-                          </button>
+                <div className="space-y-3">
+                  <div className={`bg-gray-900 rounded-lg p-3 border-2 transition-all ${
+                    songA ? 'border-cyan-500 bg-cyan-500/5' : 'border-dashed border-gray-700'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        songA ? 'bg-cyan-500' : 'bg-gray-700'
+                      }`}>
+                        <span className="text-white font-bold text-lg">A</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-gray-400 mb-0.5">Song A (Ending)</p>
+                        {songA ? (
+                          <p className="text-white font-medium text-sm truncate">{songA.originalName}</p>
+                        ) : (
+                          <p className="text-gray-500 text-sm">Select song...</p>
                         )}
                       </div>
+                      {songA && (
+                        <button
+                          onClick={() => setSongA(null)}
+                          className="p-1 hover:bg-gray-700 rounded transition-colors flex-shrink-0"
+                        >
+                          <X size={16} className="text-gray-400" />
+                        </button>
+                      )}
                     </div>
+                  </div>
 
-                    <div className={`flex-1 bg-gray-900 rounded-lg p-3 border-2 transition-all ${
-                      songB ? 'border-green-500 bg-green-500/5' : 'border-dashed border-gray-700'
-                    }`}>
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                          songB ? 'bg-green-500' : 'bg-gray-700'
-                        }`}>
-                          <span className="text-white font-bold text-lg">B</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-gray-400 mb-0.5">Song B (Beginning)</p>
-                          {songB ? (
-                            <p className="text-white font-medium text-sm truncate">{songB.originalName}</p>
-                          ) : (
-                            <p className="text-gray-500 text-sm">Select song...</p>
-                          )}
-                        </div>
-                        {songB && (
-                          <button
-                            onClick={() => setSongB(null)}
-                            className="p-1 hover:bg-gray-700 rounded transition-colors flex-shrink-0"
-                          >
-                            <X size={16} className="text-gray-400" />
-                          </button>
+                  <div className={`bg-gray-900 rounded-lg p-3 border-2 transition-all ${
+                    songB ? 'border-green-500 bg-green-500/5' : 'border-dashed border-gray-700'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        songB ? 'bg-green-500' : 'bg-gray-700'
+                      }`}>
+                        <span className="text-white font-bold text-lg">B</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-gray-400 mb-0.5">Song B (Beginning)</p>
+                        {songB ? (
+                          <p className="text-white font-medium text-sm truncate">{songB.originalName}</p>
+                        ) : (
+                          <p className="text-gray-500 text-sm">Select song...</p>
                         )}
                       </div>
+                      {songB && (
+                        <button
+                          onClick={() => setSongB(null)}
+                          className="p-1 hover:bg-gray-700 rounded transition-colors flex-shrink-0"
+                        >
+                          <X size={16} className="text-gray-400" />
+                        </button>
+                      )}
                     </div>
                   </div>
 
                   {songA && songB ? (
                     <button
                       onClick={handleContinueToSetPoints}
-                      className="px-6 py-3 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-400/40 animate-pulse"
+                      className="w-full px-6 py-3 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-400/40 animate-pulse"
                     >
                       <span>Continue</span>
                       <ChevronRight size={18} />
                     </button>
                   ) : (
-                    <div className="px-6 py-3 text-sm text-gray-500">
+                    <div className="text-center py-2 text-sm text-gray-500">
                       {songA ? '1/2 selected' : '0/2 selected'}
                     </div>
                   )}
