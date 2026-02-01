@@ -326,79 +326,174 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
           <div>
             <div
               ref={selectionPanelRef}
-              className="sticky top-0 z-10 bg-gray-800 border-b border-gray-700 shadow-lg"
+              className="sticky top-0 z-10 bg-gradient-to-b from-gray-800 via-gray-800 to-gray-800/95 border-b border-gray-700 shadow-2xl backdrop-blur-sm"
             >
-              <div className="max-w-7xl mx-auto px-4 py-3">
-                <div className="space-y-3">
-                  <div className={`bg-gray-900 rounded-lg p-3 border-2 transition-all ${
-                    songA ? 'border-cyan-500 bg-cyan-500/5' : 'border-dashed border-gray-700'
+              <div className="max-w-7xl mx-auto px-4 py-4">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  {/* Song A Card */}
+                  <div className={`bg-gray-900/50 rounded-xl p-4 border-2 transition-all backdrop-blur-sm ${
+                    songA ? 'border-cyan-500 bg-cyan-500/5 shadow-lg shadow-cyan-500/20' : 'border-dashed border-gray-700'
                   }`}>
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        songA ? 'bg-cyan-500' : 'bg-gray-700'
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                        songA ? 'bg-gradient-to-br from-cyan-500 to-cyan-600 shadow-lg shadow-cyan-500/50' : 'bg-gray-700'
                       }`}>
                         <span className="text-white font-bold text-lg">A</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-gray-400 mb-0.5">Song A (Ending)</p>
+                        <p className="text-xs text-gray-400 mb-1 uppercase tracking-wide">Song A (Ending)</p>
                         {songA ? (
-                          <p className="text-white font-medium text-sm truncate">{songA.originalName}</p>
+                          <>
+                            <p className="text-white font-semibold text-sm truncate mb-2">{songA.originalName}</p>
+                            {songA.analysis && (
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {songA.analysis.bpm && (
+                                  <div className="flex items-center gap-1 bg-cyan-500/20 px-2 py-1 rounded">
+                                    <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse"></div>
+                                    <span className="text-xs font-bold text-cyan-300">{Math.round(songA.analysis.bpm)} BPM</span>
+                                  </div>
+                                )}
+                                {songA.analysis.key && (
+                                  <div className="bg-gray-700/80 px-2 py-1 rounded">
+                                    <span className="text-xs font-medium text-gray-300">{songA.analysis.key}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </>
                         ) : (
-                          <p className="text-gray-500 text-sm">Select song...</p>
+                          <p className="text-gray-500 text-sm italic">Select ending song...</p>
                         )}
                       </div>
                       {songA && (
                         <button
                           onClick={() => setSongA(null)}
-                          className="p-1 hover:bg-gray-700 rounded transition-colors flex-shrink-0"
+                          className="p-1.5 hover:bg-gray-700/50 rounded-lg transition-colors flex-shrink-0"
                         >
-                          <X size={16} className="text-gray-400" />
+                          <X size={16} className="text-gray-400 hover:text-white" />
                         </button>
                       )}
                     </div>
                   </div>
 
-                  <div className={`bg-gray-900 rounded-lg p-3 border-2 transition-all ${
-                    songB ? 'border-green-500 bg-green-500/5' : 'border-dashed border-gray-700'
+                  {/* Analytics/Compatibility Panel */}
+                  <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/50 rounded-xl p-4 border border-gray-700/50 backdrop-blur-sm">
+                    {songA && songB ? (
+                      <div className="space-y-3">
+                        {/* Compatibility Score */}
+                        <div className="text-center">
+                          <div className="relative inline-flex items-center justify-center">
+                            <svg className="w-16 h-16 transform -rotate-90">
+                              <circle
+                                cx="32"
+                                cy="32"
+                                r="28"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                                fill="none"
+                                className="text-gray-700"
+                              />
+                              <circle
+                                cx="32"
+                                cy="32"
+                                r="28"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                                fill="none"
+                                strokeDasharray={`${getCompatibilityScore(songA, songB) * 1.76} 176`}
+                                className="text-cyan-400 transition-all duration-1000"
+                              />
+                            </svg>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="text-xl font-bold text-cyan-400">{getCompatibilityScore(songA, songB)}%</span>
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-400 mt-1 uppercase tracking-wide">Match Quality</p>
+                        </div>
+
+                        {/* Quick Stats */}
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          {/* BPM Match */}
+                          <div className="bg-gray-800/50 rounded-lg px-2 py-1.5 text-center">
+                            <div className={`text-sm font-bold ${getBPMCompatibility(songA, songB) > 90 ? 'text-green-400' : getBPMCompatibility(songA, songB) > 70 ? 'text-yellow-400' : 'text-orange-400'}`}>
+                              {getBPMCompatibility(songA, songB)}%
+                            </div>
+                            <div className="text-gray-500 text-[10px] uppercase">Tempo</div>
+                          </div>
+
+                          {/* Energy Match */}
+                          <div className="bg-gray-800/50 rounded-lg px-2 py-1.5 text-center">
+                            <div className={`text-sm font-bold ${getEnergyMatch(songA, songB) > 80 ? 'text-green-400' : 'text-cyan-400'}`}>
+                              {getEnergyMatch(songA, songB)}%
+                            </div>
+                            <div className="text-gray-500 text-[10px] uppercase">Energy</div>
+                          </div>
+                        </div>
+
+                        {/* Continue Button */}
+                        <button
+                          onClick={handleContinueToSetPoints}
+                          className="w-full px-4 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-400/40 hover:scale-105"
+                        >
+                          <span className="text-sm">Continue</span>
+                          <ChevronRight size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="h-full flex flex-col items-center justify-center space-y-2 py-2">
+                        <div className="text-2xl font-bold text-gray-600">{songA || songB ? '1' : '0'}/2</div>
+                        <p className="text-xs text-gray-500 text-center">
+                          {!songA && !songB ? 'Select both songs' : songA && !songB ? 'Select Song B' : 'Select Song A'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Song B Card */}
+                  <div className={`bg-gray-900/50 rounded-xl p-4 border-2 transition-all backdrop-blur-sm ${
+                    songB ? 'border-green-500 bg-green-500/5 shadow-lg shadow-green-500/20' : 'border-dashed border-gray-700'
                   }`}>
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        songB ? 'bg-green-500' : 'bg-gray-700'
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                        songB ? 'bg-gradient-to-br from-green-500 to-green-600 shadow-lg shadow-green-500/50' : 'bg-gray-700'
                       }`}>
                         <span className="text-white font-bold text-lg">B</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-gray-400 mb-0.5">Song B (Beginning)</p>
+                        <p className="text-xs text-gray-400 mb-1 uppercase tracking-wide">Song B (Beginning)</p>
                         {songB ? (
-                          <p className="text-white font-medium text-sm truncate">{songB.originalName}</p>
+                          <>
+                            <p className="text-white font-semibold text-sm truncate mb-2">{songB.originalName}</p>
+                            {songB.analysis && (
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {songB.analysis.bpm && (
+                                  <div className="flex items-center gap-1 bg-green-500/20 px-2 py-1 rounded">
+                                    <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
+                                    <span className="text-xs font-bold text-green-300">{Math.round(songB.analysis.bpm)} BPM</span>
+                                  </div>
+                                )}
+                                {songB.analysis.key && (
+                                  <div className="bg-gray-700/80 px-2 py-1 rounded">
+                                    <span className="text-xs font-medium text-gray-300">{songB.analysis.key}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </>
                         ) : (
-                          <p className="text-gray-500 text-sm">Select song...</p>
+                          <p className="text-gray-500 text-sm italic">Select starting song...</p>
                         )}
                       </div>
                       {songB && (
                         <button
                           onClick={() => setSongB(null)}
-                          className="p-1 hover:bg-gray-700 rounded transition-colors flex-shrink-0"
+                          className="p-1.5 hover:bg-gray-700/50 rounded-lg transition-colors flex-shrink-0"
                         >
-                          <X size={16} className="text-gray-400" />
+                          <X size={16} className="text-gray-400 hover:text-white" />
                         </button>
                       )}
                     </div>
                   </div>
-
-                  {songA && songB ? (
-                    <button
-                      onClick={handleContinueToSetPoints}
-                      className="w-full px-6 py-3 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-400/40 animate-pulse"
-                    >
-                      <span>Continue</span>
-                      <ChevronRight size={18} />
-                    </button>
-                  ) : (
-                    <div className="text-center py-2 text-sm text-gray-500">
-                      {songA ? '1/2 selected' : '0/2 selected'}
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -853,6 +948,86 @@ function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+function getCompatibilityScore(songA: UploadResult, songB: UploadResult): number {
+  let score = 0;
+  let factors = 0;
+
+  const bpmA = songA.analysis?.bpm;
+  const bpmB = songB.analysis?.bpm;
+  const keyA = songA.analysis?.key;
+  const keyB = songB.analysis?.key;
+
+  if (bpmA && bpmB) {
+    const bpmDiff = Math.abs(bpmA - bpmB);
+    const bpmScore = Math.max(0, 100 - (bpmDiff * 2));
+    score += bpmScore;
+    factors++;
+  }
+
+  if (keyA && keyB) {
+    const compatibleKeys = areKeysCompatible(keyA, keyB);
+    score += compatibleKeys ? 100 : 60;
+    factors++;
+  }
+
+  if (factors === 0) return 75;
+  return Math.round(score / factors);
+}
+
+function getBPMCompatibility(songA: UploadResult, songB: UploadResult): number {
+  const bpmA = songA.analysis?.bpm;
+  const bpmB = songB.analysis?.bpm;
+
+  if (!bpmA || !bpmB) return 75;
+
+  const bpmDiff = Math.abs(bpmA - bpmB);
+
+  if (bpmDiff === 0) return 100;
+  if (bpmDiff <= 3) return 95;
+  if (bpmDiff <= 5) return 90;
+  if (bpmDiff <= 10) return 80;
+  if (bpmDiff <= 15) return 70;
+  if (bpmDiff <= 20) return 60;
+  return Math.max(40, 60 - bpmDiff);
+}
+
+function getEnergyMatch(songA: UploadResult, songB: UploadResult): number {
+  const bpmA = songA.analysis?.bpm || 120;
+  const bpmB = songB.analysis?.bpm || 120;
+
+  const energyA = bpmA > 140 ? 'high' : bpmA > 100 ? 'medium' : 'low';
+  const energyB = bpmB > 140 ? 'high' : bpmB > 100 ? 'medium' : 'low';
+
+  if (energyA === energyB) return 95;
+
+  const diff = Math.abs(
+    (bpmA > 140 ? 2 : bpmA > 100 ? 1 : 0) -
+    (bpmB > 140 ? 2 : bpmB > 100 ? 1 : 0)
+  );
+
+  if (diff === 1) return 75;
+  return 60;
+}
+
+function areKeysCompatible(keyA: string, keyB: string): boolean {
+  const compatiblePairs: Record<string, string[]> = {
+    'C': ['C', 'G', 'F', 'Am', 'Em', 'Dm'],
+    'G': ['G', 'D', 'C', 'Em', 'Bm', 'Am'],
+    'D': ['D', 'A', 'G', 'Bm', 'F#m', 'Em'],
+    'A': ['A', 'E', 'D', 'F#m', 'C#m', 'Bm'],
+    'E': ['E', 'B', 'A', 'C#m', 'G#m', 'F#m'],
+    'F': ['F', 'C', 'Bb', 'Dm', 'Am', 'Gm'],
+  };
+
+  for (const [key, compatible] of Object.entries(compatiblePairs)) {
+    if (keyA.includes(key) && compatible.some(k => keyB.includes(k))) {
+      return true;
+    }
+  }
+
+  return keyA === keyB;
 }
 
 export default TransitionCreator;
