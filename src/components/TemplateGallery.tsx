@@ -579,107 +579,70 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
             <p className="text-gray-400">Try adjusting your search or filters</p>
           </div>
         ) : (
-          <div className={compact ? 'flex flex-col space-y-3' : 'grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2.5'}>
+          <div className={compact ? 'grid grid-cols-2 gap-3' : 'grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2.5'}>
             {filteredTemplates.map((template) => (
               <div
                 key={template.id}
-                className={`group relative transition-all duration-300 cursor-grab active:cursor-grabbing ${
+                className={`group relative transition-all duration-300 cursor-pointer hover:scale-[1.02] ${
                   compact
-                    ? 'bg-gray-800/50 backdrop-blur-sm border border-cyan-500/20 hover:border-cyan-400/40 rounded-xl p-3 flex items-center space-x-3'
+                    ? 'bg-gray-800/50 backdrop-blur-sm border border-cyan-500/20 hover:border-cyan-400/40 rounded-xl overflow-hidden hover:shadow-lg hover:shadow-cyan-500/20'
                     : 'bg-gray-800/40 backdrop-blur-sm border border-cyan-500/10 hover:border-cyan-400/30 rounded-lg overflow-hidden hover:shadow-lg hover:shadow-cyan-500/20 hover:scale-[1.02]'
                 }`}
-                draggable
+                draggable={false}
                 onDragStart={(e) => handleDragStart(template, e)}
-                onClick={() => !compact && onSelectTemplate(template)}
+                onClick={() => onSelectTemplate(template)}
               >
-                {/* Disabled overlay for templates when tracks not ready */}
-                {(!trackA || !trackB) && !compact && (
-                  <div className="absolute inset-0 bg-gray-900/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
-                    <div className="text-center space-y-0.5 px-2">
-                      <div className="text-yellow-400 text-[10px] font-medium">Upload Required</div>
-                      <div className="text-gray-400 text-[9px]">Upload tracks first</div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Drag Handle */}
-                {compact && (
-                  <div className="text-gray-500 group-hover:text-gray-300 transition-colors duration-200">
-                    <GripVertical size={16} />
-                  </div>
-                )}
-
                 {/* Thumbnail */}
-                <div className={`relative ${compact ? 'w-16 h-16 flex-shrink-0' : ''}`}>
-                  <div className={`overflow-hidden ${compact ? 'w-16 h-16 rounded-lg' : 'w-full aspect-square'}`}>
-                    <div className={`group-hover:scale-110 transition-transform duration-300 ${compact ? 'w-16 h-16' : 'w-full h-full'}`}>
+                <div className="relative">
+                  <div className="overflow-hidden w-full aspect-square">
+                    <div className="group-hover:scale-110 transition-transform duration-300 w-full h-full">
                       <TemplateIcon category={template.category} name={template.name} />
                     </div>
                   </div>
 
                   {/* Hover Glow Effect */}
-                  {!compact && (
-                    <div className="absolute inset-0 bg-gradient-to-t from-cyan-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-cyan-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
                   {/* Badges */}
-                  <div className={`absolute flex ${compact ? 'space-x-1 top-1 left-1' : 'gap-1 top-1.5 left-1.5'}`}>
+                  <div className="absolute flex gap-1 top-1.5 left-1.5">
                     {template.isPopular && (
-                      <span className={`bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/30 ${compact ? 'w-4 h-4' : 'w-5 h-5'}`}>
-                        <Star size={compact ? 8 : 10} fill="white" />
+                      <span className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/30 w-5 h-5">
+                        <Star size={10} fill="white" />
                       </span>
                     )}
                     {template.isPremium && (
-                      <span className={`bg-gradient-to-r from-yellow-600 to-orange-600 text-white font-bold rounded-full flex items-center justify-center shadow-lg shadow-yellow-500/30 ${compact ? 'w-4 h-4' : 'w-5 h-5'}`}>
-                        <Crown size={compact ? 8 : 10} fill="white" />
+                      <span className="bg-gradient-to-r from-yellow-600 to-orange-600 text-white font-bold rounded-full flex items-center justify-center shadow-lg shadow-yellow-500/30 w-5 h-5">
+                        <Crown size={10} fill="white" />
                       </span>
                     )}
                   </div>
 
                   {/* Duration */}
-                  {!compact && (
-                    <div className="absolute bottom-1.5 right-1.5">
-                      <span className="bg-black/80 backdrop-blur-sm text-white rounded px-1.5 py-0.5 text-[10px] font-medium">
-                        {template.duration}s
-                      </span>
-                    </div>
-                  )}
+                  <div className="absolute bottom-1.5 right-1.5">
+                    <span className="bg-black/80 backdrop-blur-sm text-white rounded px-1.5 py-0.5 text-[10px] font-medium">
+                      {template.duration}s
+                    </span>
+                  </div>
                 </div>
 
-                {/* Compact Content */}
-                {compact ? (
-                  <div className="flex-1 min-w-0 space-y-2">
-                    <div>
-                      <h3 className="text-sm font-semibold text-white mb-0.5 truncate">
-                        {template.name}
-                      </h3>
-                      <p className="text-xs text-gray-400 line-clamp-1">
-                        {template.description}
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-400 truncate">by {template.author}</span>
-                      <span className={`px-2 py-1 font-medium rounded-full text-xs ${getDifficultyColor(template.difficulty)}`}>
-                        {template.difficulty}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-2 space-y-1">
-                    <h3 className="text-xs font-semibold text-white truncate group-hover:text-cyan-400 transition-colors duration-200">
-                      {template.name}
-                    </h3>
-                    <div className="flex items-center justify-between gap-1">
-                      <span className={`px-1.5 py-0.5 text-[9px] font-medium rounded-full ${getDifficultyColor(template.difficulty)}`}>
-                        {template.difficulty}
-                      </span>
-                      <div className="flex items-center gap-1 text-gray-500">
-                        <Star size={10} className="text-yellow-500" fill="currentColor" />
-                        <span className="text-[9px]">{template.rating}</span>
-                      </div>
+                {/* Content */}
+                <div className="p-2.5 space-y-1.5">
+                  <h3 className="text-sm font-semibold text-white truncate group-hover:text-cyan-400 transition-colors duration-200">
+                    {template.name}
+                  </h3>
+                  <p className="text-xs text-gray-400 line-clamp-2">
+                    {template.description}
+                  </p>
+                  <div className="flex items-center justify-between pt-1">
+                    <span className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${getDifficultyColor(template.difficulty)}`}>
+                      {template.difficulty}
+                    </span>
+                    <div className="flex items-center gap-1 text-gray-500">
+                      <Star size={10} className="text-yellow-500" fill="currentColor" />
+                      <span className="text-[10px]">{template.rating}</span>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
             ))}
           </div>
