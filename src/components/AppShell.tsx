@@ -520,25 +520,24 @@ const AppShell: React.FC = () => {
           {isSidebarCollapsed ? (
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className="hidden md:flex absolute -right-3 top-6 z-50 w-6 h-6 bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-full items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl"
+              className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 flex-col items-center justify-center px-1 py-4 bg-gray-800 hover:bg-gray-750 border-r border-gray-600 hover:border-gray-500 transition-colors duration-200"
               title="Expand sidebar"
             >
-              <ChevronRight size={14} className="text-gray-300" />
+              <ChevronRight size={16} className="text-gray-500" />
             </button>
           ) : (
             <button
               onClick={() => setIsSidebarCollapsed(true)}
-              className="hidden md:flex absolute -right-4 top-1/2 z-50 flex-col items-center justify-center px-1.5 py-6 bg-gradient-to-b from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 rounded-r-xl shadow-2xl hover:shadow-cyan-500/50 group border-l-0 border-2 border-cyan-500/50 animate-slide-hint hover:animate-none"
-              style={{ transform: 'translateY(-50%)' }}
+              className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 flex-col items-center justify-center px-1.5 py-5 bg-gray-700/80 hover:bg-gray-700 border-r-2 border-cyan-500/30 hover:border-cyan-500/50 transition-colors duration-200 group"
               title="Close sidebar"
             >
-              <ChevronLeft size={20} className="text-white mb-1 group-hover:scale-110 transition-transform" />
-              <div className="flex flex-col gap-1">
-                <div className="w-0.5 h-3 bg-white/60 rounded-full group-hover:bg-white transition-colors"></div>
-                <div className="w-0.5 h-3 bg-white/40 rounded-full group-hover:bg-white/80 transition-colors"></div>
-                <div className="w-0.5 h-3 bg-white/60 rounded-full group-hover:bg-white transition-colors"></div>
+              <ChevronLeft size={18} className="text-gray-400 group-hover:text-gray-300 transition-colors mb-2" />
+              <div className="flex flex-col gap-1.5">
+                <div className="w-0.5 h-2.5 bg-gray-500 rounded-full"></div>
+                <div className="w-0.5 h-2.5 bg-gray-600 rounded-full"></div>
+                <div className="w-0.5 h-2.5 bg-gray-500 rounded-full"></div>
               </div>
-              <ChevronLeft size={20} className="text-white mt-1 group-hover:scale-110 transition-transform" />
+              <ChevronLeft size={18} className="text-gray-400 group-hover:text-gray-300 transition-colors mt-2" />
             </button>
           )}
 
