@@ -219,11 +219,6 @@ body {
   50% { box-shadow: var(--shadow-glow-strong); }
 }
 
-@keyframes slideHint {
-  0%, 100% { transform: translateX(0) translateY(-50%); }
-  50% { transform: translateX(-4px) translateY(-50%); }
-}
-
 .animate-fade-in {
   animation: fadeIn 0.6s ease-out;
 }
@@ -238,8 +233,4 @@ body {
 
 .animate-glow {
   animation: glow 2s infinite;
-}
-
-.animate-slide-hint {
-  animation: slideHint 2s ease-in-out infinite;
 }

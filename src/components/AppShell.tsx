@@ -501,45 +501,26 @@ const AppShell: React.FC = () => {
           />
         )}
 
-        {/* Desktop Sidebar Overlay Backdrop */}
-        {!isSidebarCollapsed && !isMobile && (
-          <div
-            className="hidden md:block fixed inset-0 bg-black bg-opacity-30 z-40"
-            onClick={() => setIsSidebarCollapsed(true)}
-          />
-        )}
-
         {/* Sidebar - Hidden on Mobile (bottom nav replaces it) */}
         <div className={`
-          bg-gray-800 border-r border-gray-700 transition-all duration-300 ease-in-out
+          bg-gray-800 border-r border-gray-700 transition-all duration-300 ease-in-out relative
           ${isMobile ? 'hidden' : ''}
           md:translate-x-0
-          inset-y-0 left-0
-          ${isSidebarCollapsed ? 'md:relative md:w-16 z-30' : 'md:fixed md:w-64 z-50'}
+          md:relative inset-y-0 left-0 z-50
+          md:w-auto
+          ${isSidebarCollapsed ? 'md:w-16' : 'md:w-64'}
         `}>
-          {isSidebarCollapsed ? (
-            <button
-              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 flex-col items-center justify-center px-0.5 py-3 bg-gray-800 hover:bg-gray-750 border-r border-gray-700 hover:border-gray-600 transition-colors duration-200 rounded-l"
-              title="Expand sidebar"
-            >
-              <ChevronRight size={14} className="text-gray-600 hover:text-gray-500" />
-            </button>
-          ) : (
-            <button
-              onClick={() => setIsSidebarCollapsed(true)}
-              className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 flex-col items-center justify-center px-1 py-4 bg-gray-700/60 hover:bg-gray-700/80 border-r border-cyan-500/20 hover:border-cyan-500/40 transition-all duration-200 group rounded-l shadow-[0_0_8px_rgba(6,182,212,0.15)] hover:shadow-[0_0_12px_rgba(6,182,212,0.25)]"
-              title="Close sidebar"
-            >
-              <ChevronLeft size={16} className="text-gray-500 group-hover:text-gray-400 transition-colors mb-1.5" />
-              <div className="flex flex-col gap-1">
-                <div className="w-0.5 h-2 bg-gray-600 rounded-full"></div>
-                <div className="w-0.5 h-2 bg-gray-600 rounded-full"></div>
-                <div className="w-0.5 h-2 bg-gray-600 rounded-full"></div>
-              </div>
-              <ChevronLeft size={16} className="text-gray-500 group-hover:text-gray-400 transition-colors mt-1.5" />
-            </button>
-          )}
+          <button
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            className="hidden md:flex absolute -right-3 top-6 z-50 w-6 h-6 bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-full items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl"
+            title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {isSidebarCollapsed ? (
+              <ChevronRight size={14} className="text-gray-300" />
+            ) : (
+              <ChevronLeft size={14} className="text-gray-300" />
+            )}
+          </button>
 
           <div className="h-full flex flex-col">
             {/* Mobile Close Button */}
@@ -653,8 +634,8 @@ const AppShell: React.FC = () => {
           </div>
         </div>
 
-        {/* Main Content - Always sized for collapsed sidebar */}
-        <div className={`flex-1 flex flex-col min-w-0 ${isMobile ? 'w-full' : 'md:ml-16'}`} style={{ maxWidth: isMobile ? '100%' : 'calc(100vw - 64px)' }}>
+        {/* Main Content */}
+        <div className="flex-1 w-full flex flex-col min-w-0">
           <div className={`flex-1 overflow-y-auto overflow-x-hidden main-content-scroll ${isMobile ? 'pb-20' : ''}`} style={{ WebkitOverflowScrolling: 'touch' }}>
             {renderContent()}
           </div>

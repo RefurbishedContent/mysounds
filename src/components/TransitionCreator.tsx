@@ -284,8 +284,8 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
   const songBClipEnd = songBMarkerPoint + transitionDuration;
 
   return (
-    <div className="h-full flex flex-col bg-gray-900 overflow-x-hidden">
-      <div className="bg-gray-800 border-b border-gray-700 px-3 sm:px-4 md:px-6 py-4">
+    <div className="h-full flex flex-col bg-gray-900">
+      <div className="bg-gray-800 border-b border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button
@@ -328,24 +328,24 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
               ref={selectionPanelRef}
               className="sticky top-0 z-10 bg-gray-800 border-b border-gray-700 shadow-lg"
             >
-              <div className="w-full px-2 sm:px-3 md:px-4 py-3">
-                <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                    <div className={`flex-1 bg-gray-900 rounded-lg p-2 sm:p-3 border-2 transition-all min-w-0 ${
+              <div className="max-w-7xl mx-auto px-4 py-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className={`flex-1 bg-gray-900 rounded-lg p-3 border-2 transition-all ${
                       songA ? 'border-cyan-500 bg-cyan-500/5' : 'border-dashed border-gray-700'
                     }`}>
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
                           songA ? 'bg-cyan-500' : 'bg-gray-700'
                         }`}>
-                          <span className="text-white font-bold text-sm sm:text-lg">A</span>
+                          <span className="text-white font-bold text-lg">A</span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] sm:text-xs text-gray-400 mb-0.5 truncate">Song A</p>
+                          <p className="text-xs text-gray-400 mb-0.5">Song A (Ending)</p>
                           {songA ? (
-                            <p className="text-white font-medium text-xs sm:text-sm truncate">{songA.originalName}</p>
+                            <p className="text-white font-medium text-sm truncate">{songA.originalName}</p>
                           ) : (
-                            <p className="text-gray-500 text-xs sm:text-sm truncate">Select...</p>
+                            <p className="text-gray-500 text-sm">Select song...</p>
                           )}
                         </div>
                         {songA && (
@@ -353,27 +353,27 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                             onClick={() => setSongA(null)}
                             className="p-1 hover:bg-gray-700 rounded transition-colors flex-shrink-0"
                           >
-                            <X size={14} className="text-gray-400" />
+                            <X size={16} className="text-gray-400" />
                           </button>
                         )}
                       </div>
                     </div>
 
-                    <div className={`flex-1 bg-gray-900 rounded-lg p-2 sm:p-3 border-2 transition-all min-w-0 ${
+                    <div className={`flex-1 bg-gray-900 rounded-lg p-3 border-2 transition-all ${
                       songB ? 'border-green-500 bg-green-500/5' : 'border-dashed border-gray-700'
                     }`}>
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
                           songB ? 'bg-green-500' : 'bg-gray-700'
                         }`}>
-                          <span className="text-white font-bold text-sm sm:text-lg">B</span>
+                          <span className="text-white font-bold text-lg">B</span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] sm:text-xs text-gray-400 mb-0.5 truncate">Song B</p>
+                          <p className="text-xs text-gray-400 mb-0.5">Song B (Beginning)</p>
                           {songB ? (
-                            <p className="text-white font-medium text-xs sm:text-sm truncate">{songB.originalName}</p>
+                            <p className="text-white font-medium text-sm truncate">{songB.originalName}</p>
                           ) : (
-                            <p className="text-gray-500 text-xs sm:text-sm truncate">Select...</p>
+                            <p className="text-gray-500 text-sm">Select song...</p>
                           )}
                         </div>
                         {songB && (
@@ -381,7 +381,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                             onClick={() => setSongB(null)}
                             className="p-1 hover:bg-gray-700 rounded transition-colors flex-shrink-0"
                           >
-                            <X size={14} className="text-gray-400" />
+                            <X size={16} className="text-gray-400" />
                           </button>
                         )}
                       </div>
@@ -391,13 +391,13 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                   {songA && songB ? (
                     <button
                       onClick={handleContinueToSetPoints}
-                      className="w-full lg:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-400/40 text-sm sm:text-base whitespace-nowrap"
+                      className="px-6 py-3 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-400/40 animate-pulse"
                     >
                       <span>Continue</span>
                       <ChevronRight size={18} />
                     </button>
                   ) : (
-                    <div className="w-full lg:w-auto px-4 sm:px-6 py-2 sm:py-3 text-xs sm:text-sm text-gray-500 text-center">
+                    <div className="px-6 py-3 text-sm text-gray-500">
                       {songA ? '1/2 selected' : '0/2 selected'}
                     </div>
                   )}
@@ -405,7 +405,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
               </div>
             </div>
 
-            <div className="w-full px-2 sm:px-3 md:px-4 py-4 md:py-6 space-y-4">
+            <div className="max-w-7xl mx-auto px-4 py-6 space-y-4">
 
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-base font-semibold text-white">Your Library ({songs.length} songs)</h3>
@@ -452,7 +452,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                             <button
                               key={filter}
                               onClick={() => setBpmFilter(filter as any)}
-                              className={`px-1 sm:px-2 py-1.5 rounded text-[10px] sm:text-xs font-medium transition-all duration-200 truncate ${
+                              className={`px-2 py-1.5 rounded text-xs font-medium transition-all duration-200 ${
                                 bpmFilter === filter
                                   ? 'bg-cyan-600 text-white'
                                   : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
@@ -518,7 +518,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-2">
+                <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2">
                   {getFilteredAndSortedSongs().map((song) => {
                     const isSongA = songA?.id === song.id;
                     const isSongB = songB?.id === song.id;
@@ -562,8 +562,8 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
             </div>
 
             {showReplaceDialog && pendingSong && (
-                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-2 sm:p-4">
-                  <div className="bg-gray-800 rounded-xl border border-gray-700 max-w-sm sm:max-w-md w-full p-4 sm:p-6 shadow-2xl">
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+                  <div className="bg-gray-800 rounded-xl border border-gray-700 max-w-md w-full p-6 shadow-2xl">
                     <h3 className="text-xl font-bold text-white mb-2">Replace Song</h3>
                     <p className="text-gray-400 text-sm mb-6">
                       You already have 2 songs selected. Which one would you like to replace with <span className="text-white font-medium">{pendingSong.originalName}</span>?
@@ -623,7 +623,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
         )}
 
         {currentStep === 'set-transition-points' && songA && songB && (
-          <div className="w-full px-2 sm:px-3 md:px-4 py-4 md:py-6 space-y-6">
+          <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-white mb-2">Set Transition Points</h2>
               <p className="text-gray-400">Choose where Song A ends and Song B begins</p>
