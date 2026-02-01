@@ -14,6 +14,8 @@ import AIPowerButton from './AIPowerButton';
 import AIRecommendationsPanel from './AIRecommendationsPanel';
 import { TemplateRecommendation } from '../lib/ai/aiService';
 import { WaveformDisplay } from './WaveformDisplay';
+import { ClippedWaveformDisplay } from './ClippedWaveformDisplay';
+import { KeyframeFadeEditor, FadeKeyframe } from './KeyframeFadeEditor';
 import BlendExportDialog from './BlendExportDialog';
 
 interface TransitionEditorViewProps {
@@ -78,11 +80,18 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState(false);
   const [isTemplatesExpanded, setIsTemplatesExpanded] = useState(false);
 
-  const [songAFadeStart, setSongAFadeStart] = useState(0.7);
-  const [songBFadeEnd, setSongBFadeEnd] = useState(0.3);
+  const [songAKeyframes, setSongAKeyframes] = useState<FadeKeyframe[]>([
+    { position: 0, value: 1 },
+    { position: 0.7, value: 1 },
+    { position: 1, value: 0 }
+  ]);
+  const [songBKeyframes, setSongBKeyframes] = useState<FadeKeyframe[]>([
+    { position: 0, value: 0 },
+    { position: 0.3, value: 1 },
+    { position: 1, value: 1 }
+  ]);
   const [songAFadeCurve, setSongAFadeCurve] = useState<FadeCurveType>('smooth');
   const [songBFadeCurve, setSongBFadeCurve] = useState<FadeCurveType>('smooth');
-  const [draggingFade, setDraggingFade] = useState<'songA' | 'songB' | null>(null);
 
   const timelineRef = useRef<HTMLDivElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
@@ -100,11 +109,11 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       setTransitionDuration(transition.transitionDuration);
       setDurationSize(getDurationSizeFromValue(transition.transitionDuration));
 
-      if (transition.metadata?.songAFadeStart !== undefined) {
-        setSongAFadeStart(transition.metadata.songAFadeStart);
+      if (transition.metadata?.songAKeyframes) {
+        setSongAKeyframes(transition.metadata.songAKeyframes);
       }
-      if (transition.metadata?.songBFadeEnd !== undefined) {
-        setSongBFadeEnd(transition.metadata.songBFadeEnd);
+      if (transition.metadata?.songBKeyframes) {
+        setSongBKeyframes(transition.metadata.songBKeyframes);
       }
       if (transition.metadata?.songAFadeCurve) {
         setSongAFadeCurve(transition.metadata.songAFadeCurve);
@@ -178,32 +187,6 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     };
   }, []);
 
-  useEffect(() => {
-    if (!draggingFade) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const timeline = document.querySelector('.timeline-container');
-      if (!timeline) return;
-
-      const rect = timeline.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const percentage = Math.max(0, Math.min(1, x / rect.width));
-
-      handleFadeChange(draggingFade, percentage);
-    };
-
-    const handleMouseUp = () => {
-      setDraggingFade(null);
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [draggingFade]);
 
   const loadData = async () => {
     setLoading(true);
@@ -319,8 +302,51 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     setIsPlaying(false);
   };
 
-  const handlePlaySongA = () => {
-    setIsPlayingSongA(!isPlayingSongA);
+  const handlePlaySongA = async () => {
+    if (!transition || transition.songAClipStart === undefined || transition.songAMarkerPoint === undefined) {
+      return;
+    }
+
+    await Tone.start();
+
+    if (isPlayingSongA) {
+      if (playerARef.current) {
+        playerARef.current.stop();
+        playerARef.current.dispose();
+        playerARef.current = null;
+      }
+      setIsPlayingSongA(false);
+      return;
+    }
+
+    if (isPlayingSongB || isPlayingTransition) {
+      handleStopAll();
+    }
+
+    try {
+      const player = new Tone.Player(songA.url, () => {
+        const clipStart = transition.songAClipStart!;
+        const clipEnd = transition.songAMarkerPoint!;
+        const clipDuration = clipEnd - clipStart;
+
+        player.sync().start(0, clipStart, clipDuration);
+        Tone.Transport.start();
+
+        setTimeout(() => {
+          player.stop();
+          player.dispose();
+          playerARef.current = null;
+          setIsPlayingSongA(false);
+          Tone.Transport.stop();
+        }, clipDuration * 1000);
+      }).toDestination();
+
+      playerARef.current = player;
+      setIsPlayingSongA(true);
+    } catch (error) {
+      console.error('Failed to play Song A:', error);
+      setIsPlayingSongA(false);
+    }
   };
 
   const handlePlayTransition = () => {
@@ -328,11 +354,91 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       alert('Please select a template first');
       return;
     }
+
+    if (isPlayingTransition) {
+      if (playerTransitionRef.current) {
+        playerTransitionRef.current.stop();
+        playerTransitionRef.current.dispose();
+        playerTransitionRef.current = null;
+      }
+      setIsPlayingTransition(false);
+      return;
+    }
+
+    if (isPlayingSongA || isPlayingSongB) {
+      handleStopAll();
+    }
+
     setIsPlayingTransition(!isPlayingTransition);
   };
 
-  const handlePlaySongB = () => {
-    setIsPlayingSongB(!isPlayingSongB);
+  const handlePlaySongB = async () => {
+    if (!transition || transition.songBMarkerPoint === undefined || transition.songBClipEnd === undefined) {
+      return;
+    }
+
+    await Tone.start();
+
+    if (isPlayingSongB) {
+      if (playerBRef.current) {
+        playerBRef.current.stop();
+        playerBRef.current.dispose();
+        playerBRef.current = null;
+      }
+      setIsPlayingSongB(false);
+      return;
+    }
+
+    if (isPlayingSongA || isPlayingTransition) {
+      handleStopAll();
+    }
+
+    try {
+      const player = new Tone.Player(songB.url, () => {
+        const clipStart = transition.songBMarkerPoint!;
+        const clipEnd = transition.songBClipEnd!;
+        const clipDuration = clipEnd - clipStart;
+
+        player.sync().start(0, clipStart, clipDuration);
+        Tone.Transport.start();
+
+        setTimeout(() => {
+          player.stop();
+          player.dispose();
+          playerBRef.current = null;
+          setIsPlayingSongB(false);
+          Tone.Transport.stop();
+        }, clipDuration * 1000);
+      }).toDestination();
+
+      playerBRef.current = player;
+      setIsPlayingSongB(true);
+    } catch (error) {
+      console.error('Failed to play Song B:', error);
+      setIsPlayingSongB(false);
+    }
+  };
+
+  const handleStopAll = () => {
+    if (playerARef.current) {
+      playerARef.current.stop();
+      playerARef.current.dispose();
+      playerARef.current = null;
+    }
+    if (playerBRef.current) {
+      playerBRef.current.stop();
+      playerBRef.current.dispose();
+      playerBRef.current = null;
+    }
+    if (playerTransitionRef.current) {
+      playerTransitionRef.current.stop();
+      playerTransitionRef.current.dispose();
+      playerTransitionRef.current = null;
+    }
+    setIsPlayingSongA(false);
+    setIsPlayingSongB(false);
+    setIsPlayingTransition(false);
+    Tone.Transport.stop();
   };
 
   const handleSave = async () => {
@@ -374,16 +480,14 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     }
   };
 
-  const handleFadeChange = (track: 'songA' | 'songB', value: number) => {
-    if (track === 'songA') {
-      const clampedValue = Math.max(0, Math.min(1, value));
-      setSongAFadeStart(clampedValue);
-      debouncedSaveFade({ songAFadeStart: clampedValue });
-    } else {
-      const clampedValue = Math.max(0, Math.min(1, value));
-      setSongBFadeEnd(clampedValue);
-      debouncedSaveFade({ songBFadeEnd: clampedValue });
-    }
+  const handleSongAKeyframesChange = (newKeyframes: FadeKeyframe[]) => {
+    setSongAKeyframes(newKeyframes);
+    debouncedSaveFade({ songAKeyframes: newKeyframes });
+  };
+
+  const handleSongBKeyframesChange = (newKeyframes: FadeKeyframe[]) => {
+    setSongBKeyframes(newKeyframes);
+    debouncedSaveFade({ songBKeyframes: newKeyframes });
   };
 
   const handleFadeCurveChange = (track: 'songA' | 'songB', curve: FadeCurveType) => {
@@ -647,13 +751,6 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
           </button>
 
           <div className="flex-1 flex flex-col p-4 overflow-auto">
-            <div className="mb-3">
-              <h2 className="text-base font-semibold text-white mb-1">Timeline Editor</h2>
-              <p className="text-xs text-gray-400">
-                Select a template below, adjust fade curves on each track. Use Space to play/pause.
-              </p>
-            </div>
-
             <div className="flex-1 bg-gray-800 rounded-lg border border-gray-700 p-4">
               <div className="space-y-4">
                 <div style={{ height: `${trackHeight}px` }} className="relative">
@@ -667,26 +764,39 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                     </button>
                   </div>
                   <div className="relative h-full bg-gray-900 rounded overflow-hidden timeline-container">
-                    <WaveformDisplay
-                      audioUrl={songA.url}
-                      height={trackHeight - 32}
-                      color="#3b82f6"
-                      progressColor="#60a5fa"
-                    />
+                    {transition && transition.songAClipStart !== undefined && transition.songAMarkerPoint !== undefined ? (
+                      <ClippedWaveformDisplay
+                        audioUrl={songA.url}
+                        clipStart={transition.songAClipStart}
+                        clipEnd={transition.songAMarkerPoint}
+                        height={trackHeight - 32}
+                        color="#3b82f6"
+                        progressColor="#60a5fa"
+                        zoom={zoomLevel / 100}
+                      />
+                    ) : (
+                      <WaveformDisplay
+                        audioUrl={songA.url}
+                        height={trackHeight - 32}
+                        color="#3b82f6"
+                        progressColor="#60a5fa"
+                      />
+                    )}
 
-                    <div
-                      className="absolute top-0 bottom-0 right-0 bg-gradient-to-l from-gray-900 via-gray-900/70 to-transparent pointer-events-none"
-                      style={{ width: `${(1 - songAFadeStart) * 100}%` }}
-                    />
-
-                    <div
-                      className="absolute top-0 bottom-0 w-1 bg-gradient-to-b from-cyan-400 via-cyan-500 to-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)] cursor-ew-resize z-10"
-                      style={{ left: `${songAFadeStart * 100}%` }}
-                      onMouseDown={() => setDraggingFade('songA')}
-                    >
-                      <div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-3 h-6 bg-cyan-500 rounded-sm flex items-center justify-center">
-                        <Volume2 className="w-2 h-2 text-white" />
+                    <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-cyan-400 pointer-events-none z-20 shadow-[0_0_10px_rgba(6,182,212,0.8)]">
+                      <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-cyan-400 text-gray-900 text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap">
+                        OUT
                       </div>
+                    </div>
+
+                    <div className="absolute inset-0 pointer-events-auto">
+                      <KeyframeFadeEditor
+                        keyframes={songAKeyframes}
+                        onChange={handleSongAKeyframesChange}
+                        color="#06b6d4"
+                        direction="fadeOut"
+                        height={trackHeight - 32}
+                      />
                     </div>
                   </div>
                   <div className="mt-1 flex items-center justify-between text-[10px]">
@@ -730,14 +840,17 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                     )}
                   </div>
                   <div
-                    className="relative h-full rounded overflow-hidden transition-all duration-300"
+                    className="relative h-full rounded overflow-hidden transition-all duration-300 border"
                     style={{
                       background: selectedTemplate
                         ? 'linear-gradient(90deg, rgba(6,182,212,0.2) 0%, rgba(168,85,247,0.3) 50%, rgba(236,72,153,0.2) 100%)'
-                        : 'rgba(31,41,55,1)',
+                        : 'linear-gradient(135deg, rgba(17,24,39,0.8) 0%, rgba(31,41,55,0.9) 50%, rgba(17,24,39,0.8) 100%)',
+                      borderColor: selectedTemplate
+                        ? 'rgba(168,85,247,0.4)'
+                        : 'rgba(75,85,99,0.3)',
                       boxShadow: selectedTemplate
                         ? '0 0 30px rgba(168,85,247,0.4), inset 0 0 30px rgba(168,85,247,0.1)'
-                        : 'none'
+                        : 'inset 0 0 20px rgba(0,0,0,0.2)'
                     }}
                   >
                     {selectedTemplate ? (
@@ -755,12 +868,16 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                         </div>
                       </>
                     ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-center space-y-2">
-                          <Sparkles className="w-6 h-6 text-gray-600 mx-auto" />
-                          <p className="text-xs text-gray-500">Select a template below to begin</p>
+                      <>
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-700/5 to-transparent animate-pulse" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="text-center space-y-2">
+                            <Sparkles className="w-8 h-8 text-gray-600 mx-auto animate-pulse" />
+                            <p className="text-sm font-medium text-gray-400">Select a template below to begin</p>
+                            <p className="text-xs text-gray-600">Choose your transition style</p>
+                          </div>
                         </div>
-                      </div>
+                      </>
                     )}
                   </div>
                 </div>
@@ -776,26 +893,39 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                     </button>
                   </div>
                   <div className="relative h-full bg-gray-900 rounded overflow-hidden timeline-container">
-                    <WaveformDisplay
-                      audioUrl={songB.url}
-                      height={trackHeight - 32}
-                      color="#10b981"
-                      progressColor="#34d399"
-                    />
+                    {transition && transition.songBMarkerPoint !== undefined && transition.songBClipEnd !== undefined ? (
+                      <ClippedWaveformDisplay
+                        audioUrl={songB.url}
+                        clipStart={transition.songBMarkerPoint}
+                        clipEnd={transition.songBClipEnd}
+                        height={trackHeight - 32}
+                        color="#10b981"
+                        progressColor="#34d399"
+                        zoom={zoomLevel / 100}
+                      />
+                    ) : (
+                      <WaveformDisplay
+                        audioUrl={songB.url}
+                        height={trackHeight - 32}
+                        color="#10b981"
+                        progressColor="#34d399"
+                      />
+                    )}
 
-                    <div
-                      className="absolute top-0 bottom-0 left-0 bg-gradient-to-r from-gray-900 via-gray-900/70 to-transparent pointer-events-none"
-                      style={{ width: `${songBFadeEnd * 100}%` }}
-                    />
-
-                    <div
-                      className="absolute top-0 bottom-0 w-1 bg-gradient-to-b from-green-400 via-green-500 to-green-400 shadow-[0_0_10px_rgba(52,211,153,0.8)] cursor-ew-resize z-10"
-                      style={{ left: `${songBFadeEnd * 100}%` }}
-                      onMouseDown={() => setDraggingFade('songB')}
-                    >
-                      <div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-3 h-6 bg-green-500 rounded-sm flex items-center justify-center">
-                        <Volume2 className="w-2 h-2 text-white" />
+                    <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-green-400 pointer-events-none z-20 shadow-[0_0_10px_rgba(16,185,129,0.8)]">
+                      <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-green-400 text-gray-900 text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap">
+                        IN
                       </div>
+                    </div>
+
+                    <div className="absolute inset-0 pointer-events-auto">
+                      <KeyframeFadeEditor
+                        keyframes={songBKeyframes}
+                        onChange={handleSongBKeyframesChange}
+                        color="#10b981"
+                        direction="fadeIn"
+                        height={trackHeight - 32}
+                      />
                     </div>
                   </div>
                   <div className="mt-1 flex items-center justify-between text-[10px]">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Music, ArrowLeft, Check, ChevronRight, Search, X, SlidersHorizontal, Zap, Clock, Timer, Sparkles, Play, Pause } from 'lucide-react';
+import { Music, ArrowLeft, ChevronRight, Search, X, SlidersHorizontal, Sparkles, Play, Pause } from 'lucide-react';
 import * as Tone from 'tone';
 import { useAuth } from '../contexts/AuthContext';
 import { storageService, UploadResult } from '../lib/storage';
@@ -14,17 +14,8 @@ interface TransitionCreatorProps {
 }
 
 type CreatorStep = 'select-songs' | 'set-transition-points';
-type DurationSize = 'short' | 'medium' | 'long';
 
-const DURATION_RANGES = {
-  short: { min: 4, max: 8, default: 6 },
-  medium: { min: 8, max: 15, default: 12 },
-  long: { min: 16, max: 25, default: 20 }
-};
-
-const getDurationForSize = (size: DurationSize): number => {
-  return DURATION_RANGES[size].default;
-};
+const DEFAULT_TRANSITION_DURATION = 10;
 
 const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, initialSongA }) => {
   const { user } = useAuth();
@@ -37,8 +28,6 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
   const [showFilters, setShowFilters] = useState(false);
   const [bpmFilter, setBpmFilter] = useState<'all' | 'slow' | 'medium' | 'fast'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'recent' | 'bpm'>('recent');
-  const [durationSize, setDurationSize] = useState<DurationSize>('medium');
-  const [transitionDuration, setTransitionDuration] = useState(12);
 
   const [songAMarkerPoint, setSongAMarkerPoint] = useState<number>(0);
   const [songBMarkerPoint, setSongBMarkerPoint] = useState<number>(0);
@@ -66,7 +55,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
     if (songA) {
       const duration = songA.metadata?.duration || 300;
       setSongADuration(duration);
-      setSongAMarkerPoint(Math.max(30, duration - 30));
+      setSongAMarkerPoint(Math.max(DEFAULT_TRANSITION_DURATION, duration - DEFAULT_TRANSITION_DURATION));
 
       const loadActualDuration = async () => {
         try {
@@ -75,7 +64,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
             player.dispose();
             if (actualDuration > 0) {
               setSongADuration(actualDuration);
-              setSongAMarkerPoint(Math.max(30, actualDuration - 30));
+              setSongAMarkerPoint(Math.max(DEFAULT_TRANSITION_DURATION, actualDuration - DEFAULT_TRANSITION_DURATION));
             }
           });
         } catch (error) {
@@ -91,7 +80,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
     if (songB) {
       const duration = songB.metadata?.duration || 300;
       setSongBDuration(duration);
-      setSongBMarkerPoint(Math.min(30, duration / 2));
+      setSongBMarkerPoint(Math.min(DEFAULT_TRANSITION_DURATION, duration / 2));
 
       const loadActualDuration = async () => {
         try {
@@ -110,11 +99,6 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
       loadActualDuration();
     }
   }, [songB]);
-
-  const handleDurationSizeChange = (size: DurationSize) => {
-    setDurationSize(size);
-    setTransitionDuration(getDurationForSize(size));
-  };
 
   const loadData = async () => {
     if (!user) {
@@ -224,8 +208,8 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
 
     setSaving(true);
     try {
-      const songAClipStart = Math.max(0, songAMarkerPoint - transitionDuration);
-      const songBClipEnd = songBMarkerPoint + transitionDuration;
+      const songAClipStart = Math.max(0, songAMarkerPoint - DEFAULT_TRANSITION_DURATION);
+      const songBClipEnd = songBMarkerPoint + DEFAULT_TRANSITION_DURATION;
 
       const transition = await transitionsService.createTransition(user.id, {
         name: `${songA.originalName} → ${songB.originalName}`,
@@ -233,7 +217,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
         songBId: songB.id,
         templateId: null,
         transitionStartPoint: songAMarkerPoint,
-        transitionDuration: transitionDuration,
+        DEFAULT_TRANSITION_DURATION: DEFAULT_TRANSITION_DURATION,
         songAEndTime: songAMarkerPoint,
         songBStartTime: songBMarkerPoint,
         songAMarkerPoint: songAMarkerPoint,
@@ -242,8 +226,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
         songBClipEnd: songBClipEnd,
         metadata: {
           songAName: songA.originalName,
-          songBName: songB.originalName,
-          durationSize: durationSize
+          songBName: songB.originalName
         }
       });
 
@@ -280,8 +263,8 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
     );
   }
 
-  const songAClipStart = Math.max(0, songAMarkerPoint - transitionDuration);
-  const songBClipEnd = songBMarkerPoint + transitionDuration;
+  const songAClipStart = Math.max(0, songAMarkerPoint - DEFAULT_TRANSITION_DURATION);
+  const songBClipEnd = songBMarkerPoint + DEFAULT_TRANSITION_DURATION;
 
   return (
     <div className="h-full flex flex-col bg-gray-900">
@@ -722,108 +705,6 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
               <p className="text-gray-400">Choose where Song A ends and Song B begins</p>
             </div>
 
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-3">Transition Duration</h3>
-              <p className="text-sm text-gray-400 mb-4">Choose how long the blend between songs should take</p>
-              <div className="grid grid-cols-3 gap-4 mb-8">
-                <button
-                  onClick={() => handleDurationSizeChange('short')}
-                  className={`
-                    relative p-6 rounded-xl border-2 transition-all duration-200
-                    ${durationSize === 'short'
-                      ? 'border-cyan-500 bg-cyan-500/10 shadow-lg shadow-cyan-500/20'
-                      : 'border-gray-700 bg-gray-900 hover:border-gray-600 hover:bg-gray-800'
-                    }
-                  `}
-                >
-                  <div className="flex flex-col items-center space-y-3">
-                    <div className={`
-                      w-12 h-12 rounded-full flex items-center justify-center
-                      ${durationSize === 'short' ? 'bg-cyan-500' : 'bg-gray-700'}
-                    `}>
-                      <Zap className={`w-6 h-6 ${durationSize === 'short' ? 'text-white' : 'text-gray-400'}`} />
-                    </div>
-                    <div className="text-center">
-                      <p className={`text-lg font-bold ${durationSize === 'short' ? 'text-cyan-400' : 'text-white'}`}>
-                        Short
-                      </p>
-                      <p className="text-sm text-gray-400 mt-1">{DURATION_RANGES.short.default} seconds</p>
-                      <p className="text-xs text-gray-500 mt-2">Quick, energetic blend</p>
-                    </div>
-                  </div>
-                  {durationSize === 'short' && (
-                    <div className="absolute top-3 right-3">
-                      <Check className="w-5 h-5 text-cyan-400" />
-                    </div>
-                  )}
-                </button>
-
-                <button
-                  onClick={() => handleDurationSizeChange('medium')}
-                  className={`
-                    relative p-6 rounded-xl border-2 transition-all duration-200
-                    ${durationSize === 'medium'
-                      ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/20'
-                      : 'border-gray-700 bg-gray-900 hover:border-gray-600 hover:bg-gray-800'
-                    }
-                  `}
-                >
-                  <div className="flex flex-col items-center space-y-3">
-                    <div className={`
-                      w-12 h-12 rounded-full flex items-center justify-center
-                      ${durationSize === 'medium' ? 'bg-blue-500' : 'bg-gray-700'}
-                    `}>
-                      <Clock className={`w-6 h-6 ${durationSize === 'medium' ? 'text-white' : 'text-gray-400'}`} />
-                    </div>
-                    <div className="text-center">
-                      <p className={`text-lg font-bold ${durationSize === 'medium' ? 'text-blue-400' : 'text-white'}`}>
-                        Medium
-                      </p>
-                      <p className="text-sm text-gray-400 mt-1">{DURATION_RANGES.medium.default} seconds</p>
-                      <p className="text-xs text-gray-500 mt-2">Balanced transition</p>
-                    </div>
-                  </div>
-                  {durationSize === 'medium' && (
-                    <div className="absolute top-3 right-3">
-                      <Check className="w-5 h-5 text-blue-400" />
-                    </div>
-                  )}
-                </button>
-
-                <button
-                  onClick={() => handleDurationSizeChange('long')}
-                  className={`
-                    relative p-6 rounded-xl border-2 transition-all duration-200
-                    ${durationSize === 'long'
-                      ? 'border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/20'
-                      : 'border-gray-700 bg-gray-900 hover:border-gray-600 hover:bg-gray-800'
-                    }
-                  `}
-                >
-                  <div className="flex flex-col items-center space-y-3">
-                    <div className={`
-                      w-12 h-12 rounded-full flex items-center justify-center
-                      ${durationSize === 'long' ? 'bg-purple-500' : 'bg-gray-700'}
-                    `}>
-                      <Timer className={`w-6 h-6 ${durationSize === 'long' ? 'text-white' : 'text-gray-400'}`} />
-                    </div>
-                    <div className="text-center">
-                      <p className={`text-lg font-bold ${durationSize === 'long' ? 'text-purple-400' : 'text-white'}`}>
-                        Long
-                      </p>
-                      <p className="text-sm text-gray-400 mt-1">{DURATION_RANGES.long.default} seconds</p>
-                      <p className="text-xs text-gray-500 mt-2">Smooth, gradual blend</p>
-                    </div>
-                  </div>
-                  {durationSize === 'long' && (
-                    <div className="absolute top-3 right-3">
-                      <Check className="w-5 h-5 text-purple-400" />
-                    </div>
-                  )}
-                </button>
-              </div>
-            </div>
-
             <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 space-y-8">
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -835,7 +716,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                     <p className="text-sm text-gray-400">Marker at</p>
                     <p className="text-xl font-bold text-blue-400">{formatTime(songAMarkerPoint)}</p>
                     <p className="text-xs text-gray-500 mt-1">
-                      Will use {transitionDuration}s before this point
+                      Will use {DEFAULT_TRANSITION_DURATION}s before this point
                     </p>
                   </div>
                 </div>
@@ -861,7 +742,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                         Extraction Range: <span className="text-blue-400 font-mono">{formatTime(songAClipStart)}</span> to <span className="text-blue-400 font-mono">{formatTime(songAMarkerPoint)}</span>
                       </span>
                     </div>
-                    <span className="text-xs text-gray-500">({transitionDuration}s clip)</span>
+                    <span className="text-xs text-gray-500">({DEFAULT_TRANSITION_DURATION}s clip)</span>
                   </div>
                 </div>
               </div>
@@ -870,7 +751,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                 <div className="flex items-center space-x-3 px-6 py-3 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-green-500/20 rounded-full border border-purple-500/30">
                   <Sparkles className="w-5 h-5 text-purple-400" />
                   <span className="text-sm font-medium text-purple-300">
-                    {transitionDuration}s Transition Blend
+                    {DEFAULT_TRANSITION_DURATION}s Transition Blend
                   </span>
                   <Sparkles className="w-5 h-5 text-purple-400" />
                 </div>
@@ -886,7 +767,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                     <p className="text-sm text-gray-400">Marker at</p>
                     <p className="text-xl font-bold text-green-400">{formatTime(songBMarkerPoint)}</p>
                     <p className="text-xs text-gray-500 mt-1">
-                      Will use {transitionDuration}s after this point
+                      Will use {DEFAULT_TRANSITION_DURATION}s after this point
                     </p>
                   </div>
                 </div>
@@ -912,7 +793,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                         Extraction Range: <span className="text-green-400 font-mono">{formatTime(songBMarkerPoint)}</span> to <span className="text-green-400 font-mono">{formatTime(songBClipEnd)}</span>
                       </span>
                     </div>
-                    <span className="text-xs text-gray-500">({transitionDuration}s clip)</span>
+                    <span className="text-xs text-gray-500">({DEFAULT_TRANSITION_DURATION}s clip)</span>
                   </div>
                 </div>
               </div>

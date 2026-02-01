@@ -1,25 +1,32 @@
 import { useEffect, useRef, useState } from 'react';
+import * as Tone from 'tone';
 import { waveformGenerator, WaveformData } from '../lib/audio/WaveformGenerator';
 
-interface WaveformDisplayProps {
+interface ClippedWaveformDisplayProps {
   audioUrl: string;
+  clipStart: number;
+  clipEnd: number;
   progress?: number;
   height?: number;
   color?: string;
   progressColor?: string;
   onSeek?: (progress: number) => void;
   showScrubber?: boolean;
+  zoom?: number;
 }
 
-export function WaveformDisplay({
+export function ClippedWaveformDisplay({
   audioUrl,
+  clipStart,
+  clipEnd,
   progress = 0,
   height = 100,
   color = '#3b82f6',
   progressColor = '#60a5fa',
   onSeek,
-  showScrubber = false
-}: WaveformDisplayProps) {
+  showScrubber = false,
+  zoom = 1
+}: ClippedWaveformDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [waveformData, setWaveformData] = useState<WaveformData | null>(null);
@@ -30,28 +37,83 @@ export function WaveformDisplay({
   useEffect(() => {
     let mounted = true;
 
-    const loadWaveform = async () => {
+    const loadClippedWaveform = async () => {
       try {
         setIsLoading(true);
-        const data = await waveformGenerator.generateWaveform(audioUrl, 500);
+
+        const response = await fetch(audioUrl);
+        const arrayBuffer = await response.arrayBuffer();
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+        const clipDuration = clipEnd - clipStart;
+        const startSample = Math.floor(clipStart * audioBuffer.sampleRate);
+        const endSample = Math.floor(clipEnd * audioBuffer.sampleRate);
+        const clipLength = endSample - startSample;
+
+        const clippedBuffer = audioContext.createBuffer(
+          audioBuffer.numberOfChannels,
+          clipLength,
+          audioBuffer.sampleRate
+        );
+
+        for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+          const sourceData = audioBuffer.getChannelData(channel);
+          const clippedData = clippedBuffer.getChannelData(channel);
+
+          for (let i = 0; i < clipLength; i++) {
+            clippedData[i] = sourceData[startSample + i] || 0;
+          }
+        }
+
+        const samples = Math.floor(500 * zoom);
+        const peaks = extractPeaks(clippedBuffer, samples);
+
         if (mounted) {
-          setWaveformData(data);
+          setWaveformData({
+            peaks,
+            duration: clipDuration,
+            sampleRate: audioBuffer.sampleRate
+          });
           setIsLoading(false);
         }
       } catch (error) {
-        console.error('Failed to load waveform:', error);
+        console.error('Failed to load clipped waveform:', error);
         if (mounted) {
           setIsLoading(false);
         }
       }
     };
 
-    loadWaveform();
+    loadClippedWaveform();
 
     return () => {
       mounted = false;
     };
-  }, [audioUrl]);
+  }, [audioUrl, clipStart, clipEnd, zoom]);
+
+  const extractPeaks = (audioBuffer: AudioBuffer, samples: number): Float32Array => {
+    const channelData = audioBuffer.getChannelData(0);
+    const peaks = new Float32Array(samples);
+    const samplesPerPeak = Math.floor(channelData.length / samples);
+
+    for (let i = 0; i < samples; i++) {
+      const start = i * samplesPerPeak;
+      const end = start + samplesPerPeak;
+      let max = 0;
+
+      for (let j = start; j < end && j < channelData.length; j++) {
+        const abs = Math.abs(channelData[j]);
+        if (abs > max) {
+          max = abs;
+        }
+      }
+
+      peaks[i] = max;
+    }
+
+    return peaks;
+  };
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -73,7 +135,7 @@ export function WaveformDisplay({
     if (!waveformData || !canvasRef.current) return;
 
     const canvas = canvasRef.current;
-    canvas.width = containerWidth;
+    canvas.width = containerWidth * zoom;
     canvas.height = height;
 
     waveformGenerator.drawWaveform(canvas, waveformData, {
@@ -82,7 +144,7 @@ export function WaveformDisplay({
       progress,
       centerLine: true
     });
-  }, [waveformData, progress, color, progressColor, height, containerWidth]);
+  }, [waveformData, progress, color, progressColor, height, containerWidth, zoom]);
 
   const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!onSeek || !canvasRef.current) return;
@@ -121,7 +183,7 @@ export function WaveformDisplay({
   }, [isDragging]);
 
   return (
-    <div ref={containerRef} className="relative w-full" style={{ height }}>
+    <div ref={containerRef} className="relative w-full overflow-x-auto" style={{ height }}>
       {isLoading ? (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-800 rounded">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
@@ -129,11 +191,12 @@ export function WaveformDisplay({
       ) : (
         <canvas
           ref={canvasRef}
-          width={containerWidth}
+          width={containerWidth * zoom}
           height={height}
-          className={`w-full h-full rounded ${
+          className={`h-full rounded ${
             onSeek ? 'cursor-pointer' : ''
           } ${isDragging ? 'cursor-grabbing' : ''}`}
+          style={{ width: zoom > 1 ? `${containerWidth * zoom}px` : '100%' }}
           onClick={handleClick}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
