@@ -175,23 +175,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
-        
-        if (event === 'SIGNED_IN' && session?.user) {
-          console.log('User signed in:', session.user.email);
-          
-          const user: User = {
-            id: session.user.id,
-            email: session.user.email!,
-            name: session.user.user_metadata?.name || session.user.email!.split('@')[0],
-            plan: 'free'
-          };
 
-          setAuthState({
-            isAuthenticated: true,
-            user,
-            loading: false,
-          });
-          
+        // Handle session events that should maintain authentication
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+          if (session?.user) {
+            console.log('User session active:', session.user.email, 'Event:', event);
+
+            // Try to get user profile
+            try {
+              const { data: profile } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', session.user.id)
+                .maybeSingle();
+
+              const user: User = profile ? {
+                id: profile.id,
+                email: profile.email,
+                name: profile.name,
+                avatar: profile.avatar_url,
+                plan: profile.plan
+              } : {
+                id: session.user.id,
+                email: session.user.email!,
+                name: session.user.user_metadata?.name || session.user.email!.split('@')[0],
+                plan: 'free'
+              };
+
+              setAuthState({
+                isAuthenticated: true,
+                user,
+                loading: false,
+              });
+
+              // Refresh credits on sign-in (but not on every token refresh to avoid excessive calls)
+              if (event === 'SIGNED_IN') {
+                refreshCredits().catch(err => {
+                  console.warn('Failed to fetch credits:', err);
+                });
+              }
+            } catch (error) {
+              console.error('Error updating user profile:', error);
+              // Still maintain authentication with basic user data
+              const user: User = {
+                id: session.user.id,
+                email: session.user.email!,
+                name: session.user.user_metadata?.name || session.user.email!.split('@')[0],
+                plan: 'free'
+              };
+
+              setAuthState({
+                isAuthenticated: true,
+                user,
+                loading: false,
+              });
+            }
+          }
         } else if (event === 'SIGNED_OUT') {
           console.log('User signed out');
           setAuthState({
@@ -201,6 +240,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
           setCredits(null);
         }
+        // Ignore other events (USER_UPDATED, PASSWORD_RECOVERY, etc.) to prevent unnecessary resets
       }
     );
 
