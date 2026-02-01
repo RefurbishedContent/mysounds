@@ -51,43 +51,46 @@ const SongCard: React.FC<SongCardProps> = ({ song, isSelected, onSelect, showChe
         </div>
 
         <div className="flex-1 min-w-0 space-y-2">
-          <h4 className={`
-            font-semibold truncate transition-colors duration-200
-            ${isSelected ? 'text-cyan-400' : 'text-white group-hover:text-gray-200'}
-          `}>
+          <h4
+            className={`
+              font-semibold break-words line-clamp-2 transition-colors duration-200
+              ${isSelected ? 'text-cyan-400' : 'text-white group-hover:text-gray-200'}
+            `}
+            title={song.original_name || song.filename}
+          >
             {song.original_name || song.filename}
           </h4>
 
-          <div className="flex items-center space-x-3 text-xs">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
             {bpm && (
-              <div className={`
-                px-2 py-1 rounded-md font-medium transition-colors duration-200
+              <span className={`
+                px-2 py-1 rounded-md font-medium transition-colors duration-200 whitespace-nowrap
                 ${isSelected
                   ? 'bg-cyan-500/20 text-cyan-300'
                   : 'bg-gray-700 text-gray-400'
                 }
               `}>
                 {bpm} BPM
-              </div>
+              </span>
             )}
 
             {key && (
-              <div className={`
-                px-2 py-1 rounded-md font-medium transition-colors duration-200
+              <span className={`
+                px-2 py-1 rounded-md font-medium transition-colors duration-200 whitespace-nowrap
                 ${isSelected
                   ? 'bg-blue-500/20 text-blue-300'
                   : 'bg-gray-700 text-gray-400'
                 }
               `}>
                 {key}
-              </div>
+              </span>
             )}
 
             {duration && (
-              <div className="flex items-center space-x-1 text-gray-500">
+              <span className="flex items-center gap-1 text-gray-500 whitespace-nowrap">
                 <Clock size={12} />
                 <span>{formatDuration(duration)}</span>
-              </div>
+              </span>
             )}
           </div>
         </div>

@@ -70,7 +70,7 @@ const WizardStep3Configuration: React.FC<WizardStep3ConfigurationProps> = ({
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
-        <div className="max-w-4xl mx-auto space-y-4">
+        <div className="max-w-full lg:max-w-4xl mx-auto space-y-4 px-2">
           <div className="text-center space-y-1">
             <h2 className="text-xl font-bold text-white">Configure Your Project</h2>
             <p className="text-sm text-gray-400">Name your project and adjust settings</p>
@@ -139,7 +139,7 @@ const WizardStep3Configuration: React.FC<WizardStep3ConfigurationProps> = ({
               {selectedSongs.map((song, index) => (
                 <div
                   key={song.id}
-                  className="flex items-center space-x-3 p-3 bg-gray-700 rounded-lg"
+                  className="flex items-start space-x-3 p-3 bg-gray-700 rounded-lg min-w-0"
                 >
                   <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
                     <span className="text-white font-bold">
@@ -147,10 +147,23 @@ const WizardStep3Configuration: React.FC<WizardStep3ConfigurationProps> = ({
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-white truncate">{song.original_name}</h4>
-                    <div className="flex items-center space-x-2 text-xs text-gray-400">
-                      {song.analysis?.bpm && <span>{Math.round(song.analysis.bpm)} BPM</span>}
-                      {song.analysis?.key && <span>• {song.analysis.key}</span>}
+                    <h4
+                      className="font-medium text-white break-words line-clamp-2 mb-1"
+                      title={song.original_name}
+                    >
+                      {song.original_name}
+                    </h4>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
+                      {song.analysis?.bpm && (
+                        <span className="bg-gray-600 px-2 py-0.5 rounded whitespace-nowrap">
+                          {Math.round(song.analysis.bpm)} BPM
+                        </span>
+                      )}
+                      {song.analysis?.key && (
+                        <span className="bg-gray-600 px-2 py-0.5 rounded whitespace-nowrap">
+                          {song.analysis.key}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -161,7 +174,7 @@ const WizardStep3Configuration: React.FC<WizardStep3ConfigurationProps> = ({
       </div>
 
       <div className="flex-shrink-0 bg-gray-800 border-t border-gray-700 p-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+        <div className="max-w-full lg:max-w-4xl mx-auto flex items-center justify-between px-2">
           <button
             onClick={onBack}
             className="flex items-center space-x-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-all duration-200"

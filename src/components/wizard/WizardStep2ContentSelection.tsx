@@ -82,36 +82,45 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
     return (
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
-          <div className="max-w-6xl mx-auto space-y-4">
+          <div className="max-w-full lg:max-w-5xl xl:max-w-6xl mx-auto space-y-4 px-2">
             <div className="text-center space-y-1">
               <h2 className="text-xl font-bold text-white">Select Your Songs</h2>
               <p className="text-sm text-gray-400">Choose two songs to create a seamless transition</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+              <div className="space-y-4 min-w-0">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-semibold text-white">Song A</h3>
+                  <h3 className="text-lg md:text-xl font-semibold text-white">Song A</h3>
                   {songA && (
                     <button
                       onClick={() => onClearSong(0)}
-                      className="text-gray-400 hover:text-white transition-colors p-1"
+                      className="text-gray-400 hover:text-white transition-colors p-1 flex-shrink-0"
                     >
                       <X size={20} />
                     </button>
                   )}
                 </div>
                 {songA ? (
-                  <div className="p-4 bg-gray-800 border-2 border-cyan-500 rounded-xl">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center">
+                  <div className="p-4 bg-gray-800 border-2 border-cyan-500 rounded-xl min-w-0">
+                    <div className="flex items-start space-x-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
                         <span className="text-white font-bold text-lg">A</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-white truncate">{songA.original_name}</h4>
-                        <div className="flex items-center space-x-2 text-sm text-gray-400">
-                          {songA.analysis?.bpm && <span>{Math.round(songA.analysis.bpm)} BPM</span>}
-                          {songA.analysis?.key && <span>• {songA.analysis.key}</span>}
+                        <h4
+                          className="font-semibold text-white break-words line-clamp-2 mb-2"
+                          title={songA.original_name}
+                        >
+                          {songA.original_name}
+                        </h4>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
+                          {songA.analysis?.bpm && (
+                            <span className="bg-gray-700 px-2 py-0.5 rounded">{Math.round(songA.analysis.bpm)} BPM</span>
+                          )}
+                          {songA.analysis?.key && (
+                            <span className="bg-gray-700 px-2 py-0.5 rounded">{songA.analysis.key}</span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -123,29 +132,38 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
                 )}
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-4 min-w-0">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-semibold text-white">Song B</h3>
+                  <h3 className="text-lg md:text-xl font-semibold text-white">Song B</h3>
                   {songB && (
                     <button
                       onClick={() => onClearSong(1)}
-                      className="text-gray-400 hover:text-white transition-colors p-1"
+                      className="text-gray-400 hover:text-white transition-colors p-1 flex-shrink-0"
                     >
                       <X size={20} />
                     </button>
                   )}
                 </div>
                 {songB ? (
-                  <div className="p-4 bg-gray-800 border-2 border-blue-500 rounded-xl">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                  <div className="p-4 bg-gray-800 border-2 border-blue-500 rounded-xl min-w-0">
+                    <div className="flex items-start space-x-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
                         <span className="text-white font-bold text-lg">B</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-white truncate">{songB.original_name}</h4>
-                        <div className="flex items-center space-x-2 text-sm text-gray-400">
-                          {songB.analysis?.bpm && <span>{Math.round(songB.analysis.bpm)} BPM</span>}
-                          {songB.analysis?.key && <span>• {songB.analysis.key}</span>}
+                        <h4
+                          className="font-semibold text-white break-words line-clamp-2 mb-2"
+                          title={songB.original_name}
+                        >
+                          {songB.original_name}
+                        </h4>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
+                          {songB.analysis?.bpm && (
+                            <span className="bg-gray-700 px-2 py-0.5 rounded">{Math.round(songB.analysis.bpm)} BPM</span>
+                          )}
+                          {songB.analysis?.key && (
+                            <span className="bg-gray-700 px-2 py-0.5 rounded">{songB.analysis.key}</span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -183,7 +201,7 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
         </div>
 
         <div className="flex-shrink-0 bg-gray-800 border-t border-gray-700 p-4">
-          <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div className="max-w-full lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center justify-between px-2">
             <button
               onClick={onBack}
               className="flex items-center space-x-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-all duration-200"
@@ -212,7 +230,7 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
-        <div className="max-w-6xl mx-auto space-y-4">
+        <div className="max-w-full lg:max-w-5xl xl:max-w-6xl mx-auto space-y-4 px-2">
           <div className="text-center space-y-1">
             <h2 className="text-xl font-bold text-white">Select Your Tracks</h2>
             <p className="text-sm text-gray-400">Choose one or more tracks for your mixer project</p>
@@ -227,16 +245,21 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {selectedSongs.map((song, index) => (
-                  <div key={song.id} className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
+                  <div key={song.id} className="flex items-center justify-between p-3 bg-gray-700 rounded-lg min-w-0">
                     <div className="flex items-center space-x-3 flex-1 min-w-0">
                       <div className="w-8 h-8 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
                         <span className="text-white text-sm font-bold">{index + 1}</span>
                       </div>
-                      <span className="text-white truncate">{song.original_name}</span>
+                      <span
+                        className="text-white break-words line-clamp-1"
+                        title={song.original_name}
+                      >
+                        {song.original_name}
+                      </span>
                     </div>
                     <button
                       onClick={() => onClearSong(index)}
-                      className="text-gray-400 hover:text-white transition-colors p-1 flex-shrink-0"
+                      className="text-gray-400 hover:text-white transition-colors p-1 flex-shrink-0 ml-2"
                     >
                       <X size={18} />
                     </button>
@@ -260,7 +283,7 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
       </div>
 
       <div className="flex-shrink-0 bg-gray-800 border-t border-gray-700 p-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <div className="max-w-full lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center justify-between px-2">
           <button
             onClick={onBack}
             className="flex items-center space-x-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-all duration-200"
