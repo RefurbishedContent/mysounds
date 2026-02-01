@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Music, Search, Filter, Upload, Folder, Clock, Star, Grid3x3 as Grid3X3, List, Heart, MoreVertical, Shuffle, Plus, Sparkles, Download, Play } from 'lucide-react';
+import { Music, Search, Filter, Upload, Folder, Clock, Star, Grid3x3 as Grid3X3, List, Heart, MoreVertical, Shuffle, Plus, Sparkles, Download, Play, Zap, CheckCircle, AlertCircle, Loader } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { storageService, UploadResult } from '../lib/storage';
 import { blendExportService, BlendData } from '../lib/blendExportService';
+import { songAnalyzer } from '../lib/songAnalyzer';
 import LibraryUploader from './LibraryUploader';
 import SongDetailModal from './SongDetailModal';
 
@@ -226,43 +227,120 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
           <>
             {viewMode === 'grid' ? (
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                {filteredSongs.map((song) => (
-                  <div
-                    key={song.id}
-                    onClick={() => handleSongClick(song)}
-                    className="group bg-gray-800 rounded-lg p-3 transition-all duration-200 hover:bg-gray-750 hover:shadow-lg relative cursor-pointer"
-                  >
-                    <div className="w-full aspect-square bg-gradient-to-br from-cyan-600/20 to-purple-600/20 rounded-lg mb-2 flex items-center justify-center relative">
-                      <Music className="w-10 h-10 text-cyan-400" />
+                {filteredSongs.map((song) => {
+                  const hasFullAnalysis = song.analysis?.bpm && song.analysis?.key;
+                  const isAnalyzing = song.status === 'processing';
+
+                  return (
+                    <div
+                      key={song.id}
+                      className="group bg-gray-800 rounded-lg p-3 transition-all duration-200 hover:bg-gray-750 hover:shadow-lg relative"
+                    >
+                      <div
+                        onClick={() => handleSongClick(song)}
+                        className="w-full aspect-square bg-gradient-to-br from-cyan-600/20 to-purple-600/20 rounded-lg mb-2 flex items-center justify-center relative cursor-pointer"
+                      >
+                        <Music className="w-10 h-10 text-cyan-400" />
+
+                        {!hasFullAnalysis && !isAnalyzing && (
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (!user) return;
+                              try {
+                                await songAnalyzer.analyzeSong(song.id, user.id);
+                              } catch (error) {
+                                console.error('Analysis failed:', error);
+                                alert(error instanceof Error ? error.message : 'Analysis failed');
+                              }
+                            }}
+                            className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center"
+                          >
+                            <div className="flex flex-col items-center space-y-1">
+                              <Sparkles className="w-6 h-6 text-purple-400" />
+                              <span className="text-xs text-white font-medium">Analyze</span>
+                            </div>
+                          </button>
+                        )}
+
+                        {hasFullAnalysis && (
+                          <div className="absolute top-1 right-1 w-5 h-5 bg-green-500/90 rounded-full flex items-center justify-center">
+                            <CheckCircle className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+
+                        {isAnalyzing && (
+                          <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center">
+                            <Loader className="w-6 h-6 text-cyan-400 animate-spin" />
+                          </div>
+                        )}
+                      </div>
+                      <div onClick={() => handleSongClick(song)} className="cursor-pointer">
+                        <h3 className="text-white font-medium text-xs truncate mb-0.5">
+                          {song.originalName}
+                        </h3>
+                        <p className="text-gray-400 text-xs">
+                          {song.analysis?.bpm ? `${Math.round(song.analysis.bpm)} BPM` : 'Not analyzed'}
+                        </p>
+                      </div>
                     </div>
-                    <h3 className="text-white font-medium text-xs truncate mb-0.5">
-                      {song.originalName}
-                    </h3>
-                    <p className="text-gray-400 text-xs">
-                      {song.analysis?.bpm ? `${song.analysis.bpm} BPM` : 'Not analyzed'}
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="space-y-1.5">
-                {filteredSongs.map((song) => (
-                  <div
-                    key={song.id}
-                    onClick={() => handleSongClick(song)}
-                    className="group flex items-center space-x-3 bg-gray-800 rounded-lg p-3 transition-all duration-200 hover:bg-gray-750 cursor-pointer"
-                  >
-                    <div className="w-10 h-10 bg-gradient-to-br from-cyan-600/20 to-purple-600/20 rounded flex items-center justify-center flex-shrink-0">
-                      <Music className="w-5 h-5 text-cyan-400" />
+                {filteredSongs.map((song) => {
+                  const hasFullAnalysis = song.analysis?.bpm && song.analysis?.key;
+                  const isAnalyzing = song.status === 'processing';
+
+                  return (
+                    <div
+                      key={song.id}
+                      className="group flex items-center space-x-3 bg-gray-800 rounded-lg p-3 transition-all duration-200 hover:bg-gray-750 relative"
+                    >
+                      <div
+                        onClick={() => handleSongClick(song)}
+                        className="w-10 h-10 bg-gradient-to-br from-cyan-600/20 to-purple-600/20 rounded flex items-center justify-center flex-shrink-0 cursor-pointer relative"
+                      >
+                        <Music className="w-5 h-5 text-cyan-400" />
+                        {hasFullAnalysis && (
+                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                            <CheckCircle className="w-2.5 h-2.5 text-white" />
+                          </div>
+                        )}
+                        {isAnalyzing && (
+                          <div className="absolute inset-0 bg-black/60 rounded flex items-center justify-center">
+                            <Loader className="w-4 h-4 text-cyan-400 animate-spin" />
+                          </div>
+                        )}
+                      </div>
+                      <div onClick={() => handleSongClick(song)} className="flex-1 min-w-0 cursor-pointer">
+                        <h3 className="text-white font-medium text-sm truncate">{song.originalName}</h3>
+                        <p className="text-gray-400 text-xs">
+                          {song.analysis?.bpm ? `${Math.round(song.analysis.bpm)} BPM` : 'Not analyzed'}
+                        </p>
+                      </div>
+                      {!hasFullAnalysis && !isAnalyzing && (
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!user) return;
+                            try {
+                              await songAnalyzer.analyzeSong(song.id, user.id);
+                            } catch (error) {
+                              console.error('Analysis failed:', error);
+                              alert(error instanceof Error ? error.message : 'Analysis failed');
+                            }
+                          }}
+                          className="opacity-0 group-hover:opacity-100 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-medium rounded-lg transition-all duration-200 flex items-center space-x-1"
+                        >
+                          <Sparkles className="w-3 h-3" />
+                          <span>Analyze</span>
+                        </button>
+                      )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-white font-medium text-sm truncate">{song.originalName}</h3>
-                      <p className="text-gray-400 text-xs">
-                        {song.analysis?.bpm ? `${song.analysis.bpm} BPM` : 'Not analyzed'}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </>

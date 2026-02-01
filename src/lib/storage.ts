@@ -29,6 +29,26 @@ export interface AudioAnalysis {
   loudness?: number;
   spectrogramUrl?: string;
   waveformData?: number[];
+  genre?: string;
+  genreConfidence?: number;
+  subGenres?: string[];
+  moodTags?: string[];
+  hasVocals?: boolean;
+  vocalPercentage?: number;
+  brightness?: number;
+  warmth?: number;
+  dynamicRangeDb?: number;
+  beatConfidence?: number;
+  keyConfidence?: number;
+  introDuration?: number;
+  outroDuration?: number;
+  harmonicComplexity?: number;
+  rhythmicComplexity?: number;
+  tempoStability?: number;
+  analyzedAt?: string;
+  analyzerVersion?: string;
+  beatGrid?: number[];
+  downbeats?: number[];
 }
 
 class StorageService {
