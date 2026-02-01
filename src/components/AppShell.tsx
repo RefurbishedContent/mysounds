@@ -87,8 +87,8 @@ const AppShell: React.FC = () => {
     {
       title: 'AI Fusion',
       items: [
-        { id: 'smart-blend', icon: Sparkles, label: 'Smart Blend', view: 'library' },
-        { id: 'auto-transition', icon: Wand2, label: 'Auto Transition', view: 'library' },
+        { id: 'smart-blend', icon: Sparkles, label: 'Smart Blend', comingSoon: true },
+        { id: 'auto-transition', icon: Wand2, label: 'Auto Transition', comingSoon: true },
         { id: 'ai-mashup', icon: Music, label: 'AI Mashup', comingSoon: true },
         { id: 'voice-enhance', icon: Mic, label: 'Voice Enhancement', comingSoon: true },
         { id: 'mood-analysis', icon: Brain, label: 'Mood Analysis', comingSoon: true },
