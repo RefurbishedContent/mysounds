@@ -53,6 +53,7 @@ const AppShell: React.FC = () => {
   const [isTopBarVisible, setIsTopBarVisible] = useState(true);
   const lastScrollYRef = useRef(0);
   const scrollTimeoutRef = useRef<number | null>(null);
+  const lastStateChangeRef = useRef(0);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
@@ -245,14 +246,17 @@ const AppShell: React.FC = () => {
     const handleScroll = () => {
       const scrollY = mainContent.scrollTop;
       const scrollDifference = scrollY - lastScrollYRef.current;
+      const now = Date.now();
 
-      // Only process significant scroll movements (threshold of 10px)
-      if (Math.abs(scrollDifference) < 10) {
+      // Prevent rapid state changes (cooldown period of 300ms)
+      if (now - lastStateChangeRef.current < 300) {
         return;
       }
 
-      // Update last scroll position immediately
-      lastScrollYRef.current = scrollY;
+      // Only process significant scroll movements (threshold of 50px)
+      if (Math.abs(scrollDifference) < 50) {
+        return;
+      }
 
       // Clear any existing timeout
       if (scrollTimeoutRef.current) {
@@ -261,15 +265,35 @@ const AppShell: React.FC = () => {
 
       // Debounce the scroll state change
       scrollTimeoutRef.current = window.setTimeout(() => {
-        // Hide top bar if scrolling down and past threshold
-        if (scrollY > 80 && scrollDifference > 0) {
-          setIsTopBarVisible(false);
+        const currentScroll = mainContent.scrollTop;
+        const currentDifference = currentScroll - lastScrollYRef.current;
+
+        // Update last scroll position
+        lastScrollYRef.current = currentScroll;
+
+        // Determine desired state based on scroll position and direction
+        let shouldBeVisible = true;
+
+        if (currentScroll > 100 && currentDifference > 0) {
+          // Scrolling down significantly, hide bar
+          shouldBeVisible = false;
+        } else if (currentScroll < 50 || currentDifference < -50) {
+          // Near top or scrolling up significantly, show bar
+          shouldBeVisible = true;
+        } else {
+          // No change needed
+          return;
         }
-        // Show top bar if scrolling up or near top
-        else if (scrollY < 30 || scrollDifference < 0) {
-          setIsTopBarVisible(true);
-        }
-      }, 100); // Debounce by 100ms
+
+        // Only update state if it's actually changing
+        setIsTopBarVisible((prev) => {
+          if (prev !== shouldBeVisible) {
+            lastStateChangeRef.current = Date.now();
+            return shouldBeVisible;
+          }
+          return prev;
+        });
+      }, 150); // Increased debounce to 150ms
     };
 
     mainContent.addEventListener('scroll', handleScroll, { passive: true });
