@@ -246,6 +246,14 @@ const AppShell: React.FC = () => {
       const scrollY = mainContent.scrollTop;
       const scrollDifference = scrollY - lastScrollYRef.current;
 
+      // Only process significant scroll movements (threshold of 10px)
+      if (Math.abs(scrollDifference) < 10) {
+        return;
+      }
+
+      // Update last scroll position immediately
+      lastScrollYRef.current = scrollY;
+
       // Clear any existing timeout
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
@@ -261,8 +269,6 @@ const AppShell: React.FC = () => {
         else if (scrollY < 30 || scrollDifference < 0) {
           setIsTopBarVisible(true);
         }
-
-        lastScrollYRef.current = scrollY;
       }, 100); // Debounce by 100ms
     };
 
