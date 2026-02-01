@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  ArrowLeft, Play, Pause, RotateCcw, Save, Sparkles, Music, Zap, Clock, Timer,
-  Download, ZoomIn, ZoomOut, Maximize2, Target, ChevronRight, ChevronLeft,
-  Volume2, VolumeX, Layers
+  ArrowLeft, Play, Pause, RotateCcw, Save, Sparkles, Zap, Clock, Timer,
+  Download, ZoomIn, ZoomOut, ChevronRight, ChevronLeft, ChevronDown, ChevronUp,
+  Volume2, X
 } from 'lucide-react';
 import * as Tone from 'tone';
 import { UploadResult } from '../lib/storage';
@@ -25,6 +25,7 @@ interface TransitionEditorViewProps {
 }
 
 type DurationSize = 'short' | 'medium' | 'long';
+type FadeCurveType = 'linear' | 'smooth' | 'fast';
 
 const DURATION_RANGES = {
   short: { min: 4, max: 8, default: 6 },
@@ -54,6 +55,9 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateData | null>(null);
   const [templates, setTemplates] = useState<TemplateData[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlayingSongA, setIsPlayingSongA] = useState(false);
+  const [isPlayingTransition, setIsPlayingTransition] = useState(false);
+  const [isPlayingSongB, setIsPlayingSongB] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [durationSize, setDurationSize] = useState<DurationSize>('medium');
   const [transitionDuration, setTransitionDuration] = useState(12);
@@ -62,24 +66,30 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showBackDialog, setShowBackDialog] = useState(false);
 
   const [songADuration, setSongADuration] = useState(songA.metadata?.duration || 300);
   const [songBDuration, setSongBDuration] = useState(songB.metadata?.duration || 300);
 
   const [zoomLevel, setZoomLevel] = useState(50);
   const [trackHeight, setTrackHeight] = useState(120);
-  const [showGrid, setShowGrid] = useState(true);
-  const [snapToGrid, setSnapToGrid] = useState(true);
 
-  const [draggingMarker, setDraggingMarker] = useState<'songA' | 'songB' | null>(null);
-  const [playheadPosition, setPlayheadPosition] = useState(0);
-  const [isDraggingPlayhead, setIsDraggingPlayhead] = useState(false);
-
-  const [leftPanelWidth, setLeftPanelWidth] = useState(280);
+  const [leftPanelWidth] = useState(180);
   const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState(false);
+  const [isTemplatesExpanded, setIsTemplatesExpanded] = useState(false);
+
+  const [songAFadeStart, setSongAFadeStart] = useState(0.7);
+  const [songBFadeEnd, setSongBFadeEnd] = useState(0.3);
+  const [songAFadeCurve, setSongAFadeCurve] = useState<FadeCurveType>('smooth');
+  const [songBFadeCurve, setSongBFadeCurve] = useState<FadeCurveType>('smooth');
+  const [draggingFade, setDraggingFade] = useState<'songA' | 'songB' | null>(null);
 
   const timelineRef = useRef<HTMLDivElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
+
+  const playerARef = useRef<Tone.Player | null>(null);
+  const playerBRef = useRef<Tone.Player | null>(null);
+  const playerTransitionRef = useRef<Tone.Player | null>(null);
 
   useEffect(() => {
     loadData();
@@ -89,6 +99,19 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     if (transition) {
       setTransitionDuration(transition.transitionDuration);
       setDurationSize(getDurationSizeFromValue(transition.transitionDuration));
+
+      if (transition.metadata?.songAFadeStart !== undefined) {
+        setSongAFadeStart(transition.metadata.songAFadeStart);
+      }
+      if (transition.metadata?.songBFadeEnd !== undefined) {
+        setSongBFadeEnd(transition.metadata.songBFadeEnd);
+      }
+      if (transition.metadata?.songAFadeCurve) {
+        setSongAFadeCurve(transition.metadata.songAFadeCurve);
+      }
+      if (transition.metadata?.songBFadeCurve) {
+        setSongBFadeCurve(transition.metadata.songBFadeCurve);
+      }
     }
   }, [transition]);
 
@@ -131,28 +154,6 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
           e.preventDefault();
           handlePlayPause();
           break;
-        case 'Home':
-          e.preventDefault();
-          jumpToMarker('songA');
-          break;
-        case 'End':
-          e.preventDefault();
-          jumpToMarker('songB');
-          break;
-        case 'i':
-        case 'I':
-          if (!e.ctrlKey && !e.metaKey) {
-            e.preventDefault();
-            setMarkerAtPlayhead('songA');
-          }
-          break;
-        case 'o':
-        case 'O':
-          if (!e.ctrlKey && !e.metaKey) {
-            e.preventDefault();
-            setMarkerAtPlayhead('songB');
-          }
-          break;
         case '+':
         case '=':
           e.preventDefault();
@@ -167,7 +168,42 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [playheadPosition, transition]);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      playerARef.current?.dispose();
+      playerBRef.current?.dispose();
+      playerTransitionRef.current?.dispose();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!draggingFade) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const timeline = document.querySelector('.timeline-container');
+      if (!timeline) return;
+
+      const rect = timeline.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const percentage = Math.max(0, Math.min(1, x / rect.width));
+
+      handleFadeChange(draggingFade, percentage);
+    };
+
+    const handleMouseUp = () => {
+      setDraggingFade(null);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [draggingFade]);
 
   const loadData = async () => {
     setLoading(true);
@@ -194,7 +230,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     }
   };
 
-  const debouncedSaveMarker = useCallback((markerType: 'songA' | 'songB', value: number) => {
+  const debouncedSaveFade = useCallback((updates: any) => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
@@ -203,93 +239,26 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       if (!transition) return;
 
       try {
-        const updates: any = {};
-        if (markerType === 'songA') {
-          updates.songAMarkerPoint = value;
-          updates.songAClipStart = Math.max(0, value - transitionDuration);
-        } else {
-          updates.songBMarkerPoint = value;
-          updates.songBClipEnd = value + transitionDuration;
-        }
-
-        await transitionsService.updateTransition(transitionId, updates);
+        await transitionsService.updateTransition(transitionId, {
+          metadata: {
+            ...transition.metadata,
+            ...updates
+          }
+        });
 
         const updatedTransition = await transitionsService.getTransition(transitionId);
         setTransition(updatedTransition);
       } catch (error) {
-        console.error('Failed to save marker position:', error);
+        console.error('Failed to save fade settings:', error);
       }
     }, 500);
-  }, [transition, transitionId, transitionDuration]);
-
-  const handleMarkerDrag = (markerType: 'songA' | 'songB', newPosition: number) => {
-    if (!transition) return;
-
-    const clampedPosition = markerType === 'songA'
-      ? Math.max(transitionDuration, Math.min(songADuration, newPosition))
-      : Math.max(0, Math.min(songBDuration - transitionDuration, newPosition));
-
-    if (snapToGrid) {
-      const gridSize = 1;
-      const snapped = Math.round(clampedPosition / gridSize) * gridSize;
-
-      if (markerType === 'songA') {
-        setTransition({ ...transition, songAMarkerPoint: snapped });
-      } else {
-        setTransition({ ...transition, songBMarkerPoint: snapped });
-      }
-
-      debouncedSaveMarker(markerType, snapped);
-    } else {
-      if (markerType === 'songA') {
-        setTransition({ ...transition, songAMarkerPoint: clampedPosition });
-      } else {
-        setTransition({ ...transition, songBMarkerPoint: clampedPosition });
-      }
-
-      debouncedSaveMarker(markerType, clampedPosition);
-    }
-  };
-
-  const jumpToMarker = (markerType: 'songA' | 'songB') => {
-    if (!transition) return;
-
-    const position = markerType === 'songA'
-      ? transition.songAMarkerPoint || 0
-      : transition.songBMarkerPoint || 0;
-
-    setPlayheadPosition(position);
-  };
-
-  const setMarkerAtPlayhead = async (markerType: 'songA' | 'songB') => {
-    if (!transition) return;
-
-    const clampedPosition = markerType === 'songA'
-      ? Math.max(transitionDuration, Math.min(songADuration, playheadPosition))
-      : Math.max(0, Math.min(songBDuration - transitionDuration, playheadPosition));
-
-    try {
-      const updates: any = {};
-      if (markerType === 'songA') {
-        updates.songAMarkerPoint = clampedPosition;
-        updates.songAClipStart = Math.max(0, clampedPosition - transitionDuration);
-      } else {
-        updates.songBMarkerPoint = clampedPosition;
-        updates.songBClipEnd = clampedPosition + transitionDuration;
-      }
-
-      await transitionsService.updateTransition(transitionId, updates);
-      const updatedTransition = await transitionsService.getTransition(transitionId);
-      setTransition(updatedTransition);
-    } catch (error) {
-      console.error('Failed to set marker:', error);
-    }
-  };
+  }, [transition, transitionId]);
 
   const handleTemplateSelect = async (template: TemplateData) => {
     if (!transition) return;
 
     setSelectedTemplate(template);
+    setIsTemplatesExpanded(false);
 
     try {
       await transitionsService.updateTransition(transitionId, {
@@ -346,8 +315,24 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   };
 
   const handleRestart = () => {
-    setPlayheadPosition(0);
+    setCurrentTime(0);
     setIsPlaying(false);
+  };
+
+  const handlePlaySongA = () => {
+    setIsPlayingSongA(!isPlayingSongA);
+  };
+
+  const handlePlayTransition = () => {
+    if (!selectedTemplate) {
+      alert('Please select a template first');
+      return;
+    }
+    setIsPlayingTransition(!isPlayingTransition);
+  };
+
+  const handlePlaySongB = () => {
+    setIsPlayingSongB(!isPlayingSongB);
   };
 
   const handleSave = async () => {
@@ -361,7 +346,14 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     setSaving(true);
     try {
       await transitionsService.updateTransition(transitionId, {
-        status: 'ready'
+        status: 'ready',
+        metadata: {
+          ...transition.metadata,
+          songAFadeStart,
+          songBFadeEnd,
+          songAFadeCurve,
+          songBFadeCurve
+        }
       });
 
       alert('Transition saved successfully!');
@@ -374,55 +366,42 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     }
   };
 
+  const handleBackClick = () => {
+    if (selectedTemplate || songAFadeStart !== 0.7 || songBFadeEnd !== 0.3) {
+      setShowBackDialog(true);
+    } else {
+      onBack();
+    }
+  };
+
+  const handleFadeChange = (track: 'songA' | 'songB', value: number) => {
+    if (track === 'songA') {
+      const clampedValue = Math.max(0, Math.min(1, value));
+      setSongAFadeStart(clampedValue);
+      debouncedSaveFade({ songAFadeStart: clampedValue });
+    } else {
+      const clampedValue = Math.max(0, Math.min(1, value));
+      setSongBFadeEnd(clampedValue);
+      debouncedSaveFade({ songBFadeEnd: clampedValue });
+    }
+  };
+
+  const handleFadeCurveChange = (track: 'songA' | 'songB', curve: FadeCurveType) => {
+    if (track === 'songA') {
+      setSongAFadeCurve(curve);
+      debouncedSaveFade({ songAFadeCurve: curve });
+    } else {
+      setSongBFadeCurve(curve);
+      debouncedSaveFade({ songBFadeCurve: curve });
+    }
+  };
+
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     const frames = Math.floor((seconds % 1) * 30);
     return `${mins}:${secs.toString().padStart(2, '0')}:${frames.toString().padStart(2, '0')}`;
   };
-
-  const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!timelineRef.current || draggingMarker) return;
-
-    const rect = timelineRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const maxDuration = Math.max(songADuration, songBDuration);
-    const clickTime = (x / rect.width) * maxDuration * (100 / zoomLevel);
-
-    setPlayheadPosition(Math.max(0, Math.min(maxDuration, clickTime)));
-  };
-
-  const handleMarkerMouseDown = (markerType: 'songA' | 'songB', e: React.MouseEvent) => {
-    e.stopPropagation();
-    setDraggingMarker(markerType);
-  };
-
-  useEffect(() => {
-    if (!draggingMarker) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!timelineRef.current || !transition) return;
-
-      const rect = timelineRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const maxDuration = draggingMarker === 'songA' ? songADuration : songBDuration;
-      const newPosition = (x / rect.width) * maxDuration * (100 / zoomLevel);
-
-      handleMarkerDrag(draggingMarker, newPosition);
-    };
-
-    const handleMouseUp = () => {
-      setDraggingMarker(null);
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [draggingMarker, transition, zoomLevel]);
 
   if (loading || !transition) {
     return (
@@ -446,33 +425,26 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     return size === durationSize;
   });
 
-  const maxDuration = Math.max(songADuration, songBDuration);
-  const pixelsPerSecond = (zoomLevel / 100) * 50;
-
   return (
     <div className="h-screen bg-gray-900 flex flex-col">
-      <div className="bg-gray-800 border-b border-gray-700 px-4 py-2.5 flex-shrink-0">
+      <div className="bg-gray-800 border-b border-gray-700 px-3 py-2 flex-shrink-0">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
             <button
-              onClick={onBack}
-              className="p-1.5 hover:bg-gray-700 rounded-lg transition-colors"
+              onClick={handleBackClick}
+              className="p-1 hover:bg-gray-700 rounded transition-colors"
             >
               <ArrowLeft className="w-4 h-4 text-gray-400" />
             </button>
             <div>
-              <h1 className="text-base font-bold text-white">Professional Timeline Editor</h1>
-              <p className="text-xs text-gray-400">
+              <h1 className="text-sm font-bold text-white">Professional Timeline Editor</h1>
+              <p className="text-[10px] text-gray-400">
                 {songA.originalName} → {songB.originalName}
               </p>
             </div>
           </div>
 
           <div className="flex items-center space-x-2">
-            <div className="px-3 py-1.5 bg-gray-700 rounded-lg">
-              <span className="text-xs text-gray-400 mr-2">Playhead:</span>
-              <span className="text-sm font-mono text-cyan-400">{formatTime(playheadPosition)}</span>
-            </div>
             <AIPowerButton
               uploadIdA={songA.id}
               uploadIdB={songB.id}
@@ -488,28 +460,28 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
               onClick={() => setShowExportDialog(true)}
               disabled={!selectedTemplate || transition?.status !== 'ready'}
               className={`
-                px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center space-x-1.5
+                px-3 py-1.5 rounded text-xs font-semibold transition-all duration-200 flex items-center space-x-1
                 ${selectedTemplate && transition?.status === 'ready'
-                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white shadow-lg'
+                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white'
                   : 'bg-gray-700 text-gray-500 cursor-not-allowed'
                 }
               `}
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-3 h-3" />
               <span>Export</span>
             </button>
             <button
               onClick={handleSave}
               disabled={!selectedTemplate || saving}
               className={`
-                px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center space-x-1.5
+                px-3 py-1.5 rounded text-xs font-semibold transition-all duration-200 flex items-center space-x-1
                 ${selectedTemplate && !saving
-                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-lg'
+                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white'
                   : 'bg-gray-700 text-gray-500 cursor-not-allowed'
                 }
               `}
             >
-              <Save className="w-4 h-4" />
+              <Save className="w-3 h-3" />
               <span>{saving ? 'Saving...' : 'Save'}</span>
             </button>
           </div>
@@ -522,87 +494,43 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
             className="bg-gray-800 border-r border-gray-700 flex-shrink-0 overflow-y-auto"
             style={{ width: `${leftPanelWidth}px` }}
           >
-            <div className="p-4 space-y-6">
+            <div className="p-3 space-y-2">
               <div>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Transport</h3>
-                <div className="flex flex-col space-y-2">
+                <h3 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Transport</h3>
+                <div className="flex flex-col space-y-1.5">
                   <button
                     onClick={handlePlayPause}
-                    className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 text-white font-semibold shadow-lg"
+                    className="w-full px-2 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 rounded transition-all duration-200 flex items-center justify-center space-x-1.5 text-white font-semibold text-xs"
                   >
-                    {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-                    <span>{isPlaying ? 'Pause' : 'Play'}</span>
+                    {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                    <span>{isPlaying ? 'Pause' : 'Play All'}</span>
                   </button>
                   <button
                     onClick={handleRestart}
-                    className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors flex items-center justify-center space-x-2 text-gray-300"
+                    className="w-full px-2 py-1.5 bg-gray-700 hover:bg-gray-600 rounded transition-colors flex items-center justify-center space-x-1.5 text-gray-300 text-xs"
                   >
-                    <RotateCcw className="w-4 h-4" />
+                    <RotateCcw className="w-3 h-3" />
                     <span>Restart</span>
                   </button>
                 </div>
               </div>
 
               <div>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Markers</h3>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => setMarkerAtPlayhead('songA')}
-                    className="w-full px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-left"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-white">Set Song A Out</span>
-                      <span className="text-xs text-cyan-400 font-mono">{formatTime(songAMarkerPoint)}</span>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => setMarkerAtPlayhead('songB')}
-                    className="w-full px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-left"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-white">Set Song B In</span>
-                      <span className="text-xs text-green-400 font-mono">{formatTime(songBMarkerPoint)}</span>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Quick Navigation</h3>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => jumpToMarker('songA')}
-                    className="flex-1 px-3 py-2 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-600/50 rounded-lg transition-colors"
-                  >
-                    <Target className="w-4 h-4 text-cyan-400 mx-auto" />
-                    <span className="text-xs text-cyan-300 mt-1 block">A Out</span>
-                  </button>
-                  <button
-                    onClick={() => jumpToMarker('songB')}
-                    className="flex-1 px-3 py-2 bg-green-600/20 hover:bg-green-600/30 border border-green-600/50 rounded-lg transition-colors"
-                  >
-                    <Target className="w-4 h-4 text-green-400 mx-auto" />
-                    <span className="text-xs text-green-300 mt-1 block">B In</span>
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Transition Duration</h3>
-                <div className="space-y-2">
+                <h3 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Transition Duration</h3>
+                <div className="space-y-1.5">
                   <button
                     onClick={() => handleDurationChange('short')}
                     className={`
-                      w-full p-3 rounded-lg border-2 transition-all duration-200
+                      w-full p-2 rounded border-2 transition-all duration-200
                       ${durationSize === 'short'
                         ? 'border-cyan-500 bg-cyan-500/10'
                         : 'border-gray-700 bg-gray-900 hover:border-gray-600'
                       }
                     `}
                   >
-                    <div className="flex items-center space-x-2">
-                      <Zap className={`w-5 h-5 ${durationSize === 'short' ? 'text-cyan-400' : 'text-gray-400'}`} />
-                      <span className={`text-sm font-semibold ${durationSize === 'short' ? 'text-cyan-400' : 'text-white'}`}>
+                    <div className="flex items-center space-x-1.5">
+                      <Zap className={`w-4 h-4 ${durationSize === 'short' ? 'text-cyan-400' : 'text-gray-400'}`} />
+                      <span className={`text-xs font-semibold ${durationSize === 'short' ? 'text-cyan-400' : 'text-white'}`}>
                         Short ({DURATION_RANGES.short.default}s)
                       </span>
                     </div>
@@ -611,16 +539,16 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                   <button
                     onClick={() => handleDurationChange('medium')}
                     className={`
-                      w-full p-3 rounded-lg border-2 transition-all duration-200
+                      w-full p-2 rounded border-2 transition-all duration-200
                       ${durationSize === 'medium'
                         ? 'border-blue-500 bg-blue-500/10'
                         : 'border-gray-700 bg-gray-900 hover:border-gray-600'
                       }
                     `}
                   >
-                    <div className="flex items-center space-x-2">
-                      <Clock className={`w-5 h-5 ${durationSize === 'medium' ? 'text-blue-400' : 'text-gray-400'}`} />
-                      <span className={`text-sm font-semibold ${durationSize === 'medium' ? 'text-blue-400' : 'text-white'}`}>
+                    <div className="flex items-center space-x-1.5">
+                      <Clock className={`w-4 h-4 ${durationSize === 'medium' ? 'text-blue-400' : 'text-gray-400'}`} />
+                      <span className={`text-xs font-semibold ${durationSize === 'medium' ? 'text-blue-400' : 'text-white'}`}>
                         Medium ({DURATION_RANGES.medium.default}s)
                       </span>
                     </div>
@@ -629,16 +557,16 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                   <button
                     onClick={() => handleDurationChange('long')}
                     className={`
-                      w-full p-3 rounded-lg border-2 transition-all duration-200
+                      w-full p-2 rounded border-2 transition-all duration-200
                       ${durationSize === 'long'
                         ? 'border-purple-500 bg-purple-500/10'
                         : 'border-gray-700 bg-gray-900 hover:border-gray-600'
                       }
                     `}
                   >
-                    <div className="flex items-center space-x-2">
-                      <Timer className={`w-5 h-5 ${durationSize === 'long' ? 'text-purple-400' : 'text-gray-400'}`} />
-                      <span className={`text-sm font-semibold ${durationSize === 'long' ? 'text-purple-400' : 'text-white'}`}>
+                    <div className="flex items-center space-x-1.5">
+                      <Timer className={`w-4 h-4 ${durationSize === 'long' ? 'text-purple-400' : 'text-gray-400'}`} />
+                      <span className={`text-xs font-semibold ${durationSize === 'long' ? 'text-purple-400' : 'text-white'}`}>
                         Long ({DURATION_RANGES.long.default}s)
                       </span>
                     </div>
@@ -647,34 +575,10 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
               </div>
 
               <div>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">View Options</h3>
+                <h3 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Zoom</h3>
                 <div className="space-y-2">
-                  <label className="flex items-center justify-between p-2 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-650">
-                    <span className="text-sm text-white">Show Grid</span>
-                    <input
-                      type="checkbox"
-                      checked={showGrid}
-                      onChange={(e) => setShowGrid(e.target.checked)}
-                      className="w-4 h-4 text-cyan-600 bg-gray-600 border-gray-500 rounded focus:ring-cyan-500"
-                    />
-                  </label>
-                  <label className="flex items-center justify-between p-2 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-650">
-                    <span className="text-sm text-white">Snap to Grid</span>
-                    <input
-                      type="checkbox"
-                      checked={snapToGrid}
-                      onChange={(e) => setSnapToGrid(e.target.checked)}
-                      className="w-4 h-4 text-cyan-600 bg-gray-600 border-gray-500 rounded focus:ring-cyan-500"
-                    />
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Zoom</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <ZoomOut className="w-4 h-4 text-gray-400" />
+                  <div className="flex items-center space-x-1.5">
+                    <ZoomOut className="w-3 h-3 text-gray-400" />
                     <input
                       type="range"
                       min="20"
@@ -683,46 +587,32 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                       onChange={(e) => setZoomLevel(Number(e.target.value))}
                       className="flex-1"
                     />
-                    <ZoomIn className="w-4 h-4 text-gray-400" />
+                    <ZoomIn className="w-3 h-3 text-gray-400" />
                   </div>
-                  <div className="text-center text-xs text-gray-400">
+                  <div className="text-center text-[10px] text-gray-400">
                     {zoomLevel}%
-                  </div>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => setZoomLevel(50)}
-                      className="flex-1 px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs text-gray-300"
-                    >
-                      Fit
-                    </button>
-                    <button
-                      onClick={() => setZoomLevel(100)}
-                      className="flex-1 px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs text-gray-300"
-                    >
-                      100%
-                    </button>
                   </div>
                 </div>
               </div>
 
               <div>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Track Height</h3>
-                <div className="flex space-x-2">
+                <h3 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Track Height</h3>
+                <div className="flex space-x-1.5">
                   <button
                     onClick={() => setTrackHeight(80)}
-                    className={`flex-1 px-2 py-1.5 rounded text-xs ${trackHeight === 80 ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                    className={`flex-1 px-2 py-1 rounded text-[10px] ${trackHeight === 80 ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
                   >
                     Small
                   </button>
                   <button
                     onClick={() => setTrackHeight(120)}
-                    className={`flex-1 px-2 py-1.5 rounded text-xs ${trackHeight === 120 ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                    className={`flex-1 px-2 py-1 rounded text-[10px] ${trackHeight === 120 ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
                   >
                     Medium
                   </button>
                   <button
                     onClick={() => setTrackHeight(180)}
-                    className={`flex-1 px-2 py-1.5 rounded text-xs ${trackHeight === 180 ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                    className={`flex-1 px-2 py-1 rounded text-[10px] ${trackHeight === 180 ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
                   >
                     Large
                   </button>
@@ -744,189 +634,285 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                   />
                 </div>
               )}
-
-              <div>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center justify-between">
-                  <span>Templates ({filteredTemplates.length})</span>
-                  <Sparkles className="w-4 h-4 text-cyan-400" />
-                </h3>
-                <div className="max-h-96 overflow-y-auto">
-                  <TemplateGallery
-                    onSelectTemplate={handleTemplateSelect}
-                    compact={true}
-                    trackA={songA}
-                    trackB={songB}
-                    durationFilter={durationSize}
-                    selectedTemplateId={selectedTemplate?.id}
-                  />
-                </div>
-              </div>
             </div>
           </div>
         )}
 
-        <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
+        <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden relative">
           <button
             onClick={() => setIsLeftPanelCollapsed(!isLeftPanelCollapsed)}
-            className="absolute left-0 top-20 z-10 bg-gray-800 border border-gray-700 rounded-r-lg p-2 hover:bg-gray-700 transition-colors"
+            className="absolute left-2 top-4 z-10 bg-gray-800 border border-gray-700 rounded p-1.5 hover:bg-gray-700 transition-colors"
           >
-            {isLeftPanelCollapsed ? <ChevronRight className="w-4 h-4 text-gray-400" /> : <ChevronLeft className="w-4 h-4 text-gray-400" />}
+            {isLeftPanelCollapsed ? <ChevronRight className="w-3 h-3 text-gray-400" /> : <ChevronLeft className="w-3 h-3 text-gray-400" />}
           </button>
 
-          <div className="flex-1 flex flex-col p-6 overflow-auto">
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-white mb-2">Professional Timeline</h2>
-              <p className="text-sm text-gray-400">
-                Click markers to drag and adjust transition points. Use keyboard shortcuts: Space (play/pause), I (set Song A out), O (set Song B in), Home/End (jump to markers)
+          <div className="flex-1 flex flex-col p-4 overflow-auto">
+            <div className="mb-3">
+              <h2 className="text-base font-semibold text-white mb-1">Timeline Editor</h2>
+              <p className="text-xs text-gray-400">
+                Select a template below, adjust fade curves on each track. Use Space to play/pause.
               </p>
             </div>
 
-            <div
-              ref={timelineRef}
-              className="flex-1 bg-gray-800 rounded-xl border border-gray-700 overflow-x-auto overflow-y-hidden p-4"
-              onClick={handleTimelineClick}
-              style={{ minHeight: `${trackHeight * 3 + 200}px` }}
-            >
-              <div style={{ width: `${maxDuration * pixelsPerSecond}px`, minWidth: '100%' }}>
-                <div className="relative h-8 mb-4 border-b border-gray-700">
-                  {Array.from({ length: Math.ceil(maxDuration / 5) + 1 }).map((_, i) => {
-                    const time = i * 5;
-                    return (
-                      <div
-                        key={i}
-                        className="absolute top-0 bottom-0 border-l border-gray-600"
-                        style={{ left: `${(time / maxDuration) * 100}%` }}
-                      >
-                        <span className="absolute -top-1 left-1 text-xs text-gray-400">
-                          {formatTime(time)}
-                        </span>
+            <div className="flex-1 bg-gray-800 rounded-lg border border-gray-700 p-4">
+              <div className="space-y-4">
+                <div style={{ height: `${trackHeight}px` }} className="relative">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-xs font-semibold text-cyan-400">Song A (Ending - Fade Out)</div>
+                    <button
+                      onClick={handlePlaySongA}
+                      className="p-1 bg-cyan-600/20 hover:bg-cyan-600/30 rounded transition-colors"
+                    >
+                      {isPlayingSongA ? <Pause className="w-3 h-3 text-cyan-400" /> : <Play className="w-3 h-3 text-cyan-400" />}
+                    </button>
+                  </div>
+                  <div className="relative h-full bg-gray-900 rounded overflow-hidden timeline-container">
+                    <WaveformDisplay
+                      audioUrl={songA.url}
+                      height={trackHeight - 32}
+                      color="#3b82f6"
+                      progressColor="#60a5fa"
+                    />
+
+                    <div
+                      className="absolute top-0 bottom-0 right-0 bg-gradient-to-l from-gray-900 via-gray-900/70 to-transparent pointer-events-none"
+                      style={{ width: `${(1 - songAFadeStart) * 100}%` }}
+                    />
+
+                    <div
+                      className="absolute top-0 bottom-0 w-1 bg-gradient-to-b from-cyan-400 via-cyan-500 to-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)] cursor-ew-resize z-10"
+                      style={{ left: `${songAFadeStart * 100}%` }}
+                      onMouseDown={() => setDraggingFade('songA')}
+                    >
+                      <div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-3 h-6 bg-cyan-500 rounded-sm flex items-center justify-center">
+                        <Volume2 className="w-2 h-2 text-white" />
                       </div>
-                    );
-                  })}
+                    </div>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-[10px]">
+                    <span className="text-gray-500">Fade Curve:</span>
+                    <div className="flex space-x-1">
+                      <button
+                        onClick={() => handleFadeCurveChange('songA', 'linear')}
+                        className={`px-2 py-0.5 rounded ${songAFadeCurve === 'linear' ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-400'}`}
+                      >
+                        Linear
+                      </button>
+                      <button
+                        onClick={() => handleFadeCurveChange('songA', 'smooth')}
+                        className={`px-2 py-0.5 rounded ${songAFadeCurve === 'smooth' ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-400'}`}
+                      >
+                        Smooth
+                      </button>
+                      <button
+                        onClick={() => handleFadeCurveChange('songA', 'fast')}
+                        className={`px-2 py-0.5 rounded ${songAFadeCurve === 'fast' ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-400'}`}
+                      >
+                        Fast
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-6 relative">
-                  <div style={{ height: `${trackHeight}px` }} className="relative">
-                    <div className="absolute top-0 left-0 w-full h-full">
-                      <div className="text-xs font-semibold text-white mb-2">Song A (Ending)</div>
-                      <div className="relative h-full bg-gray-900 rounded overflow-hidden">
-                        <WaveformDisplay
-                          audioUrl={songA.url}
-                          height={trackHeight - 24}
-                          color="#3b82f6"
-                          progressColor="#60a5fa"
-                        />
-
-                        <div
-                          className="absolute top-0 bottom-0 left-0 bg-gray-900/80 pointer-events-none"
-                          style={{ width: `${(songAClipStart / songADuration) * 100}%` }}
-                        />
-
-                        <div
-                          className="absolute top-0 bottom-0 bg-gray-900/80 pointer-events-none"
-                          style={{
-                            left: `${(songAMarkerPoint / songADuration) * 100}%`,
-                            right: 0
-                          }}
-                        />
-
-                        <div
-                          className="absolute top-0 bottom-0 w-1 bg-gradient-to-b from-cyan-400 via-blue-500 to-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.8)] cursor-ew-resize group"
-                          style={{ left: `${(songAMarkerPoint / songADuration) * 100}%` }}
-                          onMouseDown={(e) => handleMarkerMouseDown('songA', e)}
-                        >
-                          <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-cyan-500 text-white text-xs px-2 py-1 rounded whitespace-nowrap font-medium shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
-                            Song A Out: {formatTime(songAMarkerPoint)}
-                          </div>
-                          <div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-4 h-8 bg-cyan-500 rounded-sm flex items-center justify-center">
-                            <div className="w-1 h-4 bg-white rounded-full"></div>
-                          </div>
-                        </div>
-                      </div>
+                <div style={{ height: `${Math.max(80, trackHeight * 0.6)}px` }} className="relative">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-xs font-semibold text-purple-400 flex items-center space-x-1">
+                      <Sparkles className="w-4 h-4" />
+                      <span>Transition</span>
                     </div>
+                    {selectedTemplate && (
+                      <button
+                        onClick={handlePlayTransition}
+                        className="p-1 bg-purple-600/20 hover:bg-purple-600/30 rounded transition-colors"
+                      >
+                        {isPlayingTransition ? <Pause className="w-3 h-3 text-purple-400" /> : <Play className="w-3 h-3 text-purple-400" />}
+                      </button>
+                    )}
                   </div>
-
-                  <div style={{ height: `${Math.min(trackHeight, 60)}px` }} className="relative flex items-center justify-center">
-                    <div className="flex items-center space-x-3 px-6 py-3 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-green-500/20 rounded-full border border-purple-500/30">
-                      <Sparkles className="w-5 h-5 text-purple-400" />
-                      <span className="text-sm font-medium text-purple-300">
-                        {selectedTemplate ? selectedTemplate.name : 'No Template Selected'}
-                      </span>
-                      <span className="text-xs text-purple-400">({transitionDuration}s transition)</span>
-                      <Sparkles className="w-5 h-5 text-purple-400" />
-                    </div>
-                  </div>
-
-                  <div style={{ height: `${trackHeight}px` }} className="relative">
-                    <div className="absolute top-0 left-0 w-full h-full">
-                      <div className="text-xs font-semibold text-white mb-2">Song B (Beginning)</div>
-                      <div className="relative h-full bg-gray-900 rounded overflow-hidden">
-                        <WaveformDisplay
-                          audioUrl={songB.url}
-                          height={trackHeight - 24}
-                          color="#10b981"
-                          progressColor="#34d399"
-                        />
-
-                        <div
-                          className="absolute top-0 bottom-0 left-0 bg-gray-900/80 pointer-events-none"
-                          style={{ width: `${(songBMarkerPoint / songBDuration) * 100}%` }}
-                        />
-
-                        <div
-                          className="absolute top-0 bottom-0 bg-gray-900/80 pointer-events-none"
-                          style={{
-                            left: `${(songBClipEnd / songBDuration) * 100}%`,
-                            right: 0
-                          }}
-                        />
-
-                        <div
-                          className="absolute top-0 bottom-0 w-1 bg-gradient-to-b from-green-400 via-emerald-500 to-green-400 shadow-[0_0_20px_rgba(52,211,153,0.8)] cursor-ew-resize group"
-                          style={{ left: `${(songBMarkerPoint / songBDuration) * 100}%` }}
-                          onMouseDown={(e) => handleMarkerMouseDown('songB', e)}
-                        >
-                          <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs px-2 py-1 rounded whitespace-nowrap font-medium shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
-                            Song B In: {formatTime(songBMarkerPoint)}
-                          </div>
-                          <div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-4 h-8 bg-green-500 rounded-sm flex items-center justify-center">
-                            <div className="w-1 h-4 bg-white rounded-full"></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
                   <div
-                    className="absolute top-0 bottom-0 w-0.5 bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)] pointer-events-none z-10"
-                    style={{ left: `${(playheadPosition / maxDuration) * 100}%` }}
+                    className="relative h-full rounded overflow-hidden transition-all duration-300"
+                    style={{
+                      background: selectedTemplate
+                        ? 'linear-gradient(90deg, rgba(6,182,212,0.2) 0%, rgba(168,85,247,0.3) 50%, rgba(236,72,153,0.2) 100%)'
+                        : 'rgba(31,41,55,1)',
+                      boxShadow: selectedTemplate
+                        ? '0 0 30px rgba(168,85,247,0.4), inset 0 0 30px rgba(168,85,247,0.1)'
+                        : 'none'
+                    }}
                   >
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-red-500"></div>
+                    {selectedTemplate ? (
+                      <>
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-400/10 to-transparent animate-pulse" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="text-center space-y-1">
+                            <div className="flex items-center justify-center space-x-2">
+                              <Sparkles className="w-5 h-5 text-purple-400 animate-pulse" />
+                              <span className="text-sm font-bold text-purple-300">{selectedTemplate.name}</span>
+                              <Sparkles className="w-5 h-5 text-purple-400 animate-pulse" />
+                            </div>
+                            <div className="text-xs text-purple-400">{transitionDuration}s transition</div>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-center space-y-2">
+                          <Sparkles className="w-6 h-6 text-gray-600 mx-auto" />
+                          <p className="text-xs text-gray-500">Select a template below to begin</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ height: `${trackHeight}px` }} className="relative">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-xs font-semibold text-green-400">Song B (Beginning - Fade In)</div>
+                    <button
+                      onClick={handlePlaySongB}
+                      className="p-1 bg-green-600/20 hover:bg-green-600/30 rounded transition-colors"
+                    >
+                      {isPlayingSongB ? <Pause className="w-3 h-3 text-green-400" /> : <Play className="w-3 h-3 text-green-400" />}
+                    </button>
+                  </div>
+                  <div className="relative h-full bg-gray-900 rounded overflow-hidden timeline-container">
+                    <WaveformDisplay
+                      audioUrl={songB.url}
+                      height={trackHeight - 32}
+                      color="#10b981"
+                      progressColor="#34d399"
+                    />
+
+                    <div
+                      className="absolute top-0 bottom-0 left-0 bg-gradient-to-r from-gray-900 via-gray-900/70 to-transparent pointer-events-none"
+                      style={{ width: `${songBFadeEnd * 100}%` }}
+                    />
+
+                    <div
+                      className="absolute top-0 bottom-0 w-1 bg-gradient-to-b from-green-400 via-green-500 to-green-400 shadow-[0_0_10px_rgba(52,211,153,0.8)] cursor-ew-resize z-10"
+                      style={{ left: `${songBFadeEnd * 100}%` }}
+                      onMouseDown={() => setDraggingFade('songB')}
+                    >
+                      <div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-3 h-6 bg-green-500 rounded-sm flex items-center justify-center">
+                        <Volume2 className="w-2 h-2 text-white" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-[10px]">
+                    <span className="text-gray-500">Fade Curve:</span>
+                    <div className="flex space-x-1">
+                      <button
+                        onClick={() => handleFadeCurveChange('songB', 'linear')}
+                        className={`px-2 py-0.5 rounded ${songBFadeCurve === 'linear' ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400'}`}
+                      >
+                        Linear
+                      </button>
+                      <button
+                        onClick={() => handleFadeCurveChange('songB', 'smooth')}
+                        className={`px-2 py-0.5 rounded ${songBFadeCurve === 'smooth' ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400'}`}
+                      >
+                        Smooth
+                      </button>
+                      <button
+                        onClick={() => handleFadeCurveChange('songB', 'fast')}
+                        className={`px-2 py-0.5 rounded ${songBFadeCurve === 'fast' ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400'}`}
+                      >
+                        Fast
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-3">
-                <div className="text-gray-400 text-xs mb-1">Song A Clip</div>
-                <div className="text-white font-mono">{formatTime(songAClipStart)} - {formatTime(songAMarkerPoint)}</div>
-                <div className="text-cyan-400 text-xs mt-1">{transitionDuration}s duration</div>
-              </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-3">
-                <div className="text-gray-400 text-xs mb-1">Transition</div>
-                <div className="text-purple-400 font-semibold">{selectedTemplate?.name || 'None'}</div>
-                <div className="text-purple-300 text-xs mt-1">{transitionDuration}s overlap</div>
-              </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-3">
-                <div className="text-gray-400 text-xs mb-1">Song B Clip</div>
-                <div className="text-white font-mono">{formatTime(songBMarkerPoint)} - {formatTime(songBClipEnd)}</div>
-                <div className="text-green-400 text-xs mt-1">{transitionDuration}s duration</div>
+            <div className="mt-4">
+              <div
+                className={`bg-gray-800 border border-gray-700 rounded-lg transition-all duration-300 ${
+                  isTemplatesExpanded ? 'p-4' : 'p-2'
+                }`}
+              >
+                {!isTemplatesExpanded ? (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Sparkles className="w-4 h-4 text-purple-400" />
+                      {selectedTemplate ? (
+                        <div className="flex items-center space-x-2">
+                          <div className="px-3 py-1.5 bg-purple-500/20 border border-purple-500/40 rounded-full">
+                            <span className="text-xs font-semibold text-purple-300">{selectedTemplate.name}</span>
+                          </div>
+                          <span className="text-xs text-gray-400">Selected</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-400">No template selected</span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => setIsTemplatesExpanded(true)}
+                      className="flex items-center space-x-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 rounded transition-colors"
+                    >
+                      <span className="text-xs font-semibold text-white">Browse Templates</span>
+                      <ChevronDown className="w-3 h-3 text-white" />
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-2">
+                        <Sparkles className="w-5 h-5 text-purple-400" />
+                        <h3 className="text-sm font-semibold text-white">Select Template ({filteredTemplates.length})</h3>
+                      </div>
+                      <button
+                        onClick={() => setIsTemplatesExpanded(false)}
+                        className="p-1 hover:bg-gray-700 rounded transition-colors"
+                      >
+                        <ChevronUp className="w-4 h-4 text-gray-400" />
+                      </button>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      <TemplateGallery
+                        onSelectTemplate={handleTemplateSelect}
+                        compact={true}
+                        trackA={songA}
+                        trackB={songB}
+                        durationFilter={durationSize}
+                        selectedTemplateId={selectedTemplate?.id}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {showBackDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-bold text-white mb-2">Save Changes?</h3>
+            <p className="text-sm text-gray-400 mb-4">
+              Changes will be saved automatically. Return to song selection?
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowBackDialog(false)}
+                className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-white font-semibold transition-colors"
+              >
+                Continue Editing
+              </button>
+              <button
+                onClick={() => {
+                  setShowBackDialog(false);
+                  onBack();
+                }}
+                className="flex-1 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded text-white font-semibold transition-colors"
+              >
+                Back to Selection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showExportDialog && transition && (
         <BlendExportDialog
