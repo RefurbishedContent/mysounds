@@ -87,6 +87,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   transitionId,
   onBack,
   onSave: onSaveCallback,
+  onResetPoints,
 }) => {
   const { user } = useAuth();
   const [transition, setTransition] = useState<TransitionData | null>(null);
