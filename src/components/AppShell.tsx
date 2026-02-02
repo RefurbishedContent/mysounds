@@ -320,11 +320,7 @@ const AppShell: React.FC = () => {
           />
         ) : null;
       case 'templates':
-        return (
-          <TemplateGallery 
-            onSelectTemplate={handleSelectTemplate}
-          />
-        );
+        return <TemplateGallery />;
       case 'editor':
         return (
           <EditorView

@@ -4,9 +4,10 @@ import { Search, Filter, Star, Download, Play, Crown, Heart, Eye, GripVertical, 
 import { databaseService, TemplateData } from '../lib/database';
 import { UploadResult } from '../lib/storage';
 import TemplateIcon from './TemplateIcon';
+import TemplateDetailModal from './TemplateDetailModal';
 
 interface TemplateGalleryProps {
-  onSelectTemplate: (template: TemplateData) => void;
+  onSelectTemplate?: (template: TemplateData) => void;
   compact?: boolean;
   onDragStart?: (template: TemplateData, e: React.DragEvent) => void;
   trackA?: UploadResult | null;
@@ -39,6 +40,7 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [selectedTemplateForDetail, setSelectedTemplateForDetail] = useState<TemplateData | null>(null);
   const scrollIntervalRef = useRef<number | null>(null);
 
   const categories = ['electronic', 'hip-hop', 'house', 'techno', 'trance', 'dubstep', 'ambient'];
@@ -590,7 +592,13 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                 }`}
                 draggable={false}
                 onDragStart={(e) => handleDragStart(template, e)}
-                onClick={() => onSelectTemplate(template)}
+                onClick={() => {
+                  if (compact && onSelectTemplate) {
+                    onSelectTemplate(template);
+                  } else {
+                    setSelectedTemplateForDetail(template);
+                  }
+                }}
               >
                 {/* Thumbnail */}
                 <div className="relative">
@@ -869,6 +877,16 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                 </div>
           </div>
         </div>
+      )}
+
+      {selectedTemplateForDetail && (
+        <TemplateDetailModal
+          template={selectedTemplateForDetail}
+          onClose={() => setSelectedTemplateForDetail(null)}
+          onPreview={(template) => {
+            console.log('Preview template:', template);
+          }}
+        />
       )}
     </div>
   );
