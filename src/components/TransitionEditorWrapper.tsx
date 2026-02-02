@@ -8,12 +8,14 @@ interface TransitionEditorWrapperProps {
   transitionId: string;
   onBack: () => void;
   onSave: () => void;
+  onResetPoints?: () => void;
 }
 
 const TransitionEditorWrapper: React.FC<TransitionEditorWrapperProps> = ({
   transitionId,
   onBack,
   onSave,
+  onResetPoints,
 }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,6 +104,7 @@ const TransitionEditorWrapper: React.FC<TransitionEditorWrapperProps> = ({
       songB={songB}
       onBack={onBack}
       onSave={onSave}
+      onResetPoints={onResetPoints}
     />
   );
 };

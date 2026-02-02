@@ -147,6 +147,18 @@ class TransitionsService {
     if (error) throw error;
   }
 
+  async resetTransitionTimeline(transitionId: string): Promise<void> {
+    const { error } = await supabase
+      .from('transitions')
+      .update({
+        template_id: null,
+        metadata: {}
+      })
+      .eq('id', transitionId);
+
+    if (error) throw error;
+  }
+
   async getTransitionWithDetails(transitionId: string): Promise<TransitionData & {
     songA?: any;
     songB?: any;

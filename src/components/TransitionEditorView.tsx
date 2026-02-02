@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   ArrowLeft, Play, Pause, RotateCcw, Save, Sparkles, Zap, Clock, Timer,
   Download, ZoomIn, ZoomOut, ChevronRight, ChevronLeft, ChevronDown, ChevronUp,
-  Volume2, X
+  Volume2, X, Navigation
 } from 'lucide-react';
 import * as Tone from 'tone';
 import { UploadResult } from '../lib/storage';
@@ -17,6 +17,7 @@ import { WaveformDisplay } from './WaveformDisplay';
 import { ClippedWaveformDisplay } from './ClippedWaveformDisplay';
 import { KeyframeFadeEditor, FadeKeyframe } from './KeyframeFadeEditor';
 import BlendExportDialog from './BlendExportDialog';
+import ResetTransitionPointsModal from './ResetTransitionPointsModal';
 
 interface TransitionEditorViewProps {
   songA: UploadResult;
@@ -24,6 +25,7 @@ interface TransitionEditorViewProps {
   transitionId: string;
   onBack: () => void;
   onSave: () => void;
+  onResetPoints?: () => void;
 }
 
 type DurationSize = 'short' | 'medium' | 'long';
@@ -128,6 +130,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   ]);
   const [songAFadeCurve, setSongAFadeCurve] = useState<FadeCurveType>('smooth');
   const [songBFadeCurve, setSongBFadeCurve] = useState<FadeCurveType>('smooth');
+  const [showResetPointsModal, setShowResetPointsModal] = useState(false);
 
   const timelineRef = useRef<HTMLDivElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
@@ -919,13 +922,20 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                 </div>
               )}
 
-              <div className="mt-4 pt-4 border-t border-gray-700">
+              <div className="mt-4 pt-4 border-t border-gray-700 space-y-2">
                 <button
                   onClick={handleRestart}
                   className="w-full px-3 py-2.5 bg-gray-700 hover:bg-gray-600 border-2 border-yellow-600/40 hover:border-yellow-500/60 rounded transition-all flex items-center justify-center space-x-2 text-yellow-400 hover:text-yellow-300 font-semibold text-xs"
                 >
                   <RotateCcw className="w-4 h-4" />
                   <span>Start Fresh</span>
+                </button>
+                <button
+                  onClick={() => setShowResetPointsModal(true)}
+                  className="w-full px-3 py-2.5 bg-gray-700 hover:bg-gray-600 border-2 border-red-600/40 hover:border-red-500/60 rounded transition-all flex items-center justify-center space-x-2 text-red-400 hover:text-red-300 font-semibold text-xs"
+                >
+                  <Navigation className="w-4 h-4" />
+                  <span>Reset Transition Points</span>
                 </button>
               </div>
             </div>
@@ -1202,6 +1212,18 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
             setShowExportDialog(false);
             alert('Export started! Check the Blends section in your Library to view your exported blend.');
           }}
+        />
+      )}
+
+      {showResetPointsModal && (
+        <ResetTransitionPointsModal
+          onConfirm={() => {
+            setShowResetPointsModal(false);
+            if (onResetPoints) {
+              onResetPoints();
+            }
+          }}
+          onCancel={() => setShowResetPointsModal(false)}
         />
       )}
     </div>

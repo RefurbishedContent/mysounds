@@ -21,7 +21,8 @@ import AIFusionView from './AIFusionView';
 import LabsView from './LabsView';
 import MobileBottomNav, { MobileNavView } from './MobileBottomNav';
 import ProjectCreationWizard from './ProjectCreationWizard';
-import { UploadResult } from '../lib/storage';
+import { UploadResult, storageService } from '../lib/storage';
+import { transitionsService } from '../lib/transitionsService';
 
 type AppView = 'home' | 'create-with-ai' | 'ai-design' | 'ai-video' | 'ai-voice' | 'all-tools' | 'templates' | 'recent-projects' | 'share-schedule' | 'create-transition' | 'editor' | 'template-manager' | 'library' | 'mixer' | 'preview' | 'files' | 'transition-editor' | 'transitions' | 'playlists' | 'profile' | 'project-wizard';
 
@@ -202,6 +203,25 @@ const AppShell: React.FC = () => {
     setCurrentView(tool as AppView);
   };
 
+  const handleResetTransitionPoints = async () => {
+    if (!editingTransitionId) return;
+
+    try {
+      const transition = await transitionsService.getTransition(editingTransitionId);
+      await transitionsService.resetTransitionTimeline(editingTransitionId);
+
+      const songA = await storageService.getUpload(transition.songAId);
+      const songB = await storageService.getUpload(transition.songBId);
+
+      setTransitionSongA(songA || undefined);
+      setTransitionSongB(songB || undefined);
+      setCurrentView('create-transition');
+    } catch (error) {
+      console.error('Failed to reset transition points:', error);
+      alert('Failed to reset transition points. Please try again.');
+    }
+  };
+
   const handleWizardComplete = (projectType: 'transition' | 'mixer', projectData: any) => {
     if (projectType === 'transition') {
       setTransitionSongA(projectData.songA);
@@ -309,6 +329,8 @@ const AppShell: React.FC = () => {
             onBack={handleBackToTransitions}
             onSave={handleTransitionSaved}
             initialSongA={transitionSongA}
+            initialSongB={transitionSongB}
+            editingTransitionId={editingTransitionId}
           />
         );
       case 'transition-editor':
@@ -317,6 +339,7 @@ const AppShell: React.FC = () => {
             transitionId={editingTransitionId}
             onBack={() => setCurrentView('transitions')}
             onSave={() => setCurrentView('transitions')}
+            onResetPoints={handleResetTransitionPoints}
           />
         ) : null;
       case 'templates':

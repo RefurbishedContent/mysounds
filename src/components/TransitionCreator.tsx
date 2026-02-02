@@ -11,6 +11,8 @@ interface TransitionCreatorProps {
   onBack: () => void;
   onSave: () => void;
   initialSongA?: UploadResult;
+  initialSongB?: UploadResult;
+  editingTransitionId?: string;
 }
 
 type CreatorStep = 'select-songs' | 'set-transition-points';
@@ -19,13 +21,13 @@ const DEFAULT_TRANSITION_DURATION = 10;
 const MIN_CLIP_DURATION = 5;
 const MAX_CLIP_DURATION = 30;
 
-const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, initialSongA }) => {
+const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, initialSongA, initialSongB, editingTransitionId }) => {
   const { user } = useAuth();
-  const [currentStep, setCurrentStep] = useState<CreatorStep>('select-songs');
+  const [currentStep, setCurrentStep] = useState<CreatorStep>(initialSongA && initialSongB ? 'set-transition-points' : 'select-songs');
   const [songs, setSongs] = useState<UploadResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [songA, setSongA] = useState<UploadResult | null>(initialSongA || null);
-  const [songB, setSongB] = useState<UploadResult | null>(null);
+  const [songB, setSongB] = useState<UploadResult | null>(initialSongB || null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [bpmFilter, setBpmFilter] = useState<'all' | 'slow' | 'medium' | 'fast'>('all');
@@ -40,7 +42,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
   const [isPlayingA, setIsPlayingA] = useState(false);
   const [isPlayingB, setIsPlayingB] = useState(false);
 
-  const [transitionId, setTransitionId] = useState<string | null>(null);
+  const [transitionId, setTransitionId] = useState<string | null>(editingTransitionId || null);
   const [showEditor, setShowEditor] = useState(false);
   const [saving, setSaving] = useState(false);
 
