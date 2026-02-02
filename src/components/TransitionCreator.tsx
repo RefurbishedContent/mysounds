@@ -17,7 +17,7 @@ interface TransitionCreatorProps {
 
 type CreatorStep = 'select-songs' | 'set-transition-points';
 
-const DEFAULT_TRANSITION_DURATION = 10;
+const DEFAULT_TRANSITION_DURATION = 12;
 const MIN_CLIP_DURATION = 5;
 const MAX_CLIP_DURATION = 30;
 
