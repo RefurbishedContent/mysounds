@@ -50,7 +50,7 @@ const TemplateDetailModal: React.FC<TemplateDetailModalProps> = ({
   const avgEnergy = (template.energyMin + template.energyMax) / 2;
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-gray-800 rounded-2xl border border-gray-600 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="sticky top-0 bg-gray-800 border-b border-gray-700 p-6 z-10">
           <div className="flex items-start justify-between">
