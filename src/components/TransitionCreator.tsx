@@ -260,6 +260,10 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
         transitionId={transitionId}
         onBack={onBack}
         onSave={onSave}
+        onResetPoints={() => {
+          setShowEditor(false);
+          setCurrentStep('set-transition-points');
+        }}
       />
     );
   }
