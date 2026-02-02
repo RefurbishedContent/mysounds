@@ -235,8 +235,8 @@ const AppShell: React.FC = () => {
 
   const handleWizardComplete = (projectType: 'transition' | 'mixer', projectData: any) => {
     if (projectType === 'transition') {
-      if (projectData.redirectToTransitions) {
-        setCurrentView('transitions');
+      if (projectData.redirectToCreateTransition) {
+        setCurrentView('create-transition');
       } else {
         setTransitionSongA(projectData.songA);
         setTransitionSongB(projectData.songB);
@@ -387,7 +387,15 @@ const AppShell: React.FC = () => {
           </div>
         );
       case 'mixer':
-        return <MixerView />;
+        return (
+          <MixerView
+            onCreateNew={handleCreateNew}
+            onOpenSession={(sessionId) => {
+              setActiveMixSessionId(sessionId);
+              setCurrentView('mixer-editor');
+            }}
+          />
+        );
       case 'mixer-editor':
         return (
           <MixerEditorView

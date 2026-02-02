@@ -28,7 +28,7 @@ const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ onComplet
 
   const handleProjectTypeSelect = (type: 'transition' | 'mixer') => {
     if (type === 'transition') {
-      onComplete('transition', { redirectToTransitions: true });
+      onComplete('transition', { redirectToCreateTransition: true });
     } else {
       wizard.setProjectType(type);
       wizard.nextStep();
