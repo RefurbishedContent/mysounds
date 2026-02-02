@@ -152,14 +152,23 @@ const AppShell: React.FC = () => {
   };
 
   const handleCreateNewTransition = () => {
+    setTransitionSongA(undefined);
+    setTransitionSongB(undefined);
+    setEditingTransitionId(undefined);
     setCurrentView('create-transition');
   };
 
   const handleTransitionSaved = () => {
+    setTransitionSongA(undefined);
+    setTransitionSongB(undefined);
+    setEditingTransitionId(undefined);
     setCurrentView('recent-projects');
   };
 
   const handleBackToTransitions = () => {
+    setTransitionSongA(undefined);
+    setTransitionSongB(undefined);
+    setEditingTransitionId(undefined);
     setCurrentView('recent-projects');
   };
 
