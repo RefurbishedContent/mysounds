@@ -62,11 +62,6 @@ const ResetTransitionPointsModal: React.FC<ResetTransitionPointsModalProps> = ({
               </div>
             </div>
 
-            <div className="bg-cyan-900/20 border border-cyan-600/30 rounded-lg p-3">
-              <p className="text-xs text-cyan-200 leading-relaxed">
-                <strong>Tip:</strong> If you only want to adjust minor details, consider using the "Start Fresh" button instead to keep your marker points while resetting the timeline settings.
-              </p>
-            </div>
           </div>
 
           <div className="flex gap-3">
