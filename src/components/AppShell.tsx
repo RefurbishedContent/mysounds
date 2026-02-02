@@ -11,6 +11,7 @@ import EditorView from './EditorView';
 import TemplateManager from './TemplateManager';
 import LibraryView from './LibraryView';
 import MixerView from './MixerView';
+import MixerEditorView from './MixerEditorView';
 import PreviewView from './PreviewView';
 import FilesView from './FilesView';
 import TransitionEditorView from './TransitionEditorView';
@@ -24,7 +25,7 @@ import ProjectCreationWizard from './ProjectCreationWizard';
 import { UploadResult, storageService } from '../lib/storage';
 import { transitionsService } from '../lib/transitionsService';
 
-type AppView = 'home' | 'create-with-ai' | 'ai-design' | 'ai-video' | 'ai-voice' | 'all-tools' | 'templates' | 'recent-projects' | 'share-schedule' | 'create-transition' | 'editor' | 'template-manager' | 'library' | 'mixer' | 'preview' | 'files' | 'transition-editor' | 'transitions' | 'playlists' | 'profile' | 'project-wizard';
+type AppView = 'home' | 'create-with-ai' | 'ai-design' | 'ai-video' | 'ai-voice' | 'all-tools' | 'templates' | 'recent-projects' | 'share-schedule' | 'create-transition' | 'editor' | 'template-manager' | 'library' | 'mixer' | 'mixer-editor' | 'preview' | 'files' | 'transition-editor' | 'transitions' | 'playlists' | 'profile' | 'project-wizard';
 
 interface MenuItem {
   id: string;
@@ -57,6 +58,7 @@ const AppShell: React.FC = () => {
   const [transitionSongA, setTransitionSongA] = useState<UploadResult | undefined>();
   const [transitionSongB, setTransitionSongB] = useState<UploadResult | undefined>();
   const [editingTransitionId, setEditingTransitionId] = useState<string | undefined>();
+  const [activeMixSessionId, setActiveMixSessionId] = useState<string | undefined>();
 
   const handleCreateNew = () => {
     setCurrentView('project-wizard');
@@ -233,12 +235,17 @@ const AppShell: React.FC = () => {
 
   const handleWizardComplete = (projectType: 'transition' | 'mixer', projectData: any) => {
     if (projectType === 'transition') {
-      setTransitionSongA(projectData.songA);
-      setTransitionSongB(projectData.songB);
-      setEditingTransitionId(projectData.transitionId);
-      setCurrentView('transition-editor');
+      if (projectData.redirectToTransitions) {
+        setCurrentView('transitions');
+      } else {
+        setTransitionSongA(projectData.songA);
+        setTransitionSongB(projectData.songB);
+        setEditingTransitionId(projectData.transitionId);
+        setCurrentView('transition-editor');
+      }
     } else if (projectType === 'mixer') {
-      setCurrentView('mixer');
+      setActiveMixSessionId(projectData.mixSessionId);
+      setCurrentView('mixer-editor');
     }
   };
 
@@ -381,6 +388,13 @@ const AppShell: React.FC = () => {
         );
       case 'mixer':
         return <MixerView />;
+      case 'mixer-editor':
+        return (
+          <MixerEditorView
+            sessionId={activeMixSessionId}
+            onBack={() => setCurrentView('mixer')}
+          />
+        );
       case 'preview':
         return <PreviewView />;
       case 'profile':

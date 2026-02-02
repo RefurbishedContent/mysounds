@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Sparkles, Edit2 } from 'lucide-react';
+import { ArrowLeft, Sparkles, Edit2, Music } from 'lucide-react';
 import { ProjectType } from '../../hooks/useProjectWizard';
 import { UploadResult } from '../../lib/storage';
 import { TemplateData } from '../../lib/database';
+import { BlendData } from '../../lib/blendExportService';
 import TransitionConfig from './TransitionConfig';
 import MixerConfig from './MixerConfig';
 import TemplateSelector from './TemplateSelector';
@@ -11,15 +12,18 @@ interface WizardStep3ConfigurationProps {
   projectType: ProjectType;
   projectName: string;
   selectedSongs: UploadResult[];
+  selectedBlends?: BlendData[];
   selectedTemplate: TemplateData | null;
   useAITemplate: boolean;
   transitionDuration: number;
   transitionStartPoint: number;
+  crossfadeDuration?: number;
   onProjectNameChange: (name: string) => void;
   onTemplateChange: (template: TemplateData | null) => void;
   onToggleAI: (useAI: boolean) => void;
   onTransitionDurationChange: (duration: number) => void;
   onTransitionStartPointChange: (startPoint: number) => void;
+  onCrossfadeDurationChange?: (duration: number) => void;
   onCreateProject: () => void;
   onBack: () => void;
   canProceed: boolean;
@@ -29,15 +33,18 @@ const WizardStep3Configuration: React.FC<WizardStep3ConfigurationProps> = ({
   projectType,
   projectName,
   selectedSongs,
+  selectedBlends = [],
   selectedTemplate,
   useAITemplate,
   transitionDuration,
   transitionStartPoint,
+  crossfadeDuration = 8,
   onProjectNameChange,
   onTemplateChange,
   onToggleAI,
   onTransitionDurationChange,
   onTransitionStartPointChange,
+  onCrossfadeDurationChange,
   onCreateProject,
   onBack,
   canProceed
@@ -56,16 +63,16 @@ const WizardStep3Configuration: React.FC<WizardStep3ConfigurationProps> = ({
         names.push(`${songA} into ${songB}`);
         names.push(`${songA} Fusion`);
       } else if (projectType === 'mixer') {
-        names.push('My Mix Project');
-        names.push('New Mashup');
-        names.push('Untitled Mix');
+        names.push(`${selectedBlends.length}-Track Mix`);
+        names.push('Fusion Playlist');
+        names.push('DJ Mix Session');
       }
 
       setSuggestedNames(names);
     };
 
     generateNames();
-  }, [projectType, selectedSongs]);
+  }, [projectType, selectedSongs, selectedBlends]);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -130,46 +137,112 @@ const WizardStep3Configuration: React.FC<WizardStep3ConfigurationProps> = ({
           )}
 
           {projectType === 'mixer' && (
-            <MixerConfig trackCount={selectedSongs.length} />
-          )}
-
-          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Selected Tracks</h3>
-            <div className="space-y-3">
-              {selectedSongs.map((song, index) => (
-                <div
-                  key={song.id}
-                  className="flex items-start space-x-3 p-3 bg-gray-700 rounded-lg min-w-0"
-                >
-                  <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <span className="text-white font-bold">
-                      {projectType === 'transition' ? (index === 0 ? 'A' : 'B') : index + 1}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4
-                      className="font-medium text-white break-words line-clamp-2 mb-1"
-                      title={song.original_name}
-                    >
-                      {song.original_name}
-                    </h4>
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
-                      {song.analysis?.bpm && (
-                        <span className="bg-gray-600 px-2 py-0.5 rounded whitespace-nowrap">
-                          {Math.round(song.analysis.bpm)} BPM
-                        </span>
-                      )}
-                      {song.analysis?.key && (
-                        <span className="bg-gray-600 px-2 py-0.5 rounded whitespace-nowrap">
-                          {song.analysis.key}
-                        </span>
-                      )}
+            <>
+              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">Mix Settings</h3>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-sm font-medium text-white">
+                        Auto-Crossfade Duration
+                      </label>
+                      <span className="text-sm text-cyan-400 font-semibold">{crossfadeDuration}s</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="4"
+                      max="16"
+                      step="1"
+                      value={crossfadeDuration}
+                      onChange={(e) => onCrossfadeDurationChange?.(Number(e.target.value))}
+                      className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                    />
+                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                      <span>4s</span>
+                      <span>16s</span>
                     </div>
                   </div>
+                  <div className="bg-gray-700 rounded-lg p-4 space-y-2">
+                    <p className="text-sm text-gray-300">
+                      <strong>{selectedBlends.length}</strong> blends will be mixed together
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Total estimated duration: {Math.floor(selectedBlends.reduce((acc, b) => acc + b.duration, 0) / 60)} minutes
+                    </p>
+                  </div>
                 </div>
-              ))}
+              </div>
+
+              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">Playlist Order</h3>
+                <div className="space-y-3">
+                  {selectedBlends.map((blend, index) => (
+                    <div
+                      key={blend.id}
+                      className="flex items-start space-x-3 p-3 bg-gray-700 rounded-lg min-w-0"
+                    >
+                      <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-bold">{index + 1}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-white break-words line-clamp-2 mb-1" title={blend.name}>
+                          {blend.name}
+                        </h4>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
+                          <span className="bg-gray-600 px-2 py-0.5 rounded whitespace-nowrap">
+                            {Math.floor(blend.duration / 60)}:{String(blend.duration % 60).padStart(2, '0')}
+                          </span>
+                          <span className="bg-gray-600 px-2 py-0.5 rounded whitespace-nowrap">
+                            {blend.format.toUpperCase()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {projectType === 'transition' && (
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Selected Tracks</h3>
+              <div className="space-y-3">
+                {selectedSongs.map((song, index) => (
+                  <div
+                    key={song.id}
+                    className="flex items-start space-x-3 p-3 bg-gray-700 rounded-lg min-w-0"
+                  >
+                    <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <span className="text-white font-bold">
+                        {index === 0 ? 'A' : 'B'}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4
+                        className="font-medium text-white break-words line-clamp-2 mb-1"
+                        title={song.original_name}
+                      >
+                        {song.original_name}
+                      </h4>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
+                        {song.analysis?.bpm && (
+                          <span className="bg-gray-600 px-2 py-0.5 rounded whitespace-nowrap">
+                            {Math.round(song.analysis.bpm)} BPM
+                          </span>
+                        )}
+                        {song.analysis?.key && (
+                          <span className="bg-gray-600 px-2 py-0.5 rounded whitespace-nowrap">
+                            {song.analysis.key}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 

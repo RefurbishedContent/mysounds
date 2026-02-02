@@ -280,6 +280,98 @@ class BlendExportService {
     }
   }
 
+  async analyzeBlendCompatibility(blendId1: string, blendId2: string): Promise<{
+    score: number;
+    level: 'excellent' | 'good' | 'fair' | 'poor';
+    bpmDifference: number;
+    keyCompatible: boolean;
+    suggestions: string[];
+  }> {
+    const blend1 = await this.getBlendWithDetails(blendId1);
+    const blend2 = await this.getBlendWithDetails(blendId2);
+
+    if (!blend1 || !blend2) {
+      throw new Error('One or both blends not found');
+    }
+
+    const bpm1 = blend1.songB?.analysis?.bpm || 0;
+    const bpm2 = blend2.songA?.analysis?.bpm || 0;
+    const key1 = blend1.songB?.analysis?.key || '';
+    const key2 = blend2.songA?.analysis?.key || '';
+
+    const bpmDifference = Math.abs(bpm1 - bpm2);
+    const keyCompatible = this.areKeysCompatible(key1, key2);
+
+    let score = 100;
+    const suggestions: string[] = [];
+
+    if (bpmDifference > 0 && bpmDifference <= 3) {
+      score -= 5;
+    } else if (bpmDifference > 3 && bpmDifference <= 5) {
+      score -= 10;
+      suggestions.push('BPM difference is moderate. Consider tempo adjustment.');
+    } else if (bpmDifference > 5 && bpmDifference <= 10) {
+      score -= 25;
+      suggestions.push('Significant BPM difference. Strong tempo adjustment recommended.');
+    } else if (bpmDifference > 10) {
+      score -= 40;
+      suggestions.push('Large BPM difference may require creative mixing techniques.');
+    }
+
+    if (!keyCompatible && key1 && key2) {
+      score -= 15;
+      suggestions.push('Keys are not harmonically compatible. Consider key shift or EQ adjustment.');
+    } else if (keyCompatible) {
+      suggestions.push('Keys are harmonically compatible - great match!');
+    }
+
+    let level: 'excellent' | 'good' | 'fair' | 'poor';
+    if (score >= 90) level = 'excellent';
+    else if (score >= 70) level = 'good';
+    else if (score >= 50) level = 'fair';
+    else level = 'poor';
+
+    return {
+      score,
+      level,
+      bpmDifference,
+      keyCompatible,
+      suggestions
+    };
+  }
+
+  private areKeysCompatible(key1: string, key2: string): boolean {
+    if (!key1 || !key2) return false;
+
+    const compatibleKeys: Record<string, string[]> = {
+      'C': ['C', 'Am', 'G', 'F', 'Dm', 'Em'],
+      'Am': ['Am', 'C', 'Dm', 'Em', 'G', 'F'],
+      'G': ['G', 'Em', 'C', 'D', 'Am', 'Bm'],
+      'Em': ['Em', 'G', 'Am', 'Bm', 'C', 'D'],
+      'D': ['D', 'Bm', 'G', 'A', 'Em', 'F#m'],
+      'Bm': ['Bm', 'D', 'Em', 'F#m', 'G', 'A'],
+      'A': ['A', 'F#m', 'D', 'E', 'Bm', 'C#m'],
+      'F#m': ['F#m', 'A', 'Bm', 'C#m', 'D', 'E'],
+      'E': ['E', 'C#m', 'A', 'B', 'F#m', 'G#m'],
+      'C#m': ['C#m', 'E', 'F#m', 'G#m', 'A', 'B'],
+      'B': ['B', 'G#m', 'E', 'F#', 'C#m', 'D#m'],
+      'G#m': ['G#m', 'B', 'C#m', 'D#m', 'E', 'F#'],
+      'F#': ['F#', 'D#m', 'B', 'C#', 'G#m', 'A#m'],
+      'D#m': ['D#m', 'F#', 'G#m', 'A#m', 'B', 'C#'],
+      'F': ['F', 'Dm', 'C', 'Bb', 'Am', 'Gm'],
+      'Dm': ['Dm', 'F', 'Am', 'Gm', 'C', 'Bb'],
+      'Bb': ['Bb', 'Gm', 'F', 'Eb', 'Dm', 'Cm'],
+      'Gm': ['Gm', 'Bb', 'Dm', 'Cm', 'F', 'Eb'],
+      'Eb': ['Eb', 'Cm', 'Bb', 'Ab', 'Gm', 'Fm'],
+      'Cm': ['Cm', 'Eb', 'Gm', 'Fm', 'Bb', 'Ab'],
+      'Ab': ['Ab', 'Fm', 'Eb', 'Db', 'Cm', 'Bbm'],
+      'Fm': ['Fm', 'Ab', 'Cm', 'Bbm', 'Eb', 'Db']
+    };
+
+    const compatibles = compatibleKeys[key1] || [];
+    return compatibles.includes(key2);
+  }
+
   subscribeToBlendUpdates(
     blendId: string,
     callback: (blend: BlendData) => void

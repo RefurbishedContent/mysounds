@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { UploadResult } from '../lib/storage';
 import { TemplateData } from '../lib/database';
+import { BlendData } from '../lib/blendExportService';
 
 export type ProjectType = 'transition' | 'mixer';
 export type WizardStep = 1 | 2 | 3 | 4;
@@ -9,10 +10,12 @@ export interface ProjectWizardState {
   currentStep: WizardStep;
   projectType: ProjectType | null;
   selectedSongs: UploadResult[];
+  selectedBlends: BlendData[];
   selectedTemplate: TemplateData | null;
   projectName: string;
   transitionDuration: number;
   transitionStartPoint: number;
+  crossfadeDuration: number;
   useAITemplate: boolean;
   isCreating: boolean;
   error: string | null;
@@ -22,10 +25,12 @@ const DEFAULT_STATE: ProjectWizardState = {
   currentStep: 1,
   projectType: null,
   selectedSongs: [],
+  selectedBlends: [],
   selectedTemplate: null,
   projectName: '',
   transitionDuration: 12,
   transitionStartPoint: 30,
+  crossfadeDuration: 8,
   useAITemplate: true,
   isCreating: false,
   error: null
@@ -130,6 +135,30 @@ export const useProjectWizard = () => {
     setState(prev => ({ ...prev, transitionStartPoint: startPoint }));
   }, []);
 
+  const setCrossfadeDuration = useCallback((duration: number) => {
+    setState(prev => ({ ...prev, crossfadeDuration: duration }));
+  }, []);
+
+  const selectBlend = useCallback((blend: BlendData) => {
+    setState(prev => {
+      const exists = prev.selectedBlends.find(b => b.id === blend.id);
+      if (!exists) {
+        return {
+          ...prev,
+          selectedBlends: [...prev.selectedBlends, blend]
+        };
+      }
+      return prev;
+    });
+  }, []);
+
+  const removeBlend = useCallback((blendId: string) => {
+    setState(prev => ({
+      ...prev,
+      selectedBlends: prev.selectedBlends.filter(b => b.id !== blendId)
+    }));
+  }, []);
+
   const goToStep = useCallback((step: WizardStep) => {
     setState(prev => ({ ...prev, currentStep: step, error: null }));
   }, []);
@@ -168,7 +197,7 @@ export const useProjectWizard = () => {
         if (state.projectType === 'transition') {
           return state.selectedSongs.length === 2;
         } else if (state.projectType === 'mixer') {
-          return state.selectedSongs.length >= 1;
+          return state.selectedBlends.length >= 2;
         }
         return false;
       case 3:
@@ -176,7 +205,7 @@ export const useProjectWizard = () => {
       default:
         return true;
     }
-  }, [state.projectType, state.selectedSongs, state.projectName]);
+  }, [state.projectType, state.selectedSongs, state.selectedBlends, state.projectName]);
 
   return {
     ...state,
@@ -185,11 +214,14 @@ export const useProjectWizard = () => {
     removeSong,
     clearSongSlot,
     reorderSongs,
+    selectBlend,
+    removeBlend,
     setTemplate,
     setUseAITemplate,
     setProjectName,
     setTransitionDuration,
     setTransitionStartPoint,
+    setCrossfadeDuration,
     goToStep,
     nextStep,
     previousStep,

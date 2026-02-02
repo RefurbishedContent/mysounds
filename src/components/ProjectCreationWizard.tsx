@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { useProjectWizard } from '../hooks/useProjectWizard';
 import { useAuth } from '../contexts/AuthContext';
 import { transitionsService } from '../lib/transitionsService';
+import { mixerService } from '../lib/mixerService';
 import WizardProgress from './wizard/WizardProgress';
 import WizardStep1ProjectType from './wizard/WizardStep1ProjectType';
 import WizardStep2ContentSelection from './wizard/WizardStep2ContentSelection';
@@ -24,6 +25,15 @@ const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ onComplet
     { number: 2 as const, label: 'Select Content' },
     { number: 3 as const, label: 'Configure' }
   ];
+
+  const handleProjectTypeSelect = (type: 'transition' | 'mixer') => {
+    if (type === 'transition') {
+      onComplete('transition', { redirectToTransitions: true });
+    } else {
+      wizard.setProjectType(type);
+      wizard.nextStep();
+    }
+  };
 
   const handleCreateProject = async () => {
     if (!user || !wizard.projectType) return;
@@ -68,16 +78,23 @@ const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ onComplet
           template: wizard.selectedTemplate
         });
       } else if (wizard.projectType === 'mixer') {
-        const projectData = {
+        const mixSession = await mixerService.createMixSession(user.id, {
           name: wizard.projectName,
-          tracks: wizard.selectedSongs,
-          metadata: {
-            trackCount: wizard.selectedSongs.length,
-            createdViaWizard: true
-          }
-        };
+          autoCrossfadeDuration: wizard.crossfadeDuration,
+          normalizeVolume: true,
+          masterGain: 0
+        });
 
-        onComplete('mixer', projectData);
+        for (let i = 0; i < wizard.selectedBlends.length; i++) {
+          const blend = wizard.selectedBlends[i];
+          await mixerService.addBlendToMix(mixSession.id, {
+            blendId: blend.id,
+            position: i,
+            crossfadeType: 'beat-matched'
+          });
+        }
+
+        onComplete('mixer', { mixSessionId: mixSession.id });
       }
     } catch (error) {
       console.error('Failed to create project:', error);
@@ -146,15 +163,18 @@ const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ onComplet
       )}
 
       {wizard.currentStep === 1 && (
-        <WizardStep1ProjectType onSelectType={wizard.setProjectType} />
+        <WizardStep1ProjectType onSelectType={handleProjectTypeSelect} />
       )}
 
       {wizard.currentStep === 2 && wizard.projectType && (
         <WizardStep2ContentSelection
           projectType={wizard.projectType}
           selectedSongs={wizard.selectedSongs}
+          selectedBlends={wizard.selectedBlends}
           onSelectSong={wizard.selectSong}
+          onSelectBlend={wizard.selectBlend}
           onClearSong={wizard.clearSongSlot}
+          onClearBlend={wizard.removeBlend}
           onNext={wizard.nextStep}
           onBack={wizard.previousStep}
           canProceed={wizard.canProceedFromStep(2)}
@@ -166,15 +186,18 @@ const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ onComplet
           projectType={wizard.projectType}
           projectName={wizard.projectName}
           selectedSongs={wizard.selectedSongs}
+          selectedBlends={wizard.selectedBlends}
           selectedTemplate={wizard.selectedTemplate}
           useAITemplate={wizard.useAITemplate}
           transitionDuration={wizard.transitionDuration}
           transitionStartPoint={wizard.transitionStartPoint}
+          crossfadeDuration={wizard.crossfadeDuration}
           onProjectNameChange={wizard.setProjectName}
           onTemplateChange={wizard.setTemplate}
           onToggleAI={wizard.setUseAITemplate}
           onTransitionDurationChange={wizard.setTransitionDuration}
           onTransitionStartPointChange={wizard.setTransitionStartPoint}
+          onCrossfadeDurationChange={wizard.setCrossfadeDuration}
           onCreateProject={handleCreateProject}
           onBack={wizard.previousStep}
           canProceed={wizard.canProceedFromStep(3)}
