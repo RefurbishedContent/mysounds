@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,88 +47,218 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log(`[Export Blend] Starting export for blend ${blendId}`);
-    console.log(`[Export Blend] Config:`, config);
+    console.log(`[ExportBlend] Starting export for blend ${blendId}`);
+    const startTime = Date.now();
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error("Missing Supabase configuration");
+    const { data: transition, error: transitionError } = await supabase
+      .from("transitions")
+      .select("*")
+      .eq("id", config.transitionId)
+      .single();
+
+    if (transitionError || !transition) {
+      throw new Error("Transition not found");
     }
 
-    const { songAId, songBId, songAMarker, songBMarker, transitionDuration } = config;
-
-    const authHeaders = {
-      "Authorization": `Bearer ${supabaseServiceKey}`,
-      "apikey": supabaseServiceKey,
-      "Content-Type": "application/json",
-    };
-
-    const [songAResponse, songBResponse] = await Promise.all([
-      fetch(`${supabaseUrl}/rest/v1/uploads?id=eq.${songAId}&select=*`, {
-        headers: authHeaders,
-      }),
-      fetch(`${supabaseUrl}/rest/v1/uploads?id=eq.${songBId}&select=*`, {
-        headers: authHeaders,
-      }),
-    ]);
-
-    const songAData = await songAResponse.json();
-    const songBData = await songBResponse.json();
-
-    if (!songAData?.[0] || !songBData?.[0]) {
-      throw new Error("Source songs not found");
+    if (!transition.output_url) {
+      throw new Error("Transition has not been rendered yet. Please render the transition first.");
     }
 
-    const songA = songAData[0];
-    const songB = songBData[0];
+    console.log(`[ExportBlend] Using pre-rendered transition from: ${transition.output_url}`);
 
-    console.log(`[Export Blend] Song A: ${songA.original_name}, Duration: ${songA.analysis?.duration}s`);
-    console.log(`[Export Blend] Song B: ${songB.original_name}, Duration: ${songB.analysis?.duration}s`);
+    const { data: songA, error: songAError } = await supabase
+      .from("uploads")
+      .select("*")
+      .eq("id", config.songAId)
+      .single();
 
-    const songADuration = songA.analysis?.duration || 0;
+    const { data: songB, error: songBError } = await supabase
+      .from("uploads")
+      .select("*")
+      .eq("id", config.songBId)
+      .single();
+
+    if (songAError || !songA || songBError || !songB) {
+      throw new Error("Failed to fetch song data");
+    }
+
+    console.log(`[ExportBlend] Processing songs:`, {
+      songA: songA.original_name,
+      songB: songB.original_name,
+    });
+
+    const songAClipStart = transition.song_a_clip_start || 18;
+    const songBClipEnd = transition.song_b_clip_end || 12;
     const songBDuration = songB.analysis?.duration || 0;
 
-    const songAContribution = songAMarker;
-    const songBContribution = songBDuration - songBMarker;
-    const totalDuration = songAContribution + transitionDuration + songBContribution;
+    const tempDir = await Deno.makeTempDir();
+    console.log(`[ExportBlend] Created temp directory: ${tempDir}`);
 
-    console.log(`[Export Blend] Total duration will be: ${totalDuration}s`);
-    console.log(`[Export Blend] Song A contribution: ${songAContribution}s (0 to ${songAMarker}s)`);
-    console.log(`[Export Blend] Transition: ${transitionDuration}s`);
-    console.log(`[Export Blend] Song B contribution: ${songBContribution}s (${songBMarker}s to end)`);
+    const songAPath = `${tempDir}/song_a.mp3`;
+    const songBPath = `${tempDir}/song_b.mp3`;
+    const transitionPath = `${tempDir}/transition.wav`;
+    const outputPath = `${tempDir}/blend.${config.format}`;
 
-    const mockAudioUrl = `https://example.com/blends/${blendId}.${config.format}`;
-    const mockFileSize = Math.round(totalDuration * config.sampleRate * (config.bitDepth / 8) * 2);
+    console.log(`[ExportBlend] Downloading audio files...`);
 
-    const updateResponse = await fetch(
-      `${supabaseUrl}/rest/v1/blends?id=eq.${blendId}`,
-      {
-        method: "PATCH",
-        headers: authHeaders,
-        body: JSON.stringify({
-          status: "completed",
-          url: mockAudioUrl,
-          file_size: mockFileSize,
-          updated_at: new Date().toISOString(),
-        }),
-      }
-    );
+    await Promise.all([
+      downloadFile(songA.url, songAPath),
+      downloadFile(songB.url, songBPath),
+      downloadFile(transition.output_url, transitionPath),
+    ]);
 
-    if (!updateResponse.ok) {
-      throw new Error("Failed to update blend status");
+    console.log(`[ExportBlend] Audio files downloaded successfully`);
+
+    const songABeginningPath = `${tempDir}/song_a_beginning.wav`;
+    const songBEndingPath = `${tempDir}/song_b_ending.wav`;
+
+    console.log(`[ExportBlend] Extracting segments...`);
+    console.log(`[ExportBlend] Song A: 0 to ${songAClipStart}s`);
+    console.log(`[ExportBlend] Transition: pre-rendered segment`);
+    console.log(`[ExportBlend] Song B: ${songBClipEnd}s to end`);
+
+    const songBRemaining = songBDuration - songBClipEnd;
+
+    await Promise.all([
+      extractSegment(songAPath, songABeginningPath, 0, songAClipStart),
+      extractSegment(songBPath, songBEndingPath, songBClipEnd, songBRemaining),
+    ]);
+
+    console.log(`[ExportBlend] Segments extracted successfully`);
+
+    const concatListPath = `${tempDir}/concat.txt`;
+    const concatList = [
+      `file '${songABeginningPath}'`,
+      `file '${transitionPath}'`,
+      `file '${songBEndingPath}'`,
+    ].join("\n");
+    await Deno.writeTextFile(concatListPath, concatList);
+
+    console.log(`[ExportBlend] Concatenating segments...`);
+
+    let filterChain = "";
+    const filters = [];
+
+    if (config.fadeIn > 0) {
+      filters.push(`afade=t=in:st=0:d=${config.fadeIn}`);
     }
 
-    console.log(`[Export Blend] Successfully processed blend ${blendId}`);
+    if (config.fadeOut > 0) {
+      const totalDuration = songAClipStart + config.transitionDuration + songBRemaining;
+      const fadeOutStart = totalDuration - config.fadeOut;
+      filters.push(`afade=t=out:st=${fadeOutStart}:d=${config.fadeOut}`);
+    }
+
+    if (config.normalize) {
+      filters.push("loudnorm=I=-16:LRA=11:TP=-1.5");
+    }
+
+    if (filters.length > 0) {
+      filterChain = filters.join(",");
+    }
+
+    const ffmpegArgs = [
+      "-f", "concat",
+      "-safe", "0",
+      "-i", concatListPath,
+    ];
+
+    if (filterChain) {
+      ffmpegArgs.push("-af", filterChain);
+    }
+
+    ffmpegArgs.push(
+      "-ar", config.sampleRate.toString(),
+      "-y",
+      outputPath
+    );
+
+    const concatCmd = new Deno.Command("ffmpeg", {
+      args: ffmpegArgs,
+      stdout: "piped",
+      stderr: "piped",
+    });
+
+    const concatOutput = await concatCmd.output();
+    if (!concatOutput.success) {
+      const error = new TextDecoder().decode(concatOutput.stderr);
+      console.error(`[ExportBlend] Concatenation failed:`, error);
+      throw new Error(`FFmpeg concatenation failed: ${error.substring(0, 200)}`);
+    }
+
+    console.log(`[ExportBlend] Concatenation successful`);
+
+    const outputFile = await Deno.readFile(outputPath);
+    const outputSize = outputFile.byteLength;
+
+    const { data: blendData } = await supabase
+      .from("blends")
+      .select("user_id, filename")
+      .eq("id", blendId)
+      .single();
+
+    if (!blendData) {
+      throw new Error("Blend record not found");
+    }
+
+    const fileName = blendData.filename;
+
+    console.log(`[ExportBlend] Uploading to storage:`, {
+      fileName,
+      size: outputSize,
+      format: config.format,
+    });
+
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from("blends")
+      .upload(fileName, outputFile, {
+        contentType: `audio/${config.format}`,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error(`[ExportBlend] Upload failed:`, uploadError);
+      throw new Error(`Failed to upload: ${uploadError.message}`);
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from("blends")
+      .getPublicUrl(fileName);
+
+    const processingTime = (Date.now() - startTime) / 1000;
+
+    console.log(`[ExportBlend] Updating blend record with output URL`);
+
+    const { error: updateError } = await supabase
+      .from("blends")
+      .update({
+        status: "completed",
+        url: publicUrlData.publicUrl,
+        file_size: outputSize,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", blendId);
+
+    if (updateError) {
+      console.error(`[ExportBlend] Database update failed:`, updateError);
+      throw new Error(`Failed to update blend: ${updateError.message}`);
+    }
+
+    await Deno.remove(tempDir, { recursive: true });
+
+    console.log(`[ExportBlend] Export complete in ${processingTime}s`);
 
     return new Response(
       JSON.stringify({
         success: true,
         blendId,
-        message: "Blend export completed successfully",
-        duration: totalDuration,
-        fileSize: mockFileSize,
+        url: publicUrlData.publicUrl,
+        fileSize: outputSize,
+        processingTime,
       }),
       {
         headers: {
@@ -136,12 +267,31 @@ Deno.serve(async (req: Request) => {
         },
       }
     );
-  } catch (error) {
-    console.error("[Export Blend] Error:", error);
+  } catch (error: any) {
+    console.error("[ExportBlend] Error:", error);
+
+    const body = await req.json().catch(() => ({}));
+    if (body.blendId) {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+
+      await supabase
+        .from("blends")
+        .update({
+          status: "failed",
+          export_settings: {
+            error: error.message,
+            failedAt: new Date().toISOString(),
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", body.blendId);
+    }
 
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : "Unknown error occurred",
+        error: error.message || "Export failed",
       }),
       {
         status: 500,
@@ -153,3 +303,39 @@ Deno.serve(async (req: Request) => {
     );
   }
 });
+
+async function downloadFile(url: string, path: string): Promise<void> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to download ${url}: ${response.statusText}`);
+  }
+  const buffer = await response.arrayBuffer();
+  await Deno.writeFile(path, new Uint8Array(buffer));
+}
+
+async function extractSegment(
+  inputPath: string,
+  outputPath: string,
+  startTime: number,
+  duration: number
+): Promise<void> {
+  const cmd = new Deno.Command("ffmpeg", {
+    args: [
+      "-i", inputPath,
+      "-ss", startTime.toString(),
+      "-t", duration.toString(),
+      "-ar", "48000",
+      "-ac", "2",
+      "-y",
+      outputPath,
+    ],
+    stdout: "piped",
+    stderr: "piped",
+  });
+
+  const output = await cmd.output();
+  if (!output.success) {
+    const error = new TextDecoder().decode(output.stderr);
+    throw new Error(`FFmpeg extract failed: ${error.substring(0, 200)}`);
+  }
+}

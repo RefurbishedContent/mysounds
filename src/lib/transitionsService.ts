@@ -15,9 +15,14 @@ export interface TransitionData {
   songBMarkerPoint?: number;
   songAClipStart?: number;
   songBClipEnd?: number;
-  status: 'draft' | 'ready' | 'processing' | 'error';
+  status: 'draft' | 'ready' | 'processing' | 'error' | 'rendering' | 'completed' | 'failed';
   renderJobId?: string;
   outputUrl?: string;
+  renderedAt?: string;
+  renderDurationSeconds?: number;
+  outputFileSize?: number;
+  renderErrorMessage?: string;
+  renderAttempts?: number;
   metadata?: any;
   createdAt: string;
   updatedAt: string;
@@ -205,6 +210,11 @@ class TransitionsService {
       status: row.status,
       renderJobId: row.render_job_id,
       outputUrl: row.output_url,
+      renderedAt: row.rendered_at,
+      renderDurationSeconds: row.render_duration_seconds,
+      outputFileSize: row.output_file_size,
+      renderErrorMessage: row.render_error_message,
+      renderAttempts: row.render_attempts,
       metadata: row.metadata,
       createdAt: row.created_at,
       updatedAt: row.updated_at

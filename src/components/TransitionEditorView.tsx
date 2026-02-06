@@ -19,6 +19,8 @@ import { KeyframeFadeEditor, FadeKeyframe } from './KeyframeFadeEditor';
 import BlendExportDialog from './BlendExportDialog';
 import ResetTransitionPointsModal from './ResetTransitionPointsModal';
 import { TransitionWaveformDisplay } from './TransitionWaveformDisplay';
+import RenderProgressModal from './RenderProgressModal';
+import { renderService, RenderProgress } from '../lib/renderService';
 
 interface TransitionEditorViewProps {
   songA: UploadResult;
@@ -189,6 +191,10 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   ]);
   const [transitionFadeCurve, setTransitionFadeCurve] = useState<FadeCurveType>('smooth');
   const [showResetPointsModal, setShowResetPointsModal] = useState(false);
+  const [showRenderProgress, setShowRenderProgress] = useState(false);
+  const [renderStage, setRenderStage] = useState<'saving' | 'rendering' | 'success' | 'error'>('saving');
+  const [renderMessage, setRenderMessage] = useState('');
+  const [renderProgress, setRenderProgress] = useState(0);
 
   const timelineRef = useRef<HTMLDivElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
@@ -830,9 +836,14 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       return;
     }
 
-    if (!transition) return;
+    if (!transition || !user) return;
 
     setSaving(true);
+    setShowRenderProgress(true);
+    setRenderStage('saving');
+    setRenderMessage('Saving transition metadata');
+    setRenderProgress(0);
+
     try {
       const blenderOutput = {
         songASegment: {
@@ -861,7 +872,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       };
 
       await transitionsService.updateTransition(transitionId, {
-        status: 'ready',
+        status: 'draft',
         metadata: {
           ...transition.metadata,
           songAKeyframes,
@@ -872,15 +883,55 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
           transitionFadeOutKeyframes,
           transitionFadeCurve,
           templateAudioUrl,
+          fadeOutKeyframes: songAKeyframes,
+          fadeInKeyframes: songBKeyframes,
           blenderOutput
         }
       });
 
-      alert('Transition saved successfully!');
-      onSaveCallback();
+      setRenderProgress(15);
+      setRenderStage('rendering');
+      setRenderMessage('Starting audio render process');
+
+      await renderService.triggerTransitionRender(
+        transitionId,
+        user.id,
+        (progress: RenderProgress) => {
+          setRenderProgress(progress.progress);
+          setRenderMessage(progress.message);
+        }
+      );
+
+      const result = await renderService.waitForRenderCompletion(
+        transitionId,
+        180000,
+        (progress: RenderProgress) => {
+          setRenderProgress(progress.progress);
+          setRenderMessage(progress.message);
+          if (progress.stage === 'completed') {
+            setRenderStage('success');
+          } else if (progress.stage === 'failed') {
+            setRenderStage('error');
+          }
+        }
+      );
+
+      if (result.success) {
+        setRenderStage('success');
+        setRenderMessage('Transition rendered and saved successfully');
+        setRenderProgress(100);
+
+        const updatedTransition = await transitionsService.getTransition(transitionId);
+        if (updatedTransition) {
+          setTransition(updatedTransition);
+        }
+      } else {
+        throw new Error(result.error || 'Render failed');
+      }
     } catch (error) {
-      console.error('Failed to save transition:', error);
-      alert('Failed to save transition. Please try again.');
+      console.error('Failed to save/render transition:', error);
+      setRenderStage('error');
+      setRenderMessage(error instanceof Error ? error.message : 'Failed to render transition');
     } finally {
       setSaving(false);
     }
@@ -1470,6 +1521,20 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
           onCancel={() => setShowResetPointsModal(false)}
         />
       )}
+
+      <RenderProgressModal
+        isOpen={showRenderProgress}
+        stage={renderStage}
+        message={renderMessage}
+        progress={renderProgress}
+        onClose={() => {
+          setShowRenderProgress(false);
+          if (renderStage === 'success') {
+            onSaveCallback();
+          }
+        }}
+        canClose={renderStage === 'success' || renderStage === 'error'}
+      />
 
       {showLengthWarning && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm">

@@ -37,9 +37,14 @@ export const BlendExportDialog: React.FC<BlendExportDialogProps> = ({
   const songBMarker = transition.songBMarkerPoint || 0;
   const transitionDuration = transition.transitionDuration || 12;
 
-  const songAContribution = songAMarker;
-  const songBContribution = songBDuration - songBMarker;
-  const totalDuration = songAContribution + transitionDuration + songBContribution;
+  const transitionNotRendered = !transition.outputUrl;
+
+  const songAClipStart = transition.songAClipStart || 18;
+  const songBClipEnd = transition.songBClipEnd || 12;
+
+  const songAContributionBeforeTransition = songAClipStart;
+  const songBContributionAfterTransition = songBDuration - songBClipEnd;
+  const totalDuration = songAContributionBeforeTransition + transitionDuration + songBContributionAfterTransition;
 
   const qualityPresets = {
     draft: { sampleRate: 44100, bitDepth: 16 as 16 | 24, label: 'Draft (44.1kHz, 16-bit)' },
@@ -113,7 +118,24 @@ export const BlendExportDialog: React.FC<BlendExportDialogProps> = ({
         </div>
 
         <div className="p-6 space-y-6">
-          {!isExporting && !exportComplete && (
+          {transitionNotRendered && (
+            <div className="bg-red-900/20 border border-red-700/50 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="text-red-300 font-semibold mb-2">Transition Not Rendered</h3>
+                  <p className="text-red-100/80 text-sm mb-3">
+                    This transition hasn't been rendered yet. You need to open the transition editor and click "Save" to render the audio before you can export a full blend.
+                  </p>
+                  <p className="text-red-100/70 text-xs">
+                    The rendering process applies your custom fades and combines the audio segments. This only needs to be done once per transition.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!isExporting && !exportComplete && !transitionNotRendered && (
             <>
               <div className="bg-cyan-900/20 border border-cyan-700/50 rounded-lg p-4">
                 <div className="flex items-start space-x-3">
@@ -121,7 +143,7 @@ export const BlendExportDialog: React.FC<BlendExportDialogProps> = ({
                   <div>
                     <h3 className="text-cyan-300 font-semibold mb-2">About Your Export</h3>
                     <p className="text-cyan-100/80 text-sm mb-3">
-                      While you worked with 12-second clips for precision blending, your export will include the <strong>complete songs</strong> seamlessly joined with your transition.
+                      Your export will include the <strong>complete songs</strong> seamlessly joined with your custom-rendered transition zone containing the perfectly blended segments.
                     </p>
                     <div className="flex items-center space-x-2 text-sm text-cyan-100/70">
                       <div className="flex items-center space-x-1">
@@ -151,18 +173,18 @@ export const BlendExportDialog: React.FC<BlendExportDialogProps> = ({
                       <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                       <div>
                         <p className="text-sm font-medium text-white">{songA.originalName}</p>
-                        <p className="text-xs text-gray-400">From start to marker point</p>
+                        <p className="text-xs text-gray-400">From start to transition zone</p>
                       </div>
                     </div>
-                    <span className="text-blue-400 font-mono text-sm">{formatTime(songAContribution)}</span>
+                    <span className="text-blue-400 font-mono text-sm">{formatTime(songAContributionBeforeTransition)}</span>
                   </div>
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
                       <div>
-                        <p className="text-sm font-medium text-white">Transition Blend</p>
-                        <p className="text-xs text-gray-400">AI-enhanced crossfade</p>
+                        <p className="text-sm font-medium text-white">Rendered Transition</p>
+                        <p className="text-xs text-gray-400">Custom blended segments with fades</p>
                       </div>
                     </div>
                     <span className="text-purple-400 font-mono text-sm">{formatTime(transitionDuration)}</span>
@@ -173,10 +195,10 @@ export const BlendExportDialog: React.FC<BlendExportDialogProps> = ({
                       <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                       <div>
                         <p className="text-sm font-medium text-white">{songB.originalName}</p>
-                        <p className="text-xs text-gray-400">From marker point to end</p>
+                        <p className="text-xs text-gray-400">From transition zone to end</p>
                       </div>
                     </div>
-                    <span className="text-green-400 font-mono text-sm">{formatTime(songBContribution)}</span>
+                    <span className="text-green-400 font-mono text-sm">{formatTime(songBContributionAfterTransition)}</span>
                   </div>
 
                   <div className="pt-3 border-t border-gray-700 flex items-center justify-between">
@@ -332,7 +354,12 @@ export const BlendExportDialog: React.FC<BlendExportDialogProps> = ({
           {!isExporting && !exportComplete && (
             <button
               onClick={handleExport}
-              className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-lg transition-colors text-white font-semibold"
+              disabled={transitionNotRendered}
+              className={`flex items-center gap-2 px-6 py-2 rounded-lg transition-colors font-semibold ${
+                transitionNotRendered
+                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white'
+              }`}
             >
               <Download className="w-5 h-5" />
               <span>Export Blend</span>
