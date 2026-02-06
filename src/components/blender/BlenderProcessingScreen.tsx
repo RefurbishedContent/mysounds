@@ -53,6 +53,12 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
   const startBlending = async () => {
     if (!user) return;
 
+    // Reset error state
+    setError(null);
+    setProgress(0);
+    setCurrentStageIndex(0);
+    setMessage('Initializing...');
+
     try {
       const blend = await blendExportService.createBlend(
         user.id,
@@ -85,19 +91,64 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
         }
       );
 
-      setTimeout(() => {
-        subscribeToBlendUpdates(blend.id);
-      }, 1000);
+      // Subscribe to blend updates immediately
+      subscribeToBlendUpdates(blend.id);
     } catch (err) {
       console.error('Blending failed:', err);
       setError(err instanceof Error ? err.message : 'Failed to create blend');
     }
   };
 
-  const subscribeToBlendUpdates = (blendId: string) => {
+  const subscribeToBlendUpdates = async (blendId: string) => {
     console.log('[BlenderProcessing] Subscribing to blend updates:', blendId);
 
     let progressInterval: NodeJS.Timeout | null = null;
+    let hasCompleted = false;
+
+    const handleCompletion = (updatedBlend: BlendData) => {
+      if (hasCompleted) return;
+      hasCompleted = true;
+
+      console.log('[BlenderProcessing] Blend completed successfully');
+
+      // Clear the progress interval immediately
+      if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+      }
+
+      subscription.unsubscribe();
+
+      // Clean up the cleanup function
+      cleanupFnRef.current = null;
+
+      setProgress(100);
+      setCurrentStageIndex(7);
+      setMessage('Blend created successfully!');
+
+      setTimeout(() => {
+        onComplete(updatedBlend);
+      }, 500);
+    };
+
+    const handleFailure = (updatedBlend: BlendData) => {
+      if (hasCompleted) return;
+      hasCompleted = true;
+
+      console.error('[BlenderProcessing] Blend failed:', updatedBlend.exportSettings);
+
+      // Clear the progress interval
+      if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+      }
+
+      subscription.unsubscribe();
+      cleanupFnRef.current = null;
+
+      const errorMsg = updatedBlend.exportSettings?.error || 'Blend processing failed on the server';
+      setError(errorMsg);
+    };
 
     const subscription = blendExportService.subscribeToBlendUpdates(
       blendId,
@@ -108,40 +159,9 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
         });
 
         if (updatedBlend.status === 'completed') {
-          console.log('[BlenderProcessing] Blend completed successfully');
-
-          // Clear the progress interval immediately
-          if (progressInterval) {
-            clearInterval(progressInterval);
-            progressInterval = null;
-          }
-
-          subscription.unsubscribe();
-
-          // Clean up the cleanup function
-          cleanupFnRef.current = null;
-
-          setProgress(100);
-          setCurrentStageIndex(7);
-          setMessage('Blend created successfully!');
-
-          setTimeout(() => {
-            onComplete(updatedBlend);
-          }, 500);
+          handleCompletion(updatedBlend);
         } else if (updatedBlend.status === 'failed') {
-          console.error('[BlenderProcessing] Blend failed:', updatedBlend.exportSettings);
-
-          // Clear the progress interval
-          if (progressInterval) {
-            clearInterval(progressInterval);
-            progressInterval = null;
-          }
-
-          subscription.unsubscribe();
-          cleanupFnRef.current = null;
-
-          const errorMsg = updatedBlend.exportSettings?.error || 'Blend processing failed on the server';
-          setError(errorMsg);
+          handleFailure(updatedBlend);
         }
       }
     );
@@ -175,6 +195,21 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
       }
       subscription.unsubscribe();
     };
+
+    // Check if blend is already completed (in case the update happened before subscription)
+    try {
+      const currentBlend = await blendExportService.getBlend(blendId);
+      if (currentBlend) {
+        console.log('[BlenderProcessing] Checking current blend status:', currentBlend.status);
+        if (currentBlend.status === 'completed') {
+          handleCompletion(currentBlend);
+        } else if (currentBlend.status === 'failed') {
+          handleFailure(currentBlend);
+        }
+      }
+    } catch (err) {
+      console.error('[BlenderProcessing] Failed to check blend status:', err);
+    }
   };
 
   const handleCancel = () => {
@@ -202,7 +237,10 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
               Go Back
             </button>
             <button
-              onClick={startBlending}
+              onClick={() => {
+                hasStartedRef.current = false;
+                startBlending();
+              }}
               className="flex-1 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:from-teal-600 hover:to-cyan-600 transition-all"
             >
               Retry

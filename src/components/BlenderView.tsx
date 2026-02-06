@@ -106,18 +106,11 @@ const BlenderView: React.FC<BlenderViewProps> = ({ onBack, onNavigate }) => {
       )}
 
       {currentScreen === 'completion' && createdBlend && (
-        <>
-          <BlenderProcessingScreen
-            transition={selectedTransition!}
-            onComplete={handleBlendComplete}
-            onBack={handleBackToSelection}
-          />
-          <BlenderCompletionScreen
-            blend={createdBlend}
-            onCreateAnother={handleCreateAnother}
-            onGoToLibrary={handleGoToLibrary}
-          />
-        </>
+        <BlenderCompletionScreen
+          blend={createdBlend}
+          onCreateAnother={handleCreateAnother}
+          onGoToLibrary={handleGoToLibrary}
+        />
       )}
     </div>
   );
