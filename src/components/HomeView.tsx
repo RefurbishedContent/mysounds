@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Music, AudioAudioWaveform, Sliders, Upload, FileAudio, Clock, TrendingUp, Zap, Activity, Play, Download, Sparkles, ArrowRight, Plus, ChevronRight } from 'lucide-react';
+import { Music, AudioWaveform, Sliders, Upload, FileAudio, Clock, TrendingUp, Zap, Activity, Play, Download, Sparkles, ArrowRight, Plus, ChevronRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { databaseService } from '../lib/database';
 import { storageService } from '../lib/storage';
