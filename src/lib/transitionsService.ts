@@ -57,7 +57,9 @@ export interface UpdateTransitionInput {
   songBClipEnd?: number;
   status?: 'draft' | 'ready' | 'processing' | 'error';
   renderJobId?: string;
-  outputUrl?: string;
+  outputUrl?: string | null;
+  renderDuration?: number | null;
+  fileSize?: number | null;
   metadata?: any;
 }
 
@@ -130,6 +132,8 @@ class TransitionsService {
     if (updates.status !== undefined) updateData.status = updates.status;
     if (updates.renderJobId !== undefined) updateData.render_job_id = updates.renderJobId;
     if (updates.outputUrl !== undefined) updateData.output_url = updates.outputUrl;
+    if (updates.renderDuration !== undefined) updateData.render_duration_seconds = updates.renderDuration;
+    if (updates.fileSize !== undefined) updateData.output_file_size = updates.fileSize;
     if (updates.metadata !== undefined) updateData.metadata = updates.metadata;
 
     const { data, error } = await supabase

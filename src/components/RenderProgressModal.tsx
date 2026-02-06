@@ -8,6 +8,8 @@ interface RenderProgressModalProps {
   progress?: number;
   onClose?: () => void;
   canClose?: boolean;
+  onReturnHome?: () => void;
+  onContinueEditing?: () => void;
 }
 
 export const RenderProgressModal: React.FC<RenderProgressModalProps> = ({
@@ -16,7 +18,9 @@ export const RenderProgressModal: React.FC<RenderProgressModalProps> = ({
   message,
   progress = 0,
   onClose,
-  canClose = false
+  canClose = false,
+  onReturnHome,
+  onContinueEditing
 }) => {
   const [dots, setDots] = useState('');
 
@@ -102,12 +106,25 @@ export const RenderProgressModal: React.FC<RenderProgressModalProps> = ({
           )}
 
           {stage === 'success' && (
-            <button
-              onClick={onClose}
-              className="px-6 py-2 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 rounded-lg transition-colors text-white font-semibold"
-            >
-              Continue
-            </button>
+            <div className="flex flex-col space-y-3 w-full">
+              <p className="text-gray-300 text-sm text-center">
+                Transition saved successfully! You can continue editing or return home.
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={onContinueEditing || onClose}
+                  className="flex-1 px-6 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-white font-semibold"
+                >
+                  Continue Editing
+                </button>
+                <button
+                  onClick={onReturnHome || onClose}
+                  className="flex-1 px-6 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-lg transition-colors text-white font-semibold"
+                >
+                  Return to Home
+                </button>
+              </div>
+            </div>
           )}
 
           {stage === 'error' && (

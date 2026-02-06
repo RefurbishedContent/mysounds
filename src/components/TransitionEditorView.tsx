@@ -20,7 +20,6 @@ import BlendExportDialog from './BlendExportDialog';
 import ResetTransitionPointsModal from './ResetTransitionPointsModal';
 import { TransitionWaveformDisplay } from './TransitionWaveformDisplay';
 import RenderProgressModal from './RenderProgressModal';
-import { clientAudioRenderer, RenderProgress } from '../lib/audio/clientAudioRenderer';
 
 interface TransitionEditorViewProps {
   songA: UploadResult;
@@ -841,7 +840,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     setSaving(true);
     setShowRenderProgress(true);
     setRenderStage('saving');
-    setRenderMessage('Saving transition metadata');
+    setRenderMessage('Saving configuration...');
     setRenderProgress(0);
 
     try {
@@ -871,8 +870,13 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
         createdAt: new Date().toISOString()
       };
 
+      setRenderProgress(50);
+
       await transitionsService.updateTransition(transitionId, {
-        status: 'draft',
+        status: 'ready',
+        outputUrl: null,
+        renderDuration: songADuration + songBDuration,
+        fileSize: null,
         metadata: {
           ...transition.metadata,
           songAKeyframes,
@@ -889,40 +893,8 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
         }
       });
 
-      setRenderProgress(15);
-      setRenderStage('rendering');
-      setRenderMessage('Starting audio render process');
-
-      if (!templateAudioUrl) {
-        throw new Error('Template audio URL is not available');
-      }
-
-      const songADuration = transition.songAMarkerPoint - transition.songAClipStart;
-      const songBDuration = transition.songBClipEnd - transition.songBMarkerPoint;
-
-      await clientAudioRenderer.renderTransition({
-        songAUrl: songA.url,
-        songBUrl: songB.url,
-        templateUrl: templateAudioUrl,
-        songAStart: transition.songAClipStart,
-        songAEnd: transition.songAMarkerPoint,
-        songBStart: transition.songBMarkerPoint,
-        songBEnd: transition.songBClipEnd,
-        songAKeyframes,
-        songBKeyframes,
-        templateDuration: transitionDuration,
-        transitionId,
-        onProgress: (progress: RenderProgress) => {
-          setRenderProgress(progress.progress);
-          setRenderMessage(progress.message);
-          if (progress.stage === 'complete') {
-            setRenderStage('success');
-          }
-        }
-      });
-
       setRenderStage('success');
-      setRenderMessage('Transition rendered and saved successfully');
+      setRenderMessage('Transition saved successfully!');
       setRenderProgress(100);
 
       const updatedTransition = await transitionsService.getTransition(transitionId);
@@ -930,9 +902,9 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
         setTransition(updatedTransition);
       }
     } catch (error) {
-      console.error('Failed to save/render transition:', error);
+      console.error('Failed to save transition:', error);
       setRenderStage('error');
-      setRenderMessage(error instanceof Error ? error.message : 'Failed to render transition');
+      setRenderMessage(error instanceof Error ? error.message : 'Failed to save transition');
     } finally {
       setSaving(false);
     }
@@ -1530,9 +1502,13 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
         progress={renderProgress}
         onClose={() => {
           setShowRenderProgress(false);
-          if (renderStage === 'success') {
-            onSaveCallback();
-          }
+        }}
+        onReturnHome={() => {
+          setShowRenderProgress(false);
+          onSaveCallback();
+        }}
+        onContinueEditing={() => {
+          setShowRenderProgress(false);
         }}
         canClose={renderStage === 'success' || renderStage === 'error'}
       />
