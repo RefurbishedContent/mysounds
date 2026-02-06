@@ -4,8 +4,8 @@ import {
   MoreVertical, Edit2, Trash2, Search, X, Grid, Box
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
 import { BlendData } from '../lib/blendExportService';
+import { getMockBlends } from '../lib/mockDataService';
 
 interface BlendFolder {
   id: string;
@@ -66,37 +66,13 @@ export const BlendLibraryPanel: React.FC<BlendLibraryPanelProps> = ({
     try {
       setLoading(true);
 
-      // Load folders
-      const { data: foldersData } = await supabase
-        .from('blend_folders')
-        .select('*')
-        .order('position', { ascending: true });
+      // Load mock data
+      const blendsData = getMockBlends();
+      const favoritesData = blendsData.slice(0, 1);
 
-      // Load bins
-      const { data: binsData } = await supabase
-        .from('blend_bins')
-        .select('*')
-        .order('position', { ascending: true });
-
-      // Load tags
-      const { data: tagsData } = await supabase
-        .from('blend_tags')
-        .select('*');
-
-      // Load all blends
-      const { data: blendsData } = await supabase
-        .from('blends')
-        .select('*')
-        .eq('status', 'completed')
-        .order('created_at', { ascending: false });
-
-      // Load favorites
-      const { data: favoritesData } = await supabase
-        .from('blends')
-        .select('*')
-        .eq('status', 'completed')
-        .eq('is_favorite', true)
-        .order('created_at', { ascending: false });
+      const foldersData: BlendFolder[] = [];
+      const binsData: BlendBin[] = [];
+      const tagsData: BlendTag[] = [];
 
       setFolders(foldersData || []);
       setBins(binsData || []);

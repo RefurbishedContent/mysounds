@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Download, Settings, Library, Layers, Maximize2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { mixerService, MixSession, MixTrack } from '../lib/mixerService';
-import { blendExportService, BlendData } from '../lib/blendExportService';
+import { MixSession, MixTrack } from '../lib/mixerService';
+import { BlendData } from '../lib/blendExportService';
+import { getMockMixSessionById, getMockMixTracks, addMockMixTrack, deleteMockMixTrack, getMockBlendById } from '../lib/mockDataService';
 import { MixerTheme, parseThemeFromMetadata, getDefaultTheme } from '../lib/themeUtils';
 import { DJDeck } from './DJDeck';
 import { DJCrossfader } from './DJCrossfader';
@@ -39,11 +40,16 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
 
       try {
         setLoading(true);
-        const sessionData = await mixerService.getMixSession(sessionId);
-        const sessionTracks = await mixerService.getMixTracks(sessionId);
+        const sessionData = getMockMixSessionById(sessionId);
+        const sessionTracks = getMockMixTracks(sessionId);
 
-        setSession(sessionData);
-        setTracks(sessionTracks);
+        const enrichedTracks = sessionTracks.map((track: any) => ({
+          ...track,
+          blend: getMockBlendById(track.blendId)
+        }));
+
+        setSession(sessionData as any);
+        setTracks(enrichedTracks);
 
         if (sessionData?.metadata) {
           const theme = parseThemeFromMetadata(sessionData.metadata);
@@ -95,15 +101,15 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
     if (!session) return;
 
     try {
-      const newPosition = tracks.length;
-      await mixerService.addBlendToMix(session.id, {
-        blendId: blend.id,
-        position: newPosition,
-        crossfadeType: 'beat-matched'
-      });
+      const newTrack = addMockMixTrack(session.id, blend.id);
 
-      const updatedTracks = await mixerService.getMixTracks(session.id);
+      const updatedTracks = getMockMixTracks(session.id).map((track: any) => ({
+        ...track,
+        blend: getMockBlendById(track.blendId)
+      }));
+
       setTracks(updatedTracks);
+      setShowLibraryPanel(false);
     } catch (error) {
       console.error('Failed to add blend to queue:', error);
     }
@@ -113,9 +119,18 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
     if (!session) return;
 
     try {
-      await mixerService.removeBlendFromMix(session.id, trackId);
-      const updatedTracks = await mixerService.getMixTracks(session.id);
+      deleteMockMixTrack(trackId);
+
+      const updatedTracks = getMockMixTracks(session.id).map((track: any) => ({
+        ...track,
+        blend: getMockBlendById(track.blendId)
+      }));
+
       setTracks(updatedTracks);
+
+      if (currentTrackIndex >= updatedTracks.length) {
+        setCurrentTrackIndex(Math.max(0, updatedTracks.length - 1));
+      }
     } catch (error) {
       console.error('Failed to remove track:', error);
     }
@@ -130,11 +145,11 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
     if (!session) return;
 
     try {
-      await mixerService.renderMix(session.id, {
-        format: 'wav',
-        quality: 'standard'
-      });
-      alert('Mix export started! This may take a few minutes.');
+      const totalDuration = tracks.reduce((sum, track) => sum + (track.blend?.duration || 0), 0);
+      const minutes = Math.floor(totalDuration / 60);
+      const seconds = totalDuration % 60;
+
+      alert(`Mix export simulation complete!\n\nMix Name: ${session.name}\nTotal Duration: ${minutes}:${String(seconds).padStart(2, '0')}\nTracks: ${tracks.length}\n\nIn a production environment, this would render and download your mix.`);
     } catch (error) {
       console.error('Failed to export mix:', error);
       alert('Failed to start export. Please try again.');

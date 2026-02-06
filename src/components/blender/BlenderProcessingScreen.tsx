@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Loader, Zap, Music, Layers, CheckCircle, X } from 'lucide-react';
 import { TransitionData } from '../../lib/transitionsService';
-import { BlendData, blendExportService, ExportProgress } from '../../lib/blendExportService';
+import { BlendData } from '../../lib/blendExportService';
+import { createMockBlend } from '../../lib/mockDataService';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface BlenderProcessingScreenProps {
@@ -43,100 +44,58 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
     if (!user) return;
 
     try {
-      const blend = await blendExportService.createBlend(
-        user.id,
-        {
-          transitionId: transition.id,
-          format: 'wav',
-          quality: 'standard'
-        },
-        (progressUpdate: ExportProgress) => {
-          setMessage(progressUpdate.message);
-          setProgress(progressUpdate.progress);
+      let simulatedProgress = 0;
+      const progressInterval = setInterval(() => {
+        if (simulatedProgress < 100) {
+          simulatedProgress += Math.random() * 8 + 5;
+          const actualProgress = Math.min(simulatedProgress, 100);
+          setProgress(actualProgress);
 
-          if (progressUpdate.progress >= 0 && progressUpdate.progress < 20) {
+          if (actualProgress >= 0 && actualProgress < 15) {
             setCurrentStageIndex(0);
-          } else if (progressUpdate.progress >= 20 && progressUpdate.progress < 30) {
+            setMessage('Preparing audio files...');
+          } else if (actualProgress >= 15 && actualProgress < 25) {
             setCurrentStageIndex(1);
-          } else if (progressUpdate.progress >= 30 && progressUpdate.progress < 40) {
+            setMessage('Loading Song A segment...');
+          } else if (actualProgress >= 25 && actualProgress < 35) {
             setCurrentStageIndex(2);
-          } else if (progressUpdate.progress >= 40 && progressUpdate.progress < 60) {
+            setMessage('Loading transition template...');
+          } else if (actualProgress >= 35 && actualProgress < 55) {
             setCurrentStageIndex(3);
-          } else if (progressUpdate.progress >= 60 && progressUpdate.progress < 70) {
+            setMessage('Processing transition effects...');
+          } else if (actualProgress >= 55 && actualProgress < 65) {
             setCurrentStageIndex(4);
-          } else if (progressUpdate.progress >= 70 && progressUpdate.progress < 85) {
+            setMessage('Loading Song B segment...');
+          } else if (actualProgress >= 65 && actualProgress < 85) {
             setCurrentStageIndex(5);
-          } else if (progressUpdate.progress >= 85 && progressUpdate.progress < 95) {
+            setMessage('Blending audio streams...');
+          } else if (actualProgress >= 85 && actualProgress < 95) {
             setCurrentStageIndex(6);
-          } else {
+            setMessage('Finalizing blend...');
+          } else if (actualProgress >= 95) {
             setCurrentStageIndex(7);
+            setMessage('Saving to library...');
           }
-        }
-      );
+        } else {
+          clearInterval(progressInterval);
 
-      setTimeout(() => {
-        subscribeToBlendUpdates(blend.id);
-      }, 1000);
+          createMockBlend(transition.id)
+            .then((blend) => {
+              setProgress(100);
+              setTimeout(() => {
+                onComplete(blend as any);
+              }, 500);
+            })
+            .catch((err) => {
+              console.error('Blending failed:', err);
+              setError(err instanceof Error ? err.message : 'Failed to create blend');
+            });
+        }
+      }, 200);
     } catch (err) {
       console.error('Blending failed:', err);
       setError(err instanceof Error ? err.message : 'Failed to create blend');
     }
-  };
-
-  const subscribeToBlendUpdates = (blendId: string) => {
-    console.log('[BlenderProcessing] Subscribing to blend updates:', blendId);
-
-    const subscription = blendExportService.subscribeToBlendUpdates(
-      blendId,
-      (updatedBlend) => {
-        console.log('[BlenderProcessing] Blend update received:', {
-          status: updatedBlend.status,
-          blendId: updatedBlend.id
-        });
-
-        if (updatedBlend.status === 'completed') {
-          console.log('[BlenderProcessing] Blend completed successfully');
-          subscription.unsubscribe();
-          setProgress(100);
-          setCurrentStageIndex(7);
-          setTimeout(() => {
-            onComplete(updatedBlend);
-          }, 500);
-        } else if (updatedBlend.status === 'failed') {
-          console.error('[BlenderProcessing] Blend failed:', updatedBlend.exportSettings);
-          subscription.unsubscribe();
-          const errorMsg = updatedBlend.exportSettings?.error || 'Blend processing failed on the server';
-          setError(errorMsg);
-        }
-      }
-    );
-
-    let simulatedProgress = 40;
-    const progressInterval = setInterval(() => {
-      if (simulatedProgress < 90) {
-        simulatedProgress += Math.random() * 5;
-        setProgress(Math.min(simulatedProgress, 90));
-
-        if (simulatedProgress >= 40 && simulatedProgress < 55) {
-          setCurrentStageIndex(3);
-          setMessage('Processing transition effects...');
-        } else if (simulatedProgress >= 55 && simulatedProgress < 65) {
-          setCurrentStageIndex(4);
-          setMessage('Loading Song B segment...');
-        } else if (simulatedProgress >= 65 && simulatedProgress < 80) {
-          setCurrentStageIndex(5);
-          setMessage('Blending audio streams...');
-        } else if (simulatedProgress >= 80) {
-          setCurrentStageIndex(6);
-          setMessage('Finalizing blend...');
-        }
-      }
-    }, 800);
-
-    return () => {
-      clearInterval(progressInterval);
-      subscription.unsubscribe();
-    };
   };
 
   const handleCancel = () => {
