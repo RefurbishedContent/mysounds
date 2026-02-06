@@ -64,11 +64,17 @@ Deno.serve(async (req: Request) => {
       throw new Error("Transition not found");
     }
 
-    if (!transition.output_url) {
-      throw new Error("Transition has not been rendered yet. Please render the transition first.");
+    const useNewWorkflow = !transition.output_url && transition.metadata?.templateAudioUrl;
+
+    if (!transition.output_url && !useNewWorkflow) {
+      throw new Error("Transition has neither rendered audio nor template metadata. Please configure the transition first.");
     }
 
-    console.log(`[ExportBlend] Using pre-rendered transition from: ${transition.output_url}`);
+    if (useNewWorkflow) {
+      console.log(`[ExportBlend] Using new workflow with template audio from metadata`);
+    } else {
+      console.log(`[ExportBlend] Using legacy workflow with pre-rendered transition from: ${transition.output_url}`);
+    }
 
     const { data: songA, error: songAError } = await supabase
       .from("uploads")
@@ -105,11 +111,22 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[ExportBlend] Downloading audio files...`);
 
-    await Promise.all([
-      downloadFile(songA.url, songAPath),
-      downloadFile(songB.url, songBPath),
-      downloadFile(transition.output_url, transitionPath),
-    ]);
+    if (useNewWorkflow) {
+      const templateAudioUrl = transition.metadata.templateAudioUrl;
+      console.log(`[ExportBlend] Downloading template audio from: ${templateAudioUrl}`);
+
+      await Promise.all([
+        downloadFile(songA.url, songAPath),
+        downloadFile(songB.url, songBPath),
+        downloadFile(templateAudioUrl, transitionPath),
+      ]);
+    } else {
+      await Promise.all([
+        downloadFile(songA.url, songAPath),
+        downloadFile(songB.url, songBPath),
+        downloadFile(transition.output_url, transitionPath),
+      ]);
+    }
 
     console.log(`[ExportBlend] Audio files downloaded successfully`);
 
@@ -117,24 +134,77 @@ Deno.serve(async (req: Request) => {
     const songBEndingPath = `${tempDir}/song_b_ending.wav`;
 
     console.log(`[ExportBlend] Extracting segments...`);
-    console.log(`[ExportBlend] Song A: 0 to ${songAClipStart}s`);
-    console.log(`[ExportBlend] Transition: pre-rendered segment`);
-    console.log(`[ExportBlend] Song B: ${songBClipEnd}s to end`);
 
-    const songBRemaining = songBDuration - songBClipEnd;
+    let songADuration, songBStartTime, songBRemaining;
 
-    await Promise.all([
-      extractSegment(songAPath, songABeginningPath, 0, songAClipStart),
-      extractSegment(songBPath, songBEndingPath, songBClipEnd, songBRemaining),
-    ]);
+    if (useNewWorkflow) {
+      songADuration = transition.song_a_marker_point - songAClipStart;
+      songBStartTime = transition.song_b_marker_point;
+      songBRemaining = songBDuration - songBStartTime;
+
+      console.log(`[ExportBlend] New workflow segments:`);
+      console.log(`[ExportBlend] Song A: ${songAClipStart}s to ${transition.song_a_marker_point}s (${songADuration}s)`);
+      console.log(`[ExportBlend] Template: full duration from metadata`);
+      console.log(`[ExportBlend] Song B: ${songBStartTime}s to end (${songBRemaining}s)`);
+
+      await Promise.all([
+        extractSegment(songAPath, songABeginningPath, songAClipStart, songADuration),
+        extractSegment(songBPath, songBEndingPath, songBStartTime, songBRemaining),
+      ]);
+    } else {
+      console.log(`[ExportBlend] Legacy workflow segments:`);
+      console.log(`[ExportBlend] Song A: 0 to ${songAClipStart}s`);
+      console.log(`[ExportBlend] Transition: pre-rendered segment`);
+      console.log(`[ExportBlend] Song B: ${songBClipEnd}s to end`);
+
+      songBRemaining = songBDuration - songBClipEnd;
+
+      await Promise.all([
+        extractSegment(songAPath, songABeginningPath, 0, songAClipStart),
+        extractSegment(songBPath, songBEndingPath, songBClipEnd, songBRemaining),
+      ]);
+    }
 
     console.log(`[ExportBlend] Segments extracted successfully`);
 
+    let songAFadedPath = songABeginningPath;
+    let transitionFadedPath = transitionPath;
+    let songBFadedPath = songBEndingPath;
+
+    if (useNewWorkflow && transition.metadata?.blenderOutput) {
+      console.log(`[ExportBlend] Applying fade effects from metadata...`);
+
+      const blenderOutput = transition.metadata.blenderOutput;
+
+      if (blenderOutput.songASegment?.keyframes?.length > 0) {
+        songAFadedPath = `${tempDir}/song_a_faded.wav`;
+        await applyVolumeKeyframes(songABeginningPath, songAFadedPath, blenderOutput.songASegment.keyframes, songADuration);
+      }
+
+      if (blenderOutput.templateSegment?.fadeInKeyframes?.length > 0 || blenderOutput.templateSegment?.fadeOutKeyframes?.length > 0) {
+        transitionFadedPath = `${tempDir}/transition_faded.wav`;
+        await applyTemplateFades(
+          transitionPath,
+          transitionFadedPath,
+          blenderOutput.templateSegment.fadeInKeyframes || [],
+          blenderOutput.templateSegment.fadeOutKeyframes || [],
+          blenderOutput.templateSegment.duration
+        );
+      }
+
+      if (blenderOutput.songBSegment?.keyframes?.length > 0) {
+        songBFadedPath = `${tempDir}/song_b_faded.wav`;
+        await applyVolumeKeyframes(songBEndingPath, songBFadedPath, blenderOutput.songBSegment.keyframes, songBRemaining);
+      }
+
+      console.log(`[ExportBlend] Fade effects applied successfully`);
+    }
+
     const concatListPath = `${tempDir}/concat.txt`;
     const concatList = [
-      `file '${songABeginningPath}'`,
-      `file '${transitionPath}'`,
-      `file '${songBEndingPath}'`,
+      `file '${songAFadedPath}'`,
+      `file '${transitionFadedPath}'`,
+      `file '${songBFadedPath}'`,
     ].join("\n");
     await Deno.writeTextFile(concatListPath, concatList);
 
@@ -148,7 +218,9 @@ Deno.serve(async (req: Request) => {
     }
 
     if (config.fadeOut > 0) {
-      const totalDuration = songAClipStart + config.transitionDuration + songBRemaining;
+      const totalDuration = useNewWorkflow
+        ? (songADuration + config.transitionDuration + songBRemaining)
+        : (songAClipStart + config.transitionDuration + songBRemaining);
       const fadeOutStart = totalDuration - config.fadeOut;
       filters.push(`afade=t=out:st=${fadeOutStart}:d=${config.fadeOut}`);
     }
@@ -303,6 +375,119 @@ Deno.serve(async (req: Request) => {
     );
   }
 });
+
+async function applyVolumeKeyframes(
+  inputPath: string,
+  outputPath: string,
+  keyframes: Array<{ position: number; value: number }>,
+  duration: number
+): Promise<void> {
+  if (!keyframes || keyframes.length === 0) {
+    await Deno.copyFile(inputPath, outputPath);
+    return;
+  }
+
+  const volumeExpression = keyframes
+    .map((kf, idx) => {
+      const timeInSeconds = (kf.position / 100) * duration;
+      const volumeDb = 20 * Math.log10(kf.value);
+      return `'if(lt(t,${timeInSeconds}),${volumeDb},${volumeDb})'`;
+    })
+    .join(":");
+
+  const volumeFilter = `volume=${keyframes.map((kf, idx) => {
+    const timeInSeconds = (kf.position / 100) * duration;
+    const nextTime = idx < keyframes.length - 1
+      ? (keyframes[idx + 1].position / 100) * duration
+      : duration;
+    const volumeDb = 20 * Math.log10(Math.max(0.001, kf.value));
+    return `'if(between(t,${timeInSeconds},${nextTime}),${volumeDb})'`;
+  }).join(":")}:eval=frame`;
+
+  const simpleVolume = keyframes.map((kf, idx) => {
+    const nextKf = keyframes[idx + 1];
+    if (!nextKf) return null;
+
+    const startTime = (kf.position / 100) * duration;
+    const endTime = (nextKf.position / 100) * duration;
+    const startVol = Math.max(0.001, kf.value);
+    const endVol = Math.max(0.001, nextKf.value);
+
+    return `afade=t=custom:st=${startTime}:d=${endTime - startTime}:curve=exp`;
+  }).filter(Boolean).join(",");
+
+  const avgVolume = keyframes.reduce((sum, kf) => sum + kf.value, 0) / keyframes.length;
+  const volumeDb = 20 * Math.log10(Math.max(0.001, avgVolume));
+
+  const cmd = new Deno.Command("ffmpeg", {
+    args: [
+      "-i", inputPath,
+      "-af", `volume=${volumeDb}dB`,
+      "-ar", "48000",
+      "-ac", "2",
+      "-y",
+      outputPath,
+    ],
+    stdout: "piped",
+    stderr: "piped",
+  });
+
+  const output = await cmd.output();
+  if (!output.success) {
+    const error = new TextDecoder().decode(output.stderr);
+    console.error(`[ExportBlend] Volume keyframe application failed:`, error);
+    throw new Error(`FFmpeg volume keyframe failed: ${error.substring(0, 200)}`);
+  }
+}
+
+async function applyTemplateFades(
+  inputPath: string,
+  outputPath: string,
+  fadeInKeyframes: Array<{ position: number; value: number }>,
+  fadeOutKeyframes: Array<{ position: number; value: number }>,
+  duration: number
+): Promise<void> {
+  if ((!fadeInKeyframes || fadeInKeyframes.length === 0) &&
+      (!fadeOutKeyframes || fadeOutKeyframes.length === 0)) {
+    await Deno.copyFile(inputPath, outputPath);
+    return;
+  }
+
+  const filters = [];
+
+  if (fadeInKeyframes && fadeInKeyframes.length > 0) {
+    const avgFadeInVol = fadeInKeyframes.reduce((sum, kf) => sum + kf.value, 0) / fadeInKeyframes.length;
+    const fadeInDb = 20 * Math.log10(Math.max(0.001, avgFadeInVol));
+    filters.push(`afade=t=in:st=0:d=0.5`);
+  }
+
+  if (fadeOutKeyframes && fadeOutKeyframes.length > 0) {
+    const avgFadeOutVol = fadeOutKeyframes.reduce((sum, kf) => sum + kf.value, 0) / fadeOutKeyframes.length;
+    const fadeOutDb = 20 * Math.log10(Math.max(0.001, avgFadeOutVol));
+    const fadeOutStart = Math.max(0, duration - 0.5);
+    filters.push(`afade=t=out:st=${fadeOutStart}:d=0.5`);
+  }
+
+  const cmd = new Deno.Command("ffmpeg", {
+    args: [
+      "-i", inputPath,
+      "-af", filters.join(","),
+      "-ar", "48000",
+      "-ac", "2",
+      "-y",
+      outputPath,
+    ],
+    stdout: "piped",
+    stderr: "piped",
+  });
+
+  const output = await cmd.output();
+  if (!output.success) {
+    const error = new TextDecoder().decode(output.stderr);
+    console.error(`[ExportBlend] Template fade application failed:`, error);
+    throw new Error(`FFmpeg template fade failed: ${error.substring(0, 200)}`);
+  }
+}
 
 async function downloadFile(url: string, path: string): Promise<void> {
   const response = await fetch(url);
