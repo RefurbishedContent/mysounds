@@ -20,6 +20,7 @@ interface ProjectCreationWizardProps {
 const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ onComplete, onCancel, tutorialMode = false }) => {
   const { user } = useAuth();
   const wizard = useProjectWizard();
+  const [tutorialSongsSelected, setTutorialSongsSelected] = React.useState(false);
 
   const steps = [
     { number: 1 as const, label: 'Project Type' },
@@ -28,7 +29,7 @@ const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ onComplet
   ];
 
   const handleProjectTypeSelect = (type: 'transition' | 'mixer') => {
-    if (type === 'transition') {
+    if (type === 'transition' && !tutorialMode) {
       onComplete('transition', { redirectToCreateTransition: true });
     } else {
       wizard.setProjectType(type);

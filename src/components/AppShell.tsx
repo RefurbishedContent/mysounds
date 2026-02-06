@@ -435,7 +435,19 @@ const AppShell: React.FC = () => {
             {onboarding.tutorialMode && (
               <NewProjectTutorialOverlay
                 currentStep={onboarding.tutorialStep}
-                onAdvance={onboarding.advanceTutorialStep}
+                onAdvance={() => {
+                  const currentStep = onboarding.tutorialStep;
+                  onboarding.advanceTutorialStep();
+
+                  if (currentStep === 2) {
+                    setTimeout(() => {
+                      const transitionButton = document.querySelector('[data-tutorial="transition-project"]') as HTMLButtonElement;
+                      if (transitionButton) {
+                        transitionButton.click();
+                      }
+                    }, 100);
+                  }
+                }}
                 onComplete={() => {
                   onboarding.endTutorial();
                   setCurrentView('library');
