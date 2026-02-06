@@ -16,15 +16,15 @@ export const InsufficientBlendsModal: React.FC<InsufficientBlendsModalProps> = (
 }) => {
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-2xl border border-gray-700 shadow-2xl max-w-md w-full overflow-hidden">
+      <div className="bg-gray-800 rounded-2xl border border-gray-700 shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-br from-orange-500/20 to-red-500/20 border-b border-gray-700 p-6">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <AlertCircle size={24} className="text-white" />
+        <div className="bg-gradient-to-br from-orange-500/20 to-red-500/20 border-b border-gray-700 p-4 flex-shrink-0">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <AlertCircle size={20} className="text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="text-xl font-bold text-white mb-1">Not Enough Blends</h3>
+              <h3 className="text-lg font-bold text-white mb-1">Not Enough Blends</h3>
               <p className="text-sm text-gray-300">
                 You need at least 2 blends to create a mixer project
               </p>
@@ -32,10 +32,10 @@ export const InsufficientBlendsModal: React.FC<InsufficientBlendsModalProps> = (
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-4">
-          <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-3">
+        {/* Content - Scrollable */}
+        <div className="p-4 space-y-3 overflow-y-auto flex-1">
+          <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-3">
+            <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-400">Current Blends</span>
               <span className="text-2xl font-bold text-white">{blendCount}</span>
             </div>
@@ -45,7 +45,7 @@ export const InsufficientBlendsModal: React.FC<InsufficientBlendsModalProps> = (
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <h4 className="text-sm font-semibold text-white">What are Blends?</h4>
             <p className="text-sm text-gray-400">
               Blends are seamless transitions between two songs, created in the Transition Editor.
@@ -53,9 +53,9 @@ export const InsufficientBlendsModal: React.FC<InsufficientBlendsModalProps> = (
             </p>
           </div>
 
-          <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-4">
-            <div className="flex gap-3">
-              <Music size={20} className="text-cyan-400 flex-shrink-0 mt-0.5" />
+          <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-3">
+            <div className="flex gap-2">
+              <Music size={18} className="text-cyan-400 flex-shrink-0 mt-0.5" />
               <div className="space-y-1">
                 <p className="text-sm font-medium text-cyan-400">Quick Tip</p>
                 <p className="text-xs text-gray-300">
@@ -67,25 +67,25 @@ export const InsufficientBlendsModal: React.FC<InsufficientBlendsModalProps> = (
         </div>
 
         {/* Actions */}
-        <div className="bg-gray-900/50 border-t border-gray-700 p-6 space-y-3">
+        <div className="bg-gray-900/50 border-t border-gray-700 p-4 space-y-2.5 flex-shrink-0">
           <button
             onClick={onCreateTransition}
-            className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white rounded-lg font-semibold shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/50 transition-all duration-200"
+            className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white rounded-lg font-semibold shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/50 transition-all duration-200"
           >
             <span>Create Transition Blend</span>
-            <ArrowRight size={20} />
+            <ArrowRight size={18} />
           </button>
 
           <div className="flex gap-2">
             <button
               onClick={onContinueAnyway}
-              className="flex-1 px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+              className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
             >
               Continue Anyway
             </button>
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600 rounded-lg font-medium transition-colors"
+              className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600 rounded-lg font-medium transition-colors"
             >
               Cancel
             </button>
