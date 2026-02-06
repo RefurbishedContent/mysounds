@@ -742,7 +742,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   });
 
   return (
-    <div className="h-screen bg-gray-900 flex flex-col">
+    <div className="h-screen bg-gray-900 flex flex-col" data-tutorial="timeline-editor">
       <div className="bg-gray-800 border-b border-gray-700 px-3 py-2 flex-shrink-0">
         <div className="flex flex-col space-y-2">
           <div className="flex items-center space-x-2">

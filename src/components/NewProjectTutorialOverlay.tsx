@@ -46,40 +46,31 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     action: 'Select "Transition Project"'
   },
   {
-    id: 'song-a',
-    title: 'Select First Song',
-    description: 'Choose your first track. For this demo, we\'ve provided sample songs that are already analyzed and ready to mix.',
-    target: '[data-tutorial="demo-song-1"]',
-    position: 'right',
+    id: 'song-selection',
+    title: 'Select Your Songs',
+    description: 'This is the song selection interface. We\'ve pre-selected two compatible demo tracks: "Summer Beats" (Song A) and "Midnight Groove" (Song B). Notice the Match Quality indicator showing how well these tracks blend together based on BPM, key, and energy analysis. The AI has automatically calculated a compatibility score to help you create the perfect transition.',
+    target: '[data-tutorial="song-selection-interface"]',
+    position: 'bottom',
     icon: Music,
-    action: 'Click on "Summer Beats"'
+    action: 'Review the song selections and match quality'
   },
   {
-    id: 'song-b',
-    title: 'Select Second Song',
-    description: 'Now select your second track. The AI will show you compatibility indicators based on BPM, key, and energy levels.',
-    target: '[data-tutorial="demo-song-2"]',
-    position: 'right',
-    icon: Music,
-    action: 'Click on "Midnight Groove"'
-  },
-  {
-    id: 'compatibility',
-    title: 'AI Compatibility Analysis',
-    description: 'Our AI analyzes both tracks and shows compatibility scores, suggesting optimal transition points and techniques.',
-    target: '[data-tutorial="compatibility-panel"]',
-    position: 'left',
+    id: 'set-transition-points',
+    title: 'Set Transition Points',
+    description: 'Next, you\'ll set the exact points where songs transition. Use the waveform display to mark START, OUT, IN, and END points. The AI suggests optimal positions, but you can drag markers to fine-tune.',
+    target: '[data-tutorial="transition-points-interface"]',
+    position: 'bottom',
     icon: Zap,
-    action: 'Review the compatibility information'
+    action: 'Click "Continue" to proceed to transition point setup'
   },
   {
-    id: 'configuration',
-    title: 'Configure Transition',
-    description: 'Adjust transition settings like crossfade length and sync points. The AI provides smart defaults based on your tracks.',
-    target: '[data-tutorial="transition-config"]',
-    position: 'left',
+    id: 'timeline-editor',
+    title: 'Professional Timeline Editor',
+    description: 'This is where the magic happens! The Professional Timeline Editor lets you fine-tune your transition with precision. Adjust fade curves, select transition templates, and preview your blend in real-time. Each track shows its waveform with visual fade automation.',
+    target: '[data-tutorial="timeline-editor"]',
+    position: 'bottom',
     icon: Settings,
-    action: 'Explore the configuration options'
+    action: 'Explore the timeline editor features'
   },
   {
     id: 'complete',

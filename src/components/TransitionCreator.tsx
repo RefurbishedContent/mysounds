@@ -348,7 +348,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
 
       <div className="flex-1 overflow-y-auto">
         {currentStep === 'select-songs' && (
-          <div>
+          <div data-tutorial="song-selection-interface">
             <div
               ref={selectionPanelRef}
               className="bg-gradient-to-b from-gray-800 via-gray-800 to-gray-800/95 border-b border-gray-700 shadow-2xl"
@@ -741,7 +741,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
         )}
 
         {currentStep === 'set-transition-points' && songA && songB && (
-          <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+          <div className="max-w-7xl mx-auto px-4 py-6 space-y-6" data-tutorial="transition-points-interface">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-white mb-2">Set Transition Points</h2>
               <p className="text-gray-400">Drag markers to control when songs start, fade, and end</p>

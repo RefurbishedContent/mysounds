@@ -45,8 +45,18 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
   useEffect(() => {
     const loadContent = async () => {
       if (tutorialMode) {
-        setAllSongs(getDemoSongs());
+        const demoSongs = getDemoSongs();
+        setAllSongs(demoSongs);
         setLoading(false);
+
+        if (projectType === 'transition' && selectedSongs.length === 0 && demoSongs.length >= 2) {
+          setTimeout(() => {
+            onSelectSong(demoSongs[0], 0);
+            setTimeout(() => {
+              onSelectSong(demoSongs[1], 1);
+            }, 500);
+          }, 300);
+        }
         return;
       }
 
