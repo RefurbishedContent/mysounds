@@ -48,6 +48,47 @@ const getDurationForSize = (size: DurationSize): number => {
   return DURATION_RANGES[size].default;
 };
 
+const combineTransitionKeyframes = (
+  fadeInKeyframes: FadeKeyframe[],
+  fadeOutKeyframes: FadeKeyframe[]
+): FadeKeyframe[] => {
+  const samplePoints = 50;
+  const combinedKeyframes: FadeKeyframe[] = [];
+
+  for (let i = 0; i <= samplePoints; i++) {
+    const position = i / samplePoints;
+
+    let fadeInValue = 1;
+    const sortedIn = [...fadeInKeyframes].sort((a, b) => a.position - b.position);
+    for (let j = 0; j < sortedIn.length - 1; j++) {
+      if (position >= sortedIn[j].position && position <= sortedIn[j + 1].position) {
+        const segmentProgress = (position - sortedIn[j].position) / (sortedIn[j + 1].position - sortedIn[j].position);
+        fadeInValue = sortedIn[j].value + segmentProgress * (sortedIn[j + 1].value - sortedIn[j].value);
+        break;
+      }
+    }
+    if (position < sortedIn[0].position) fadeInValue = sortedIn[0].value;
+    if (position > sortedIn[sortedIn.length - 1].position) fadeInValue = sortedIn[sortedIn.length - 1].value;
+
+    let fadeOutValue = 1;
+    const sortedOut = [...fadeOutKeyframes].sort((a, b) => a.position - b.position);
+    for (let j = 0; j < sortedOut.length - 1; j++) {
+      if (position >= sortedOut[j].position && position <= sortedOut[j + 1].position) {
+        const segmentProgress = (position - sortedOut[j].position) / (sortedOut[j + 1].position - sortedOut[j].position);
+        fadeOutValue = sortedOut[j].value + segmentProgress * (sortedOut[j + 1].value - sortedOut[j].value);
+        break;
+      }
+    }
+    if (position < sortedOut[0].position) fadeOutValue = sortedOut[0].value;
+    if (position > sortedOut[sortedOut.length - 1].position) fadeOutValue = sortedOut[sortedOut.length - 1].value;
+
+    const combinedValue = fadeInValue * fadeOutValue;
+    combinedKeyframes.push({ position, value: combinedValue });
+  }
+
+  return combinedKeyframes;
+};
+
 const applyVolumeAutomation = (
   volumeNode: Tone.Volume,
   keyframes: FadeKeyframe[],
@@ -614,11 +655,12 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       const player = new Tone.Player(templateAudioUrl, () => {
         const templateDur = selectedTemplate.duration;
 
-        applyVolumeAutomation(volumeNode, transitionFadeInKeyframes, templateDur, transitionFadeCurve);
+        const combinedKeyframes = combineTransitionKeyframes(
+          transitionFadeInKeyframes,
+          transitionFadeOutKeyframes
+        );
 
-        setTimeout(() => {
-          applyVolumeAutomation(volumeNode, transitionFadeOutKeyframes, templateDur, transitionFadeCurve);
-        }, 10);
+        applyVolumeAutomation(volumeNode, combinedKeyframes, templateDur, transitionFadeCurve);
 
         player.connect(volumeNode);
         player.sync().start(0, 0, templateDur);
@@ -1212,19 +1254,19 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                           <div className="relative w-full h-full">
                             <div className="absolute left-0 top-0 bottom-0 w-[45%] pointer-events-auto">
                               <KeyframeFadeEditor
-                                keyframes={transitionFadeOutKeyframes}
-                                onChange={handleTransitionFadeOutKeyframesChange}
-                                color="#06b6d4"
-                                direction="fadeOut"
+                                keyframes={transitionFadeInKeyframes}
+                                onChange={handleTransitionFadeInKeyframesChange}
+                                color="#ec4899"
+                                direction="fadeIn"
                                 height={Math.max(80, trackHeight * 0.6) - 32}
                               />
                             </div>
                             <div className="absolute right-0 top-0 bottom-0 w-[45%] pointer-events-auto">
                               <KeyframeFadeEditor
-                                keyframes={transitionFadeInKeyframes}
-                                onChange={handleTransitionFadeInKeyframesChange}
-                                color="#ec4899"
-                                direction="fadeIn"
+                                keyframes={transitionFadeOutKeyframes}
+                                onChange={handleTransitionFadeOutKeyframesChange}
+                                color="#06b6d4"
+                                direction="fadeOut"
                                 height={Math.max(80, trackHeight * 0.6) - 32}
                               />
                             </div>
@@ -1241,15 +1283,15 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                           </div>
                         )}
 
-                        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-cyan-400 pointer-events-none z-20 shadow-[0_0_10px_rgba(6,182,212,0.8)]">
-                          <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-cyan-400 text-gray-900 text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap">
-                            A OUT
+                        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-pink-400 pointer-events-none z-20 shadow-[0_0_10px_rgba(236,72,153,0.8)]">
+                          <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-pink-400 text-gray-900 text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap">
+                            FADE IN
                           </div>
                         </div>
 
-                        <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-pink-400 pointer-events-none z-20 shadow-[0_0_10px_rgba(236,72,153,0.8)]">
-                          <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-pink-400 text-gray-900 text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap">
-                            B IN
+                        <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-cyan-400 pointer-events-none z-20 shadow-[0_0_10px_rgba(6,182,212,0.8)]">
+                          <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-cyan-400 text-gray-900 text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap">
+                            FADE OUT
                           </div>
                         </div>
                       </>
