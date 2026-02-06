@@ -786,6 +786,42 @@ class DatabaseService {
   }
 
   /**
+   * Get user's transitions
+   */
+  async getUserTransitions(userId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('transitions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch transitions: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  /**
+   * Get recent activities for dashboard
+   */
+  async getRecentActivities(userId: string, limit: number = 10): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('activity_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('Failed to fetch activities:', error);
+      return [];
+    }
+
+    return data || [];
+  }
+
+  /**
    * Map database template to application format
    */
   private mapTemplateFromDb(dbTemplate: TemplateRow): TemplateData {

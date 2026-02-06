@@ -20,6 +20,7 @@ import TransitionCreator from './TransitionCreator';
 import ProfileView from './ProfileView';
 import AIFusionView from './AIFusionView';
 import LabsView from './LabsView';
+import HomeView from './HomeView';
 import MobileBottomNav, { MobileNavView } from './MobileBottomNav';
 import ProjectCreationWizard from './ProjectCreationWizard';
 import NewProjectTutorialOverlay from './NewProjectTutorialOverlay';
@@ -289,28 +290,10 @@ const AppShell: React.FC = () => {
     switch (currentView) {
       case 'home':
         return (
-          <div className="h-full flex flex-col p-4">
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center space-y-4 max-w-2xl">
-                <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto shadow-2xl shadow-cyan-500/50">
-                  <Music size={32} className="text-white" />
-                </div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  Welcome to MySounds.AI
-                </h1>
-                <p className="text-sm text-gray-400 leading-relaxed">
-                  Create seamless transitions between your songs using AI-powered templates.
-                  Upload your music library and start blending tracks like a pro.
-                </p>
-                <button
-                  onClick={() => setCurrentView('library')}
-                  className="px-6 py-3 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105"
-                >
-                  Get Started
-                </button>
-              </div>
-            </div>
-          </div>
+          <HomeView
+            onNavigate={setCurrentView}
+            onCreateNew={handleCreateNew}
+          />
         );
       case 'create-with-ai':
         return isMobile ? (
