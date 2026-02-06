@@ -32,7 +32,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     title: 'Start Creating',
     description: 'Click the "+Create New" button to begin creating your first project. This opens the project creation wizard.',
     target: '[data-tutorial="create-button"]',
-    position: 'bottom',
+    position: 'right',
     icon: Plus,
     action: 'Click "+Create New" to continue'
   },
@@ -234,7 +234,9 @@ const NewProjectTutorialOverlay: React.FC<NewProjectTutorialOverlayProps> = ({
   return (
     <div className="fixed inset-0 z-[100] pointer-events-none">
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto transition-opacity duration-300"
+        className={`absolute inset-0 bg-black/40 pointer-events-auto transition-opacity duration-300 ${
+          !spotlightStyle || !targetElement ? 'backdrop-blur-sm' : ''
+        }`}
         style={{ opacity: isVisible ? 1 : 0 }}
       />
 
@@ -250,10 +252,11 @@ const NewProjectTutorialOverlay: React.FC<NewProjectTutorialOverlayProps> = ({
             }}
           />
           <div
-            className="absolute border-4 border-blue-500 rounded-xl pointer-events-none animate-pulse transition-all duration-300"
+            className="absolute border-4 border-blue-500 rounded-xl pointer-events-none transition-all duration-300 animate-pulse"
             style={{
               ...spotlightStyle,
-              zIndex: 102
+              zIndex: 102,
+              boxShadow: 'inset 0 0 30px 5px rgba(59, 130, 246, 0.3)'
             }}
           />
         </>
