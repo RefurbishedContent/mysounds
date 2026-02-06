@@ -33,7 +33,6 @@ const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ onComplet
       onComplete('transition', { redirectToCreateTransition: true });
     } else {
       wizard.setProjectType(type);
-      wizard.nextStep();
     }
   };
 
