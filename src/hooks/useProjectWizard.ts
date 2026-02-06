@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { UploadResult } from '../lib/storage';
 import { TemplateData } from '../lib/database';
 import { BlendData } from '../lib/blendExportService';
+import { MixerTheme, getDefaultTheme } from '../lib/themeUtils';
 
 export type ProjectType = 'transition' | 'mixer';
 export type WizardStep = 1 | 2 | 3 | 4;
@@ -16,6 +17,7 @@ export interface ProjectWizardState {
   transitionDuration: number;
   transitionStartPoint: number;
   crossfadeDuration: number;
+  mixerTheme: MixerTheme;
   useAITemplate: boolean;
   isCreating: boolean;
   error: string | null;
@@ -31,6 +33,7 @@ const DEFAULT_STATE: ProjectWizardState = {
   transitionDuration: 12,
   transitionStartPoint: 30,
   crossfadeDuration: 8,
+  mixerTheme: getDefaultTheme(),
   useAITemplate: true,
   isCreating: false,
   error: null
@@ -159,6 +162,22 @@ export const useProjectWizard = () => {
     }));
   }, []);
 
+  const reorderBlends = useCallback((fromIndex: number, toIndex: number) => {
+    setState(prev => {
+      const newSelectedBlends = [...prev.selectedBlends];
+      const [removed] = newSelectedBlends.splice(fromIndex, 1);
+      newSelectedBlends.splice(toIndex, 0, removed);
+      return {
+        ...prev,
+        selectedBlends: newSelectedBlends
+      };
+    });
+  }, []);
+
+  const setMixerTheme = useCallback((theme: MixerTheme) => {
+    setState(prev => ({ ...prev, mixerTheme: theme }));
+  }, []);
+
   const goToStep = useCallback((step: WizardStep) => {
     setState(prev => ({ ...prev, currentStep: step, error: null }));
   }, []);
@@ -217,12 +236,14 @@ export const useProjectWizard = () => {
     reorderSongs,
     selectBlend,
     removeBlend,
+    reorderBlends,
     setTemplate,
     setUseAITemplate,
     setProjectName,
     setTransitionDuration,
     setTransitionStartPoint,
     setCrossfadeDuration,
+    setMixerTheme,
     goToStep,
     nextStep,
     previousStep,

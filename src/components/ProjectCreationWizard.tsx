@@ -4,6 +4,7 @@ import { useProjectWizard } from '../hooks/useProjectWizard';
 import { useAuth } from '../contexts/AuthContext';
 import { transitionsService } from '../lib/transitionsService';
 import { mixerService } from '../lib/mixerService';
+import { formatThemeForStorage } from '../lib/themeUtils';
 import WizardProgress from './wizard/WizardProgress';
 import WizardStep1ProjectType from './wizard/WizardStep1ProjectType';
 import WizardStep2ContentSelection from './wizard/WizardStep2ContentSelection';
@@ -84,11 +85,17 @@ const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ onComplet
           template: wizard.selectedTemplate
         });
       } else if (wizard.projectType === 'mixer') {
+        const themeMetadata = formatThemeForStorage(wizard.mixerTheme);
+
         const mixSession = await mixerService.createMixSession(user.id, {
           name: wizard.projectName,
           autoCrossfadeDuration: wizard.crossfadeDuration,
           normalizeVolume: true,
           masterGain: 0
+        });
+
+        await mixerService.updateMixSession(mixSession.id, {
+          metadata: themeMetadata
         });
 
         for (let i = 0; i < wizard.selectedBlends.length; i++) {
@@ -198,15 +205,16 @@ const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ onComplet
           useAITemplate={wizard.useAITemplate}
           transitionDuration={wizard.transitionDuration}
           transitionStartPoint={wizard.transitionStartPoint}
-          crossfadeDuration={wizard.crossfadeDuration}
+          mixerTheme={wizard.mixerTheme}
           onProjectNameChange={wizard.setProjectName}
           onTemplateChange={wizard.setTemplate}
           onToggleAI={wizard.setUseAITemplate}
           onTransitionDurationChange={wizard.setTransitionDuration}
           onTransitionStartPointChange={wizard.setTransitionStartPoint}
-          onCrossfadeDurationChange={wizard.setCrossfadeDuration}
+          onMixerThemeChange={wizard.setMixerTheme}
           onCreateProject={handleCreateProject}
           onBack={wizard.previousStep}
+          onGoToStep2={() => wizard.goToStep(2)}
           canProceed={wizard.canProceedFromStep(3)}
         />
       )}

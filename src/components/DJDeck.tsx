@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Pause, Lock, Repeat, Sparkles } from 'lucide-react';
+import { DeckColors } from '../lib/themeUtils';
 
 interface DJDeckProps {
   deckId: 'A' | 'B';
@@ -18,6 +19,7 @@ interface DJDeckProps {
     low: number;
   };
   waveformData?: number[];
+  deckColors?: DeckColors;
   onPlay?: () => void;
   onPause?: () => void;
   onCue?: (index: number) => void;
@@ -39,6 +41,7 @@ export const DJDeck: React.FC<DJDeckProps> = ({
   volume = 0.8,
   eq = { high: 0, mid: 0, low: 0 },
   waveformData = [],
+  deckColors,
   onPlay,
   onPause,
   onCue,
@@ -52,8 +55,15 @@ export const DJDeck: React.FC<DJDeckProps> = ({
   const [fxEnabled, setFxEnabled] = useState(false);
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
-  const deckColor = deckId === 'A' ? 'cyan' : 'blue';
+
+  const defaultColors = deckId === 'A'
+    ? { from: '#06b6d4', to: '#3b82f6' }
+    : { from: '#3b82f6', to: '#9333ea' };
+
+  const colors = deckColors || defaultColors;
+  const gradientStyle = { background: `linear-gradient(to right, ${colors.from}, ${colors.to})` };
   const deckGradient = deckId === 'A' ? 'from-cyan-500 to-blue-500' : 'from-blue-500 to-purple-500';
+  const deckColor = deckId === 'A' ? 'cyan' : 'blue';
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -71,7 +81,10 @@ export const DJDeck: React.FC<DJDeckProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <div className={`w-8 h-8 bg-gradient-to-r ${deckGradient} rounded-lg flex items-center justify-center font-bold text-white`}>
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white"
+            style={gradientStyle}
+          >
             {deckId}
           </div>
           <div>
@@ -139,7 +152,8 @@ export const DJDeck: React.FC<DJDeckProps> = ({
             {/* Play/Pause Button Overlay */}
             <button
               onClick={isPlaying ? onPause : onPlay}
-              className={`absolute bottom-2 right-2 p-2 bg-gradient-to-r ${deckGradient} rounded-full hover:scale-110 transition-transform shadow-lg`}
+              className="absolute bottom-2 right-2 p-2 rounded-full hover:scale-110 transition-transform shadow-lg"
+              style={gradientStyle}
             >
               {isPlaying ? <Pause size={16} fill="white" /> : <Play size={16} fill="white" className="ml-0.5" />}
             </button>
@@ -214,15 +228,16 @@ export const DJDeck: React.FC<DJDeckProps> = ({
             <div className="h-full flex items-end gap-0.5">
               {waveform.map((height, i) => {
                 const isActive = (i / waveform.length) * 100 <= progress;
+                const waveformStyle = isActive
+                  ? { height: `${height * 100}%`, background: `linear-gradient(to top, ${colors.from}, ${colors.to})` }
+                  : { height: `${height * 100}%` };
                 return (
                   <div
                     key={i}
                     className={`flex-1 rounded-t transition-all ${
-                      isActive
-                        ? `bg-gradient-to-t ${deckGradient}`
-                        : 'bg-gray-700'
+                      isActive ? '' : 'bg-gray-700'
                     }`}
-                    style={{ height: `${height * 100}%` }}
+                    style={waveformStyle}
                   />
                 );
               })}

@@ -3,6 +3,7 @@ import { ArrowLeft, Download, Settings, Library, Layers, Maximize2 } from 'lucid
 import { useAuth } from '../contexts/AuthContext';
 import { mixerService, MixSession, MixTrack } from '../lib/mixerService';
 import { blendExportService, BlendData } from '../lib/blendExportService';
+import { MixerTheme, parseThemeFromMetadata, getDefaultTheme } from '../lib/themeUtils';
 import { DJDeck } from './DJDeck';
 import { DJCrossfader } from './DJCrossfader';
 import { PlaylistQueueDrawer } from './PlaylistQueueDrawer';
@@ -30,6 +31,7 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
   const [deckBVolume, setDeckBVolume] = useState(0.8);
   const [deckAEQ, setDeckAEQ] = useState({ high: 0, mid: 0, low: 0 });
   const [deckBEQ, setDeckBEQ] = useState({ high: 0, mid: 0, low: 0 });
+  const [mixerTheme, setMixerTheme] = useState<MixerTheme>(getDefaultTheme());
 
   useEffect(() => {
     const loadSession = async () => {
@@ -42,6 +44,13 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
 
         setSession(sessionData);
         setTracks(sessionTracks);
+
+        if (sessionData?.metadata) {
+          const theme = parseThemeFromMetadata(sessionData.metadata);
+          if (theme) {
+            setMixerTheme(theme);
+          }
+        }
       } catch (error) {
         console.error('Failed to load mixer session:', error);
       } finally {
@@ -282,6 +291,7 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
                 isPlaying={isPlaying}
                 volume={deckAVolume}
                 eq={deckAEQ}
+                deckColors={mixerTheme.deckAColors}
                 onPlay={handlePlay}
                 onPause={handlePause}
                 onVolumeChange={setDeckAVolume}
@@ -301,6 +311,7 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
                 isCueing={isMixing}
                 volume={deckBVolume}
                 eq={deckBEQ}
+                deckColors={mixerTheme.deckBColors}
                 onVolumeChange={setDeckBVolume}
                 onEQChange={(type, value) => setDeckBEQ({ ...deckBEQ, [type]: value })}
               />
