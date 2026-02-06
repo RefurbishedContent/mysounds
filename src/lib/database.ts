@@ -803,6 +803,42 @@ class DatabaseService {
   }
 
   /**
+   * Get user's blends
+   */
+  async getUserBlends(userId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('blends')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Failed to fetch blends:', error);
+      return [];
+    }
+
+    return data || [];
+  }
+
+  /**
+   * Get user's mix sessions
+   */
+  async getUserMixSessions(userId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('mixer_sessions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Failed to fetch mix sessions:', error);
+      return [];
+    }
+
+    return data || [];
+  }
+
+  /**
    * Get recent activities for dashboard
    */
   async getRecentActivities(userId: string, limit: number = 10): Promise<any[]> {

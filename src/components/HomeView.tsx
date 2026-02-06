@@ -48,10 +48,12 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
     try {
       setLoading(true);
 
-      const [uploads, transitions, activities] = await Promise.all([
+      const [uploads, transitions, activities, blends, mixSessions] = await Promise.all([
         storageService.getUserUploads(user!.id),
         databaseService.getUserTransitions(user!.id),
         databaseService.getRecentActivities(user!.id, 8),
+        databaseService.getUserBlends(user!.id).catch(() => []),
+        databaseService.getUserMixSessions(user!.id).catch(() => []),
       ]);
 
       const totalHours = uploads.reduce((sum, track) => {
@@ -62,8 +64,8 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
       setStats({
         totalTracks: uploads.length,
         totalTransitions: transitions.length,
-        totalMixSessions: 0,
-        totalBlends: 0,
+        totalMixSessions: mixSessions.length,
+        totalBlends: blends.length,
         hoursProduced: Math.round(totalHours * 10) / 10,
       });
 
@@ -220,11 +222,11 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700/50">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-pink-500/20 rounded-lg flex items-center justify-center">
-                    <Zap size={20} className="text-pink-400" />
+                    <Sparkles size={20} className="text-pink-400" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-white">A+</p>
-                    <p className="text-xs text-gray-400">DJ Score</p>
+                    <p className="text-2xl font-bold text-white">{stats.totalBlends}</p>
+                    <p className="text-xs text-gray-400">Total Blends</p>
                   </div>
                 </div>
               </div>
