@@ -149,49 +149,55 @@ const NewProjectTutorialOverlay: React.FC<NewProjectTutorialOverlayProps> = ({
 
     const rect = targetElement.getBoundingClientRect();
     const coachMarkWidth = 400;
-    const coachMarkHeight = 280;
+    const maxCoachMarkHeight = 500;
     const offset = 24;
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
+    let top = 0;
+    let left = 0;
+
     switch (step.position) {
       case 'top': {
-        const top = Math.max(offset, rect.top - coachMarkHeight - offset);
-        const left = Math.max(offset, Math.min(
-          viewportWidth - coachMarkWidth - offset,
-          rect.left + rect.width / 2 - coachMarkWidth / 2
-        ));
-        return { top: `${top}px`, left: `${left}px` };
+        top = rect.top - maxCoachMarkHeight - offset;
+        if (top < offset) {
+          top = rect.bottom + offset;
+        }
+        left = rect.left + rect.width / 2 - coachMarkWidth / 2;
+        break;
       }
       case 'bottom': {
-        const top = Math.min(
-          viewportHeight - coachMarkHeight - offset,
-          rect.bottom + offset
-        );
-        const left = Math.max(offset, Math.min(
-          viewportWidth - coachMarkWidth - offset,
-          rect.left + rect.width / 2 - coachMarkWidth / 2
-        ));
-        return { top: `${top}px`, left: `${left}px` };
+        top = rect.bottom + offset;
+        if (top + maxCoachMarkHeight > viewportHeight - offset) {
+          top = rect.top - maxCoachMarkHeight - offset;
+          if (top < offset) {
+            top = offset;
+          }
+        }
+        left = rect.left + rect.width / 2 - coachMarkWidth / 2;
+        break;
       }
       case 'left': {
-        const top = Math.max(offset, Math.min(
-          viewportHeight - coachMarkHeight - offset,
-          rect.top + rect.height / 2 - coachMarkHeight / 2
-        ));
-        const left = Math.max(offset, rect.left - coachMarkWidth - offset);
-        return { top: `${top}px`, left: `${left}px` };
+        left = rect.left - coachMarkWidth - offset;
+        if (left < offset) {
+          left = rect.right + offset;
+          if (left + coachMarkWidth > viewportWidth - offset) {
+            left = offset;
+          }
+        }
+        top = rect.top + rect.height / 2 - 150;
+        break;
       }
       case 'right': {
-        const top = Math.max(offset, Math.min(
-          viewportHeight - coachMarkHeight - offset,
-          rect.top + rect.height / 2 - coachMarkHeight / 2
-        ));
-        const left = Math.min(
-          viewportWidth - coachMarkWidth - offset,
-          rect.right + offset
-        );
-        return { top: `${top}px`, left: `${left}px` };
+        left = rect.right + offset;
+        if (left + coachMarkWidth > viewportWidth - offset) {
+          left = rect.left - coachMarkWidth - offset;
+          if (left < offset) {
+            left = offset;
+          }
+        }
+        top = rect.top + rect.height / 2 - 150;
+        break;
       }
       default:
         return {
@@ -200,6 +206,11 @@ const NewProjectTutorialOverlay: React.FC<NewProjectTutorialOverlayProps> = ({
           transform: 'translate(-50%, -50%)'
         };
     }
+
+    left = Math.max(offset, Math.min(viewportWidth - coachMarkWidth - offset, left));
+    top = Math.max(offset, Math.min(viewportHeight - maxCoachMarkHeight - offset, top));
+
+    return { top: `${top}px`, left: `${left}px` };
   };
 
   const getSpotlightStyle = () => {
@@ -223,7 +234,7 @@ const NewProjectTutorialOverlay: React.FC<NewProjectTutorialOverlayProps> = ({
   return (
     <div className="fixed inset-0 z-[100] pointer-events-none">
       <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm pointer-events-auto transition-opacity duration-300"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto transition-opacity duration-300"
         style={{ opacity: isVisible ? 1 : 0 }}
       />
 
@@ -233,7 +244,7 @@ const NewProjectTutorialOverlay: React.FC<NewProjectTutorialOverlayProps> = ({
             className="absolute pointer-events-none transition-all duration-300 ease-out"
             style={{
               ...spotlightStyle,
-              boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 40px 8px rgba(59, 130, 246, 0.5)',
+              boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.4), 0 0 40px 8px rgba(59, 130, 246, 0.5)',
               borderRadius: '12px',
               zIndex: 101
             }}
@@ -254,11 +265,12 @@ const NewProjectTutorialOverlay: React.FC<NewProjectTutorialOverlayProps> = ({
         }`}
         style={{
           ...getCoachMarkPosition(),
-          maxWidth: '400px',
+          maxWidth: 'min(400px, calc(100vw - 32px))',
+          maxHeight: 'calc(100vh - 32px)',
           zIndex: 103
         }}
       >
-        <div className="bg-gray-900 border-2 border-blue-500/50 rounded-2xl shadow-2xl shadow-blue-500/20 p-6">
+        <div className="bg-gray-900 border-2 border-blue-500/50 rounded-2xl shadow-2xl shadow-blue-500/20 p-6 max-h-[calc(100vh-32px)] overflow-y-auto">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
               <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
