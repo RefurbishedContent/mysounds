@@ -197,7 +197,8 @@ export const useProjectWizard = () => {
         if (state.projectType === 'transition') {
           return state.selectedSongs.length === 2;
         } else if (state.projectType === 'mixer') {
-          return state.selectedBlends.length >= 2;
+          // Allow unlimited blends (0 or more) for mixer projects
+          return true;
         }
         return false;
       case 3:

@@ -5,10 +5,14 @@ import { ProjectType } from '../../hooks/useProjectWizard';
 import SongSelectionGrid from './SongSelectionGrid';
 import CompatibilityIndicator from './CompatibilityIndicator';
 import AISuggestions from './AISuggestions';
+import { BlendPreviewCard } from './BlendPreviewCard';
+import { InsufficientBlendsModal } from './InsufficientBlendsModal';
 import { storageService } from '../../lib/storage';
 import { blendExportService, BlendData } from '../../lib/blendExportService';
 import { useAuth } from '../../contexts/AuthContext';
 import { getDemoSongs } from '../../lib/demoData';
+import { audioPlayer } from '../../lib/audioPlayer';
+import { supabase } from '../../lib/supabase';
 
 interface WizardStep2ContentSelectionProps {
   projectType: ProjectType;
@@ -41,6 +45,8 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
   const [allSongs, setAllSongs] = useState<UploadResult[]>([]);
   const [allBlends, setAllBlends] = useState<BlendData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [playingBlendId, setPlayingBlendId] = useState<string | null>(null);
+  const [showInsufficientBlendsModal, setShowInsufficientBlendsModal] = useState(false);
 
   useEffect(() => {
     const loadContent = async () => {
@@ -81,6 +87,59 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
 
     loadContent();
   }, [user, projectType, tutorialMode]);
+
+  useEffect(() => {
+    if (projectType === 'mixer' && !tutorialMode && !loading && allBlends.length < 2) {
+      setShowInsufficientBlendsModal(true);
+    }
+  }, [projectType, tutorialMode, loading, allBlends.length]);
+
+  const handleTogglePlay = async (blend: BlendData) => {
+    if (playingBlendId === blend.id) {
+      audioPlayer.pause();
+      setPlayingBlendId(null);
+    } else {
+      if (playingBlendId) {
+        audioPlayer.stop();
+      }
+
+      if (blend.file_url) {
+        audioPlayer.play(blend.file_url);
+        setPlayingBlendId(blend.id);
+
+        audioPlayer.onEnded(() => {
+          setPlayingBlendId(null);
+        });
+      }
+    }
+  };
+
+  const handleToggleFavorite = async (blendId: string, currentValue: boolean) => {
+    try {
+      await supabase
+        .from('blends')
+        .update({ is_favorite: !currentValue })
+        .eq('id', blendId);
+
+      setAllBlends(prevBlends =>
+        prevBlends.map(b =>
+          b.id === blendId ? { ...b, is_favorite: !currentValue } : b
+        )
+      );
+    } catch (error) {
+      console.error('Failed to toggle favorite:', error);
+    }
+  };
+
+  const handleCreateTransition = () => {
+    audioPlayer.stop();
+    setPlayingBlendId(null);
+    onBack();
+  };
+
+  const handleContinueAnyway = () => {
+    setShowInsufficientBlendsModal(false);
+  };
 
   const handleSongSelect = (song: UploadResult, slot?: number) => {
     if (projectType === 'transition') {
@@ -263,132 +322,130 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
 
   if (projectType === 'mixer') {
     return (
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
-          <div className="max-w-full lg:max-w-5xl xl:max-w-6xl mx-auto space-y-4 px-2">
-            <div className="text-center space-y-1">
-              <h2 className="text-xl font-bold text-white">Select Your Blends</h2>
-              <p className="text-sm text-gray-400">Choose 2 or more blends to create a seamless mix</p>
-            </div>
-
-            {selectedBlends.length > 0 && (
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-white">
-                    Selected Blends ({selectedBlends.length})
-                  </h3>
-                </div>
-                <div className="grid grid-cols-1 gap-3">
-                  {selectedBlends.map((blend, index) => (
-                    <div key={blend.id} className="flex items-center justify-between p-4 bg-gray-700 rounded-lg min-w-0">
-                      <div className="flex items-center space-x-3 flex-1 min-w-0">
-                        <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <span className="text-white font-bold">{index + 1}</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white font-medium break-words line-clamp-1" title={blend.name}>
-                            {blend.name}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs text-gray-400">{Math.floor(blend.duration / 60)}:{String(blend.duration % 60).padStart(2, '0')}</span>
-                            <span className="text-xs text-gray-500">•</span>
-                            <span className="text-xs text-gray-400">{blend.format.toUpperCase()}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => onClearBlend?.(blend.id)}
-                        className="text-gray-400 hover:text-white transition-colors p-1 flex-shrink-0 ml-2"
-                      >
-                        <X size={18} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+      <>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
+            <div className="max-w-full lg:max-w-5xl xl:max-w-6xl mx-auto space-y-4 px-2">
+              <div className="text-center space-y-1">
+                <h2 className="text-xl font-bold text-white">Select Your Blends</h2>
+                <p className="text-sm text-gray-400">
+                  {allBlends.length < 2
+                    ? `You have ${allBlends.length} blend${allBlends.length === 1 ? '' : 's'}. Create at least 2 blends to start mixing`
+                    : 'Choose blends to create a seamless mix'
+                  }
+                </p>
               </div>
-            )}
 
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-4">Your Blends</h3>
-              {allBlends.length === 0 ? (
-                <div className="bg-gray-800 border-2 border-dashed border-gray-600 rounded-xl p-12 text-center">
-                  <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Music size={32} className="text-gray-500" />
+              {selectedBlends.length > 0 && (
+                <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-white">
+                      Selected Blends ({selectedBlends.length})
+                    </h3>
+                    <span className="text-sm text-gray-400">
+                      {selectedBlends.length < 2 && '2 minimum for playback'}
+                    </span>
                   </div>
-                  <h3 className="text-lg font-semibold text-white mb-2">No Blends Yet</h3>
-                  <p className="text-gray-400 mb-4">Create transition blends first to use them in your mix</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {allBlends.map((blend) => {
-                    const isSelected = selectedBlends.some(b => b.id === blend.id);
-                    return (
-                      <button
-                        key={blend.id}
-                        onClick={() => !isSelected && onSelectBlend?.(blend)}
-                        disabled={isSelected}
-                        className={`p-4 rounded-xl text-left transition-all duration-200 ${
-                          isSelected
-                            ? 'bg-gray-700 border-2 border-cyan-500 cursor-not-allowed opacity-50'
-                            : 'bg-gray-800 border-2 border-gray-700 hover:border-cyan-500 hover:shadow-lg hover:shadow-cyan-500/20'
-                        }`}
-                      >
-                        <div className="flex items-start space-x-3">
-                          <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <Music size={24} className="text-white" />
+                  <div className="grid grid-cols-1 gap-3">
+                    {selectedBlends.map((blend, index) => (
+                      <div key={blend.id} className="flex items-center justify-between p-4 bg-gray-700 rounded-lg min-w-0">
+                        <div className="flex items-center space-x-3 flex-1 min-w-0">
+                          <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <span className="text-white font-bold">{index + 1}</span>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-white mb-1 break-words line-clamp-2" title={blend.name}>
+                            <p className="text-white font-medium break-words line-clamp-1" title={blend.name}>
                               {blend.name}
-                            </h4>
-                            <div className="flex flex-wrap items-center gap-2 text-xs">
-                              <span className="bg-gray-700 text-gray-300 px-2 py-0.5 rounded">
-                                {Math.floor(blend.duration / 60)}:{String(blend.duration % 60).padStart(2, '0')}
-                              </span>
-                              <span className="bg-gray-700 text-gray-300 px-2 py-0.5 rounded">
-                                {blend.format.toUpperCase()}
-                              </span>
-                              {blend.transitionDuration && (
-                                <span className="bg-cyan-500/20 text-cyan-400 px-2 py-0.5 rounded">
-                                  {blend.transitionDuration}s transition
-                                </span>
-                              )}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-gray-400">{Math.floor(blend.duration / 60)}:{String(blend.duration % 60).padStart(2, '0')}</span>
+                              <span className="text-xs text-gray-500">•</span>
+                              <span className="text-xs text-gray-400">{blend.format.toUpperCase()}</span>
                             </div>
                           </div>
                         </div>
-                      </button>
-                    );
-                  })}
+                        <button
+                          onClick={() => onClearBlend?.(blend.id)}
+                          className="text-gray-400 hover:text-white transition-colors p-1 flex-shrink-0 ml-2"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
+
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-4">Your Blend Library</h3>
+                {allBlends.length === 0 ? (
+                  <div className="bg-gray-800 border-2 border-dashed border-gray-600 rounded-xl p-12 text-center">
+                    <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Music size={32} className="text-gray-500" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-white mb-2">No Blends Yet</h3>
+                    <p className="text-gray-400 mb-6">Create transition blends first to use them in your mix</p>
+                    <button
+                      onClick={handleCreateTransition}
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white rounded-lg font-semibold shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/50 transition-all duration-200"
+                    >
+                      <span>Create Your First Blend</span>
+                      <ArrowRight size={20} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {allBlends.map((blend) => {
+                      const isSelected = selectedBlends.some(b => b.id === blend.id);
+                      const isPlaying = playingBlendId === blend.id;
+
+                      return (
+                        <BlendPreviewCard
+                          key={blend.id}
+                          blend={blend}
+                          isSelected={isSelected}
+                          isPlaying={isPlaying}
+                          onSelect={() => !isSelected && onSelectBlend?.(blend)}
+                          onTogglePlay={() => handleTogglePlay(blend)}
+                          onToggleFavorite={(isFavorite) => handleToggleFavorite(blend.id, isFavorite)}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-shrink-0 bg-gray-800 border-t border-gray-700 p-4">
+            <div className="max-w-full lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center justify-between px-2">
+              <button
+                onClick={onBack}
+                className="flex items-center space-x-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-all duration-200"
+              >
+                <ArrowLeft size={20} />
+                <span>Back</span>
+              </button>
+              <button
+                onClick={onNext}
+                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white rounded-lg font-medium shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/50 transition-all duration-200"
+              >
+                <span>Continue {selectedBlends.length > 0 ? `with ${selectedBlends.length} Blend${selectedBlends.length === 1 ? '' : 's'}` : ''}</span>
+                <ArrowRight size={20} />
+              </button>
             </div>
           </div>
         </div>
 
-        <div className="flex-shrink-0 bg-gray-800 border-t border-gray-700 p-4">
-          <div className="max-w-full lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center justify-between px-2">
-            <button
-              onClick={onBack}
-              className="flex items-center space-x-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-all duration-200"
-            >
-              <ArrowLeft size={20} />
-              <span>Back</span>
-            </button>
-            <button
-              onClick={onNext}
-              disabled={!canProceed}
-              className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
-                canProceed
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/50'
-                  : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              <span>Continue</span>
-              <ArrowRight size={20} />
-            </button>
-          </div>
-        </div>
-      </div>
+        {showInsufficientBlendsModal && (
+          <InsufficientBlendsModal
+            blendCount={allBlends.length}
+            onCreateTransition={handleCreateTransition}
+            onContinueAnyway={handleContinueAnyway}
+            onClose={() => setShowInsufficientBlendsModal(false)}
+          />
+        )}
+      </>
     );
   }
 
