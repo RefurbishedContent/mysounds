@@ -47,7 +47,7 @@ const AppShell: React.FC = () => {
   const { user, signOut } = useAuth();
   const onboarding = useOnboarding();
   const isMobile = useIsMobile();
-  const [currentView, setCurrentView] = useState<AppView>('library');
+  const [currentView, setCurrentView] = useState<AppView>('home');
   const [mobileNavView, setMobileNavView] = useState<MobileNavView>('library');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
