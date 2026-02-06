@@ -8,7 +8,6 @@ import ReloadDetector from './components/ReloadDetector';
 import './styles/theme.css';
 import './lib/debugMonitor';
 import './lib/sessionPersistence';
-import { initializeMockData } from './lib/mockDataService';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
@@ -19,8 +18,6 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     console.log('🚀 App initialized with reload detection and debugging enabled');
     console.log('📊 Press Ctrl+Shift+D to open debug panel');
-    initializeMockData();
-    console.log('✅ Mock data initialized');
   }, []);
 
   // Only auto-navigate to app on initial mount if already authenticated

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Music, Clock, Layers, Edit3, CheckCircle, AlertCircle, Loader } from 'lucide-react';
-import { TransitionData } from '../../lib/transitionsService';
-import { getMockTransitions, getMockSongById } from '../../lib/mockDataService';
+import { TransitionData, transitionsService } from '../../lib/transitionsService';
+import { storageService } from '../../lib/storage';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface BlenderStartScreenProps {
@@ -31,17 +31,17 @@ const BlenderStartScreen: React.FC<BlenderStartScreenProps> = ({
 
     try {
       setLoading(true);
-      const data = getMockTransitions();
-      setTransitions(data as any);
+      const data = await transitionsService.getUserTransitions(user.id);
+      setTransitions(data);
 
       const names: Record<string, string> = {};
       for (const transition of data) {
         if (!names[transition.songAId]) {
-          const songA = getMockSongById(transition.songAId);
+          const songA = await storageService.getUpload(transition.songAId);
           names[transition.songAId] = songA?.originalName || 'Unknown Song';
         }
         if (!names[transition.songBId]) {
-          const songB = getMockSongById(transition.songBId);
+          const songB = await storageService.getUpload(transition.songBId);
           names[transition.songBId] = songB?.originalName || 'Unknown Song';
         }
       }

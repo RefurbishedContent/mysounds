@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Music, Search, Filter, Upload, Folder, Clock, Star, Grid3x3 as Grid3X3, List, Heart, MoreVertical, Shuffle, Plus, Sparkles, Download, Play, Zap, CheckCircle, AlertCircle, Loader, Sliders } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { UploadResult } from '../lib/storage';
-import { BlendData } from '../lib/blendExportService';
-import { getMockSongs, getMockBlends, MockBlend } from '../lib/mockDataService';
+import { storageService, UploadResult } from '../lib/storage';
+import { blendExportService, BlendData } from '../lib/blendExportService';
+import { songAnalyzer } from '../lib/songAnalyzer';
 import LibraryUploader from './LibraryUploader';
 import SongDetailModal from './SongDetailModal';
 
@@ -35,11 +35,11 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
     setLoading(true);
     try {
       if (currentTab === 'songs') {
-        const mockSongs = getMockSongs();
-        setSongs(mockSongs.filter((u: any) => u.status === 'ready'));
+        const uploads = await storageService.getUserUploads(user.id);
+        setSongs(uploads.filter(u => u.status === 'ready'));
       } else {
-        const mockBlends = getMockBlends();
-        setBlends(mockBlends as any);
+        const userBlends = await blendExportService.getUserBlends(user.id);
+        setBlends(userBlends);
       }
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -128,10 +128,13 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
             </button>
           </div>
 
-          <div className="px-4 py-2 bg-gray-700/50 text-gray-400 rounded-lg font-semibold flex items-center space-x-2 border border-gray-600">
-            <Music size={16} />
-            <span className="text-sm">Demo Songs</span>
-          </div>
+          <button
+            onClick={() => setShowUploader(true)}
+            className="px-4 py-2 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105"
+          >
+            <Upload size={16} />
+            <span className="text-sm">Upload Music</span>
+          </button>
         </div>
       </div>
 
@@ -238,11 +241,18 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
                 <Music size={32} className="text-cyan-400" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-lg font-bold text-white">No Songs Match Filter</h2>
+                <h2 className="text-lg font-bold text-white">Your Library is Empty</h2>
                 <p className="text-sm text-gray-400 leading-relaxed">
-                  Try adjusting your search or filter settings.
+                  Start building your music collection by uploading audio files.
                 </p>
               </div>
+              <button
+                onClick={() => setShowUploader(true)}
+                className="w-full px-4 py-2.5 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105"
+              >
+                <Upload size={16} />
+                <span className="text-sm">Upload Your First Track</span>
+              </button>
             </div>
           </div>
         ) : currentTab === 'blends' && blends.length === 0 ? (
@@ -277,9 +287,39 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
                         className="w-full aspect-square bg-gradient-to-br from-cyan-600/20 to-purple-600/20 rounded-lg mb-2 flex items-center justify-center relative cursor-pointer"
                       >
                         <Music className="w-10 h-10 text-cyan-400" />
-                        <div className="absolute top-1 right-1 w-5 h-5 bg-green-500/90 rounded-full flex items-center justify-center">
-                          <CheckCircle className="w-3 h-3 text-white" />
-                        </div>
+
+                        {!hasFullAnalysis && !isAnalyzing && (
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (!user) return;
+                              try {
+                                await songAnalyzer.analyzeSong(song.id, user.id);
+                              } catch (error) {
+                                console.error('Analysis failed:', error);
+                                alert(error instanceof Error ? error.message : 'Analysis failed');
+                              }
+                            }}
+                            className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center"
+                          >
+                            <div className="flex flex-col items-center space-y-1">
+                              <Sparkles className="w-6 h-6 text-purple-400" />
+                              <span className="text-xs text-white font-medium">Analyze</span>
+                            </div>
+                          </button>
+                        )}
+
+                        {hasFullAnalysis && (
+                          <div className="absolute top-1 right-1 w-5 h-5 bg-green-500/90 rounded-full flex items-center justify-center">
+                            <CheckCircle className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+
+                        {isAnalyzing && (
+                          <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center">
+                            <Loader className="w-6 h-6 text-cyan-400 animate-spin" />
+                          </div>
+                        )}
                       </div>
                       <div onClick={() => handleSongClick(song)} className="cursor-pointer">
                         <h3 className="text-white font-medium text-xs truncate mb-0.5">
@@ -309,9 +349,16 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
                         className="w-10 h-10 bg-gradient-to-br from-cyan-600/20 to-purple-600/20 rounded flex items-center justify-center flex-shrink-0 cursor-pointer relative"
                       >
                         <Music className="w-5 h-5 text-cyan-400" />
-                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-                          <CheckCircle className="w-2.5 h-2.5 text-white" />
-                        </div>
+                        {hasFullAnalysis && (
+                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                            <CheckCircle className="w-2.5 h-2.5 text-white" />
+                          </div>
+                        )}
+                        {isAnalyzing && (
+                          <div className="absolute inset-0 bg-black/60 rounded flex items-center justify-center">
+                            <Loader className="w-4 h-4 text-cyan-400 animate-spin" />
+                          </div>
+                        )}
                       </div>
                       <div onClick={() => handleSongClick(song)} className="flex-1 min-w-0 cursor-pointer">
                         <h3 className="text-white font-medium text-sm truncate">{song.originalName}</h3>
@@ -319,6 +366,24 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
                           {song.analysis?.bpm ? `${Math.round(song.analysis.bpm)} BPM` : 'Not analyzed'}
                         </p>
                       </div>
+                      {!hasFullAnalysis && !isAnalyzing && (
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!user) return;
+                            try {
+                              await songAnalyzer.analyzeSong(song.id, user.id);
+                            } catch (error) {
+                              console.error('Analysis failed:', error);
+                              alert(error instanceof Error ? error.message : 'Analysis failed');
+                            }
+                          }}
+                          className="opacity-0 group-hover:opacity-100 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-medium rounded-lg transition-all duration-200 flex items-center space-x-1"
+                        >
+                          <Sparkles className="w-3 h-3" />
+                          <span>Analyze</span>
+                        </button>
+                      )}
                     </div>
                   );
                 })}

@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Music, ArrowLeft, ChevronRight, Search, X, SlidersHorizontal, Sparkles, Play, Pause } from 'lucide-react';
 import * as Tone from 'tone';
 import { useAuth } from '../contexts/AuthContext';
-import { UploadResult } from '../lib/storage';
-import { getMockSongs, createMockTransition } from '../lib/mockDataService';
+import { storageService, UploadResult } from '../lib/storage';
+import { transitionsService } from '../lib/transitionsService';
 import { AudioScrubber } from './AudioScrubber';
 import { TransitionEditorView } from './TransitionEditorView';
 
@@ -117,11 +117,11 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
       return;
     }
 
-    console.log('[TransitionCreator] Loading mock data');
+    console.log('[TransitionCreator] Loading data for user:', user.id, user.email);
     setLoading(true);
     try {
-      const songsData = getMockSongs();
-      const readySongs = songsData.filter((s: any) => s.status === 'ready');
+      const songsData = await storageService.getUserUploads(user.id);
+      const readySongs = songsData.filter(s => s.status === 'ready');
       console.log('[TransitionCreator] Loaded data:', {
         totalSongs: songsData.length,
         readySongs: readySongs.length,
@@ -219,7 +219,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
 
     setSaving(true);
     try {
-      const transition = await createMockTransition({
+      const transition = await transitionsService.createTransition(user.id, {
         name: `${songA.originalName} → ${songB.originalName}`,
         songAId: songA.id,
         songBId: songB.id,

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sliders, Volume2, VolumeX, RotateCcw, Equal as Equalizer, Headphones, Settings, Play, Upload, Music, Zap, Disc3, Plus, Clock, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { MixSession } from '../lib/mixerService';
-import { getMockMixSessions, deleteMockMixSession, MockMixSession } from '../lib/mockDataService';
+import { mixerService, MixSession } from '../lib/mixerService';
 
 interface MixerViewProps {
   onCreateNew?: () => void;
@@ -20,8 +19,8 @@ const MixerView: React.FC<MixerViewProps> = ({ onCreateNew, onOpenSession }) => 
 
       try {
         setLoading(true);
-        const sessions = getMockMixSessions();
-        setMixSessions(sessions as any);
+        const sessions = await mixerService.listUserMixes(user.id);
+        setMixSessions(sessions);
       } catch (error) {
         console.error('Failed to load mix sessions:', error);
       } finally {
@@ -40,7 +39,7 @@ const MixerView: React.FC<MixerViewProps> = ({ onCreateNew, onOpenSession }) => 
     }
 
     try {
-      deleteMockMixSession(sessionId);
+      await mixerService.deleteMixSession(sessionId);
       setMixSessions(prev => prev.filter(s => s.id !== sessionId));
     } catch (error) {
       console.error('Failed to delete mix session:', error);
