@@ -109,9 +109,13 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   const [loading, setLoading] = useState(true);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showBackDialog, setShowBackDialog] = useState(false);
+  const [showLengthWarning, setShowLengthWarning] = useState(false);
+  const [lengthWarningMessage, setLengthWarningMessage] = useState('');
 
   const [songADuration, setSongADuration] = useState(songA.metadata?.duration || 300);
   const [songBDuration, setSongBDuration] = useState(songB.metadata?.duration || 300);
+  const [templateAudioUrl, setTemplateAudioUrl] = useState<string | null>(null);
+  const [transitionProgress, setTransitionProgress] = useState(0);
 
   const [zoomLevel, setZoomLevel] = useState(50);
   const [trackHeight, setTrackHeight] = useState(120);
@@ -188,6 +192,9 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       if (transition.metadata?.transitionFadeCurve) {
         setTransitionFadeCurve(transition.metadata.transitionFadeCurve);
       }
+      if (transition.metadata?.templateAudioUrl) {
+        setTemplateAudioUrl(transition.metadata.templateAudioUrl);
+      }
     }
   }, [transition]);
 
@@ -263,6 +270,27 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   }, []);
 
 
+  const validateSongLengths = (duration: number): boolean => {
+    if (!transition) return true;
+
+    const minRequiredLength = duration / 2;
+    const songAClipDuration = (transition.songAMarkerPoint || 0) - (transition.songAClipStart || 0);
+    const songBClipDuration = (transition.songBClipEnd || 0) - (transition.songBMarkerPoint || 0);
+
+    if (songAClipDuration < minRequiredLength || songBClipDuration < minRequiredLength) {
+      const durationName = duration === 6 ? 'Short (6s)' : duration === 12 ? 'Medium (12s)' : 'Long (20s)';
+      setLengthWarningMessage(
+        `${durationName} transition requires at least ${minRequiredLength.toFixed(1)}s of each song. ` +
+        `Song A has ${songAClipDuration.toFixed(1)}s and Song B has ${songBClipDuration.toFixed(1)}s. ` +
+        `Please return to the previous step to adjust your transition markers.`
+      );
+      setShowLengthWarning(true);
+      return false;
+    }
+
+    return true;
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -278,8 +306,13 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
         const template = templatesData.find(t => t.id === transitionData.templateId);
         if (template) {
           setSelectedTemplate(template);
+          if (template.templateData?.previewUrl) {
+            setTemplateAudioUrl(template.templateData.previewUrl);
+          }
         }
       }
+
+      validateSongLengths(transitionData.transitionDuration);
     } catch (error) {
       console.error('Failed to load transition data:', error);
       alert('Failed to load transition data');
@@ -318,13 +351,18 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     setSelectedTemplate(template);
     setIsTemplatesExpanded(false);
 
+    if (template.templateData?.previewUrl) {
+      setTemplateAudioUrl(template.templateData.previewUrl);
+    }
+
     try {
       await transitionsService.updateTransition(transitionId, {
         templateId: template.id,
         transitionDuration: template.duration,
         metadata: {
           ...transition.metadata,
-          templateName: template.name
+          templateName: template.name,
+          templateAudioUrl: template.templateData?.previewUrl || null
         }
       });
 
@@ -333,6 +371,8 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
 
       const updatedTransition = await transitionsService.getTransition(transitionId);
       setTransition(updatedTransition);
+
+      validateSongLengths(template.duration);
     } catch (error) {
       console.error('Failed to update template:', error);
       alert('Failed to update template');
@@ -343,6 +383,11 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     if (!transition) return;
 
     const newDuration = getDurationForSize(size);
+
+    if (!validateSongLengths(newDuration)) {
+      return;
+    }
+
     setDurationSize(size);
     setTransitionDuration(newDuration);
 
@@ -431,6 +476,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       setTransitionFadeOutKeyframes(defaultTransitionFadeOut);
       setTransitionFadeCurve('smooth');
       setSelectedTemplate(null);
+      setTemplateAudioUrl(null);
       setDurationSize('medium');
       setTransitionDuration(12);
 
@@ -446,7 +492,8 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
             transitionFadeInKeyframes: defaultTransitionFadeIn,
             transitionFadeOutKeyframes: defaultTransitionFadeOut,
             transitionFadeCurve: 'smooth',
-            durationSize: 'medium'
+            durationSize: 'medium',
+            templateAudioUrl: null
           }
         });
 
@@ -544,7 +591,8 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   };
 
   const handlePlayTransition = async () => {
-    if (!transition || transition.songAMarkerPoint === undefined || transition.songBMarkerPoint === undefined) {
+    if (!selectedTemplate || !templateAudioUrl) {
+      alert('Please select a transition template first');
       return;
     }
 
@@ -560,58 +608,53 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     }
 
     try {
-      const volumeNodeA = new Tone.Volume(0).toDestination();
-      const volumeNodeB = new Tone.Volume(0).toDestination();
-      volumeNodeARef.current = volumeNodeA;
-      volumeNodeBRef.current = volumeNodeB;
+      const volumeNode = new Tone.Volume(0).toDestination();
+      volumeNodeARef.current = volumeNode;
 
-      const playerA = new Tone.Player(songA.url);
-      const playerB = new Tone.Player(songB.url);
+      const player = new Tone.Player(templateAudioUrl, () => {
+        const templateDur = selectedTemplate.duration;
 
-      await Promise.all([
-        new Promise<void>((resolve) => {
-          playerA.load(songA.url).then(() => resolve());
-        }),
-        new Promise<void>((resolve) => {
-          playerB.load(songB.url).then(() => resolve());
-        })
-      ]);
+        applyVolumeAutomation(volumeNode, transitionFadeInKeyframes, templateDur, transitionFadeCurve);
 
-      const songATransitionStart = Math.max(0, transition.songAMarkerPoint - transitionDuration);
-      const songBTransitionEnd = transition.songBMarkerPoint + transitionDuration;
+        setTimeout(() => {
+          applyVolumeAutomation(volumeNode, transitionFadeOutKeyframes, templateDur, transitionFadeCurve);
+        }, 10);
 
-      applyVolumeAutomation(volumeNodeA, transitionFadeOutKeyframes, transitionDuration, transitionFadeCurve);
-      applyVolumeAutomation(volumeNodeB, transitionFadeInKeyframes, transitionDuration, transitionFadeCurve);
+        player.connect(volumeNode);
+        player.sync().start(0, 0, templateDur);
+        Tone.Transport.start();
 
-      playerA.connect(volumeNodeA);
-      playerB.connect(volumeNodeB);
+        playerTransitionRef.current = player;
+        setIsPlayingTransition(true);
+        setTransitionProgress(0);
 
-      playerA.sync().start(0, songATransitionStart, transitionDuration);
-      playerB.sync().start(0, transition.songBMarkerPoint, transitionDuration);
+        const startTime = Date.now();
+        const updateProgress = () => {
+          const elapsed = (Date.now() - startTime) / 1000;
+          const progress = Math.min(elapsed / templateDur, 1);
+          setTransitionProgress(progress);
 
-      Tone.Transport.start();
+          if (progress < 1 && isPlayingTransition) {
+            requestAnimationFrame(updateProgress);
+          }
+        };
+        requestAnimationFrame(updateProgress);
 
-      playerARef.current = playerA;
-      playerBRef.current = playerB;
-      setIsPlayingTransition(true);
-
-      setTimeout(() => {
-        playerA.stop();
-        playerB.stop();
-        playerA.dispose();
-        playerB.dispose();
-        volumeNodeA.dispose();
-        volumeNodeB.dispose();
-        playerARef.current = null;
-        playerBRef.current = null;
-        volumeNodeARef.current = null;
-        volumeNodeBRef.current = null;
-        setIsPlayingTransition(false);
-        Tone.Transport.stop();
-      }, transitionDuration * 1000);
+        setTimeout(() => {
+          player.stop();
+          player.dispose();
+          volumeNode.dispose();
+          playerTransitionRef.current = null;
+          volumeNodeARef.current = null;
+          setIsPlayingTransition(false);
+          setTransitionProgress(0);
+          Tone.Transport.stop();
+        }, templateDur * 1000);
+      });
     } catch (error) {
       console.error('Failed to play transition:', error);
       setIsPlayingTransition(false);
+      setTransitionProgress(0);
     }
   };
 
@@ -749,6 +792,32 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
 
     setSaving(true);
     try {
+      const blenderOutput = {
+        songASegment: {
+          clipStart: transition.songAClipStart,
+          clipEnd: transition.songAMarkerPoint,
+          fadeOutKeyframes: songAKeyframes,
+          fadeCurve: songAFadeCurve
+        },
+        templateSegment: {
+          audioUrl: templateAudioUrl,
+          duration: transitionDuration,
+          fadeInKeyframes: transitionFadeInKeyframes,
+          fadeOutKeyframes: transitionFadeOutKeyframes,
+          fadeCurve: transitionFadeCurve,
+          templateName: selectedTemplate.name,
+          templateId: selectedTemplate.id
+        },
+        songBSegment: {
+          clipStart: transition.songBMarkerPoint,
+          clipEnd: transition.songBClipEnd,
+          fadeInKeyframes: songBKeyframes,
+          fadeCurve: songBFadeCurve
+        },
+        version: '1.0',
+        createdAt: new Date().toISOString()
+      };
+
       await transitionsService.updateTransition(transitionId, {
         status: 'ready',
         metadata: {
@@ -759,7 +828,9 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
           songBFadeCurve,
           transitionFadeInKeyframes,
           transitionFadeOutKeyframes,
-          transitionFadeCurve
+          transitionFadeCurve,
+          templateAudioUrl,
+          blenderOutput
         }
       });
 
@@ -1125,18 +1196,16 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                       boxShadow: '0 0 20px rgba(168,85,247,0.3), inset 0 0 20px rgba(168,85,247,0.1)'
                     }}
                   >
-                    {transition && transition.songAMarkerPoint !== undefined && transition.songBMarkerPoint !== undefined ? (
+                    {transition ? (
                       <>
                         <TransitionWaveformDisplay
-                          songAUrl={songA.url}
-                          songBUrl={songB.url}
-                          songAEndTime={transition.songAMarkerPoint}
-                          songBStartTime={transition.songBMarkerPoint}
-                          transitionDuration={transitionDuration}
+                          templateAudioUrl={templateAudioUrl}
+                          templateDuration={transitionDuration}
                           height={Math.max(80, trackHeight * 0.6) - 32}
                           fadeInKeyframes={transitionFadeInKeyframes}
                           fadeOutKeyframes={transitionFadeOutKeyframes}
                           zoom={zoomLevel / 100}
+                          progress={transitionProgress}
                         />
 
                         <div className="absolute inset-0 pointer-events-auto">
@@ -1358,6 +1427,41 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
           }}
           onCancel={() => setShowResetPointsModal(false)}
         />
+      )}
+
+      {showLengthWarning && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-gray-800 border-2 border-yellow-500/50 rounded-lg p-6 max-w-lg w-full mx-4 shadow-2xl">
+            <div className="flex items-start space-x-3 mb-4">
+              <div className="flex-shrink-0 w-10 h-10 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-white mb-2">Insufficient Song Length</h3>
+                <p className="text-sm text-gray-300 leading-relaxed">{lengthWarningMessage}</p>
+              </div>
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowLengthWarning(false);
+                  onBack();
+                }}
+                className="flex-1 px-4 py-2.5 bg-cyan-600 hover:bg-cyan-500 rounded text-white font-semibold transition-colors"
+              >
+                Adjust Markers
+              </button>
+              <button
+                onClick={() => setShowLengthWarning(false)}
+                className="flex-1 px-4 py-2.5 bg-gray-700 hover:bg-gray-600 rounded text-white font-semibold transition-colors"
+              >
+                Continue Anyway
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
