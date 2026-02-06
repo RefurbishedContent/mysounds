@@ -53,6 +53,8 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
   const [pendingSong, setPendingSong] = useState<UploadResult | null>(null);
   const selectionPanelRef = useRef<HTMLDivElement>(null);
 
+  const [customName, setCustomName] = useState<string>('');
+
   useEffect(() => {
     loadData();
   }, [user]);
@@ -214,13 +216,32 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
     }
   };
 
+  const generateShortName = (songA: UploadResult, songB: UploadResult): string => {
+    const extractArtist = (filename: string): string => {
+      // Try to extract artist name before " - " or just truncate
+      const parts = filename.split(' - ');
+      if (parts.length > 1) {
+        return parts[0].trim();
+      }
+      // If no artist separator, truncate to 15 characters
+      return filename.length > 15 ? filename.substring(0, 15) : filename;
+    };
+
+    const artistA = extractArtist(songA.originalName);
+    const artistB = extractArtist(songB.originalName);
+
+    return `${artistA} → ${artistB}`;
+  };
+
   const handleBeginEditing = async () => {
     if (!user || !songA || !songB) return;
 
     setSaving(true);
     try {
+      const transitionName = customName.trim() || generateShortName(songA, songB);
+
       const transition = await transitionsService.createTransition(user.id, {
-        name: `${songA.originalName} → ${songB.originalName}`,
+        name: transitionName,
         songAId: songA.id,
         songBId: songB.id,
         templateId: null,
@@ -742,14 +763,37 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
           <div className="max-w-7xl mx-auto px-4 py-6 space-y-6" data-tutorial="transition-points-interface">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-white mb-2">Set Transition Points</h2>
-              <p className="text-gray-400">Drag markers to control when songs start, fade, and end</p>
+              <p className="text-gray-400 mb-4">Drag markers to control when songs start, fade, and end</p>
+
+              <div className="max-w-md mx-auto">
+                <label className="block text-sm font-medium text-gray-300 mb-2 text-left">
+                  Transition Name (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder={generateShortName(songA, songB)}
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  maxLength={50}
+                  className="w-full px-4 py-2.5 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                />
+                <p className="text-xs text-gray-500 mt-1.5 text-left">
+                  {customName.length > 0 ? (
+                    <>Custom name: <span className="text-cyan-400 font-medium">{customName}</span> ({customName.length}/50)</>
+                  ) : (
+                    <>Default: <span className="text-gray-400 font-medium">{generateShortName(songA, songB)}</span></>
+                  )}
+                </p>
+              </div>
             </div>
 
             <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 space-y-8">
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h4 className="text-lg font-semibold text-white">{songA.originalName}</h4>
+                  <div className="flex-1 min-w-0 mr-4">
+                    <h4 className="text-lg font-semibold text-white truncate" title={songA.originalName}>
+                      {songA.originalName}
+                    </h4>
                     <p className="text-sm text-gray-400">Drag markers to set Song A boundaries</p>
                   </div>
                   <div className="text-right">
@@ -834,8 +878,10 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
 
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h4 className="text-lg font-semibold text-white">{songB.originalName}</h4>
+                  <div className="flex-1 min-w-0 mr-4">
+                    <h4 className="text-lg font-semibold text-white truncate" title={songB.originalName}>
+                      {songB.originalName}
+                    </h4>
                     <p className="text-sm text-gray-400">Drag markers to set Song B boundaries</p>
                   </div>
                   <div className="text-right">

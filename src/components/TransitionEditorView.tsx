@@ -989,10 +989,8 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
               <ArrowLeft className="w-4 h-4 text-gray-400" />
             </button>
             <div className="flex-1">
-              <h1 className="text-sm font-bold text-white">Professional Timeline Editor</h1>
-              <p className="text-[10px] text-gray-400">
-                {songA.originalName} → {songB.originalName}
-              </p>
+              <h1 className="text-sm font-bold text-white">{transition.name}</h1>
+              <p className="text-[10px] text-gray-400">Professional Timeline Editor</p>
             </div>
           </div>
 
