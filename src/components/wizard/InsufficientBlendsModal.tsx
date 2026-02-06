@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertCircle, ArrowRight, Music } from 'lucide-react';
+import { AlertCircle, ArrowRight } from 'lucide-react';
 
 interface InsufficientBlendsModalProps {
   blendCount: number;
@@ -51,18 +51,6 @@ export const InsufficientBlendsModal: React.FC<InsufficientBlendsModalProps> = (
               Blends are seamless transitions between two songs, created in the Transition Editor.
               The mixer combines multiple blends to create longer, professional DJ mixes.
             </p>
-          </div>
-
-          <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-3">
-            <div className="flex gap-2">
-              <Music size={18} className="text-cyan-400 flex-shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-cyan-400">Quick Tip</p>
-                <p className="text-xs text-gray-300">
-                  Create a transition blend to seamlessly mix two songs together, then use the mixer to combine multiple blends into a full set.
-                </p>
-              </div>
-            </div>
           </div>
         </div>
 
