@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Trash2, Music, Search, Filter, Clock, Sparkles, Plus, Edit } from 'lucide-react';
+import { Play, Trash2, Music, Search, Filter, Clock, Sparkles, Plus, Edit, Layers } from 'lucide-react';
 import { transitionsService, TransitionData } from '../lib/transitionsService';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -7,9 +7,10 @@ interface TransitionsListProps {
   onPlayTransition?: (transitionId: string) => void;
   onEditTransition?: (transitionId: string) => void;
   onCreateNew?: () => void;
+  onBlendTransition?: () => void;
 }
 
-const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition, onEditTransition, onCreateNew }) => {
+const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition, onEditTransition, onCreateNew, onBlendTransition }) => {
   const { user } = useAuth();
   const [transitions, setTransitions] = useState<TransitionData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -168,13 +169,15 @@ const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition, onE
                     </div>
                   </div>
                   <span
+                    onClick={() => transition.status === 'ready' && onBlendTransition?.()}
                     className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                       transition.status === 'ready'
-                        ? 'bg-green-900/30 text-green-400'
+                        ? 'bg-green-900/30 text-green-400 cursor-pointer hover:bg-green-900/50 transition-colors'
                         : transition.status === 'draft'
                         ? 'bg-yellow-900/30 text-yellow-400'
                         : 'bg-gray-700 text-gray-400'
                     }`}
+                    title={transition.status === 'ready' ? 'Click to blend this transition' : ''}
                   >
                     {transition.status}
                   </span>
@@ -232,11 +235,11 @@ const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition, onE
                     <span>Edit</span>
                   </button>
                   <button
-                    onClick={() => onPlayTransition?.(transition.id)}
-                    className="flex-1 px-3 py-1.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg transition-all duration-200 flex items-center justify-center space-x-1.5 text-xs"
+                    onClick={() => onBlendTransition?.()}
+                    className="flex-1 px-3 py-1.5 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-white rounded-lg transition-all duration-200 flex items-center justify-center space-x-1.5 text-xs"
                   >
-                    <Play size={14} />
-                    <span>Preview</span>
+                    <Layers size={14} />
+                    <span>Blend This</span>
                   </button>
                   <button
                     onClick={() => handleDelete(transition.id)}

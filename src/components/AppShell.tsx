@@ -177,6 +177,10 @@ const AppShell: React.FC = () => {
     setCurrentView('transition-editor');
   };
 
+  const handleBlendTransition = () => {
+    setCurrentView('blender');
+  };
+
   const handleMobileNavigation = (view: MobileNavView) => {
     setMobileNavView(view);
 
@@ -314,10 +318,10 @@ const AppShell: React.FC = () => {
         return isMobile ? (
           <LabsView onSelectTool={handleLabToolSelect} />
         ) : (
-          <TransitionsList onCreateNew={handleCreateNewTransition} onEditTransition={handleEditTransition} />
+          <TransitionsList onCreateNew={handleCreateNewTransition} onEditTransition={handleEditTransition} onBlendTransition={handleBlendTransition} />
         );
       case 'recent-projects':
-        return <TransitionsList onCreateNew={handleCreateNewTransition} onEditTransition={handleEditTransition} />;
+        return <TransitionsList onCreateNew={handleCreateNewTransition} onEditTransition={handleEditTransition} onBlendTransition={handleBlendTransition} />;
       case 'share-schedule':
         return (
           <div className="flex items-center justify-center h-full">
