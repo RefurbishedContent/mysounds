@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Music, Search, Filter, Upload, Folder, Clock, Star, Grid3x3 as Grid3X3, List, Heart, MoreVertical, Shuffle, Plus, Sparkles, Download, Play, Zap, CheckCircle, AlertCircle, Loader, Sliders } from 'lucide-react';
+import { Music, Search, Filter, Upload, Folder, Clock, Star, Grid3x3 as Grid3X3, List, Heart, MoreVertical, Shuffle, Plus, Sparkles, Download, Play, Zap, CheckCircle, AlertCircle, Loader, Sliders, Trash } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { storageService, UploadResult } from '../lib/storage';
 import { blendExportService, BlendData } from '../lib/blendExportService';
@@ -9,9 +9,10 @@ import SongDetailModal from './SongDetailModal';
 
 interface LibraryViewProps {
   onCreateTransitionWithSong?: (song: UploadResult) => void;
+  onNavigate?: (view: string, params?: any) => void;
 }
 
-const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong }) => {
+const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong, onNavigate }) => {
   const { user } = useAuth();
   const [currentTab, setCurrentTab] = useState<'songs' | 'blends'>('songs');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -65,6 +66,21 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
   const handleCreateTransition = (song: UploadResult) => {
     setSelectedSong(null);
     onCreateTransitionWithSong?.(song);
+  };
+
+  const handleDeleteBlend = async (blendId: string) => {
+    if (!user) return;
+
+    const confirmed = window.confirm('Are you sure you want to delete this blend? This action cannot be undone.');
+    if (!confirmed) return;
+
+    try {
+      await blendExportService.deleteBlend(blendId, user.id);
+      setBlends(prevBlends => prevBlends.filter(b => b.id !== blendId));
+    } catch (error) {
+      console.error('Failed to delete blend:', error);
+      alert(error instanceof Error ? error.message : 'Failed to delete blend. Please try again.');
+    }
   };
 
   const uniqueGenres = Array.from(new Set(songs.map(song =>
@@ -393,7 +409,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
             )}
           </>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
             {blends.map((blend) => (
               <div
                 key={blend.id}
@@ -422,6 +438,16 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
                         <Download className="w-3.5 h-3.5 text-white" />
                       </a>
                     )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteBlend(blend.id);
+                      }}
+                      className="p-1.5 bg-gray-700 hover:bg-red-600 rounded-lg transition-colors"
+                      title="Delete"
+                    >
+                      <Trash className="w-3.5 h-3.5 text-white" />
+                    </button>
                   </div>
                 </div>
 
@@ -454,6 +480,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
                 {blend.status === 'completed' && (
                   <div className="flex gap-2 pt-3 border-t border-gray-700">
                     <button
+                      onClick={() => onNavigate?.('mixer', { blendId: blend.id })}
                       className="flex-1 py-2 px-3 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white rounded-lg text-xs font-medium transition-all flex items-center justify-center space-x-1"
                       title="Use in Mixer"
                     >

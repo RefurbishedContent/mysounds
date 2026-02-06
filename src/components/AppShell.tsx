@@ -301,7 +301,14 @@ const AppShell: React.FC = () => {
         return isMobile ? (
           <AIFusionView onSelectTool={handleAIToolSelect} />
         ) : (
-          <LibraryView onCreateTransitionWithSong={handleCreateTransitionWithSong} />
+          <LibraryView
+            onCreateTransitionWithSong={handleCreateTransitionWithSong}
+            onNavigate={(view, params) => {
+              if (view === 'mixer') {
+                setCurrentView('mixer');
+              }
+            }}
+          />
         );
       case 'transitions':
         return isMobile ? (
@@ -357,7 +364,16 @@ const AppShell: React.FC = () => {
         return <TemplateManager />;
       case 'library':
       case 'files':
-        return <LibraryView onCreateTransitionWithSong={handleCreateTransitionWithSong} />;
+        return (
+          <LibraryView
+            onCreateTransitionWithSong={handleCreateTransitionWithSong}
+            onNavigate={(view, params) => {
+              if (view === 'mixer') {
+                setCurrentView('mixer');
+              }
+            }}
+          />
+        );
       case 'playlists':
         return (
           <div className="flex items-center justify-center h-full">
