@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Music, Search, Filter, Upload, Folder, Clock, Star, Grid3x3 as Grid3X3, List, Heart, MoreVertical, Shuffle, Plus, Sparkles, Download, Play, Zap, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { Music, Search, Filter, Upload, Folder, Clock, Star, Grid3x3 as Grid3X3, List, Heart, MoreVertical, Shuffle, Plus, Sparkles, Download, Play, Zap, CheckCircle, AlertCircle, Loader, Sliders } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { storageService, UploadResult } from '../lib/storage';
 import { blendExportService, BlendData } from '../lib/blendExportService';
@@ -399,7 +399,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-1.5">
-                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    <Sparkles className="w-4 h-4 text-cyan-400" />
                     <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
                       blend.status === 'completed' ? 'bg-green-500/20 text-green-400' :
                       blend.status === 'processing' ? 'bg-yellow-500/20 text-yellow-400' :
@@ -408,21 +408,29 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
                       {blend.status === 'completed' ? 'Ready' : blend.status === 'processing' ? 'Processing' : 'Failed'}
                     </span>
                   </div>
-                  {blend.status === 'completed' && (
-                    <a
-                      href={blend.url}
-                      download
-                      onClick={(e) => e.stopPropagation()}
-                      className="p-1.5 bg-cyan-600 hover:bg-cyan-500 rounded-lg transition-colors"
-                    >
-                      <Download className="w-3.5 h-3.5 text-white" />
-                    </a>
-                  )}
+                  <div className="flex items-center space-x-1">
+                    {blend.status === 'completed' && blend.url && (
+                      <a
+                        href={blend.url}
+                        download
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                        title="Download"
+                      >
+                        <Download className="w-3.5 h-3.5 text-white" />
+                      </a>
+                    )}
+                  </div>
                 </div>
 
-                <h3 className="text-white font-semibold text-sm mb-2 truncate">
-                  {blend.name}
-                </h3>
+                <div className="mb-3">
+                  <div className="w-full aspect-video bg-gradient-to-br from-cyan-500/20 via-teal-500/20 to-blue-500/20 rounded-lg flex items-center justify-center mb-2 border border-cyan-500/30">
+                    <Zap className="w-10 h-10 text-cyan-400" />
+                  </div>
+                  <h3 className="text-white font-semibold text-sm line-clamp-2 mb-1">
+                    {blend.name}
+                  </h3>
+                </div>
 
                 <div className="space-y-1.5 mb-3">
                   <div className="flex items-center justify-between text-xs">
@@ -433,24 +441,29 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
                     <span className="text-gray-400">Format:</span>
                     <span className="text-white uppercase">{blend.format}</span>
                   </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-400">Quality:</span>
-                    <span className="text-white capitalize">{blend.quality}</span>
-                  </div>
+                  {blend.templateName && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-400">Template:</span>
+                      <span className="text-white truncate ml-2">{blend.templateName}</span>
+                    </div>
+                  )}
                 </div>
 
-                {blend.templateName && (
-                  <div className="pt-2 border-t border-gray-700">
-                    <div className="flex items-center space-x-1.5 text-xs text-gray-400">
-                      <Clock size={12} />
-                      <span>Template: {blend.templateName}</span>
-                    </div>
+                {blend.status === 'completed' && (
+                  <div className="flex gap-2 pt-3 border-t border-gray-700">
+                    <button
+                      className="flex-1 py-2 px-3 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white rounded-lg text-xs font-medium transition-all flex items-center justify-center space-x-1"
+                      title="Use in Mixer"
+                    >
+                      <Sliders className="w-3.5 h-3.5" />
+                      <span>Use in Mix</span>
+                    </button>
                   </div>
                 )}
 
-                <div className="pt-3 border-t border-gray-700 mt-3">
+                <div className="pt-2 mt-2 border-t border-gray-700">
                   <div className="text-xs text-gray-500">
-                    Created {new Date(blend.createdAt).toLocaleDateString()}
+                    {new Date(blend.createdAt).toLocaleDateString()}
                   </div>
                 </div>
               </div>

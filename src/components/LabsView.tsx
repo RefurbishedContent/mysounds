@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlaskConical, Scissors, AudioWaveform, Sliders, Zap } from 'lucide-react';
+import { FlaskConical, Scissors, AudioWaveform, Sliders, Zap, Layers } from 'lucide-react';
 
 interface LabsViewProps {
   onSelectTool: (tool: string) => void;
@@ -14,6 +14,14 @@ const LabsView: React.FC<LabsViewProps> = ({ onSelectTool }) => {
       description: 'Create and edit custom transitions between songs',
       gradient: 'from-cyan-500 to-blue-500',
       action: () => onSelectTool('transitions')
+    },
+    {
+      id: 'blender',
+      icon: Layers,
+      title: 'Blender',
+      description: 'Blend configured transitions into complete audio files',
+      gradient: 'from-teal-500 to-cyan-500',
+      action: () => onSelectTool('blender')
     },
     {
       id: 'mixer',
