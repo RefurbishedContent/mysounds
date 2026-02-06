@@ -43,6 +43,16 @@ export class ClientAudioRenderer {
     } = params;
 
     try {
+      if (!songAUrl) {
+        throw new Error('Song A URL is missing');
+      }
+      if (!songBUrl) {
+        throw new Error('Song B URL is missing');
+      }
+      if (!templateUrl) {
+        throw new Error('Template URL is missing');
+      }
+
       onProgress?.({ stage: 'loading', progress: 0, message: 'Loading audio files...' });
 
       console.log('Loading audio files:', { songAUrl, songBUrl, templateUrl });
@@ -155,6 +165,10 @@ export class ClientAudioRenderer {
 
   private async loadAudioBuffer(url: string): Promise<AudioBuffer> {
     try {
+      if (!url) {
+        throw new Error('Audio URL is undefined or empty');
+      }
+
       let arrayBuffer: ArrayBuffer;
 
       if (url.includes('supabase')) {

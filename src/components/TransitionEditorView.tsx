@@ -893,12 +893,16 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       setRenderStage('rendering');
       setRenderMessage('Starting audio render process');
 
+      if (!templateAudioUrl) {
+        throw new Error('Template audio URL is not available');
+      }
+
       const songADuration = transition.songAMarkerPoint - transition.songAClipStart;
       const songBDuration = transition.songBClipEnd - transition.songBMarkerPoint;
 
       await clientAudioRenderer.renderTransition({
-        songAUrl: transition.songAUrl,
-        songBUrl: transition.songBUrl,
+        songAUrl: songA.url,
+        songBUrl: songB.url,
         templateUrl: templateAudioUrl,
         songAStart: transition.songAClipStart,
         songAEnd: transition.songAMarkerPoint,
