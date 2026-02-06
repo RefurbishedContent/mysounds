@@ -171,14 +171,25 @@ export class ClientAudioRenderer {
 
       let arrayBuffer: ArrayBuffer;
 
-      if (url.includes('supabase')) {
+      // Check if it's a public Supabase URL - these can be fetched directly
+      if (url.includes('/object/public/')) {
+        // Public URLs don't need authentication, just fetch directly
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        arrayBuffer = await response.arrayBuffer();
+      } else if (url.includes('supabase') && url.includes('/storage/')) {
+        // Private Supabase URLs need to use the SDK download method
+        // Extract bucket and file path from private storage URLs
         const urlParts = new URL(url);
-        const pathParts = urlParts.pathname.split('/');
-        const bucketIndex = pathParts.findIndex(p => p === 'storage' || p === 'object');
+        const pathParts = urlParts.pathname.split('/').filter(p => p);
 
-        if (bucketIndex !== -1 && pathParts.length > bucketIndex + 2) {
-          const bucket = pathParts[bucketIndex + 2];
-          const filePath = pathParts.slice(bucketIndex + 3).join('/');
+        // Find the bucket name (comes after 'storage' and version)
+        const storageIndex = pathParts.indexOf('storage');
+        if (storageIndex !== -1 && pathParts.length > storageIndex + 2) {
+          const bucket = pathParts[storageIndex + 1];
+          const filePath = pathParts.slice(storageIndex + 2).join('/');
 
           const { data, error } = await supabase.storage
             .from(bucket)
@@ -195,6 +206,7 @@ export class ClientAudioRenderer {
 
           arrayBuffer = await data.arrayBuffer();
         } else {
+          // Fallback to direct fetch
           const response = await fetch(url);
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -202,6 +214,7 @@ export class ClientAudioRenderer {
           arrayBuffer = await response.arrayBuffer();
         }
       } else {
+        // Regular URLs - just fetch directly
         const response = await fetch(url);
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
