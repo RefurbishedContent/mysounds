@@ -84,20 +84,59 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
   };
 
   const subscribeToBlendUpdates = (blendId: string) => {
+    console.log('[BlenderProcessing] Subscribing to blend updates:', blendId);
+
     const subscription = blendExportService.subscribeToBlendUpdates(
       blendId,
       (updatedBlend) => {
+        console.log('[BlenderProcessing] Blend update received:', {
+          status: updatedBlend.status,
+          blendId: updatedBlend.id
+        });
+
         if (updatedBlend.status === 'completed') {
+          console.log('[BlenderProcessing] Blend completed successfully');
           subscription.unsubscribe();
+          setProgress(100);
+          setCurrentStageIndex(7);
           setTimeout(() => {
             onComplete(updatedBlend);
           }, 500);
         } else if (updatedBlend.status === 'failed') {
+          console.error('[BlenderProcessing] Blend failed:', updatedBlend.exportSettings);
           subscription.unsubscribe();
-          setError('Blend processing failed on the server');
+          const errorMsg = updatedBlend.exportSettings?.error || 'Blend processing failed on the server';
+          setError(errorMsg);
         }
       }
     );
+
+    let simulatedProgress = 40;
+    const progressInterval = setInterval(() => {
+      if (simulatedProgress < 90) {
+        simulatedProgress += Math.random() * 5;
+        setProgress(Math.min(simulatedProgress, 90));
+
+        if (simulatedProgress >= 40 && simulatedProgress < 55) {
+          setCurrentStageIndex(3);
+          setMessage('Processing transition effects...');
+        } else if (simulatedProgress >= 55 && simulatedProgress < 65) {
+          setCurrentStageIndex(4);
+          setMessage('Loading Song B segment...');
+        } else if (simulatedProgress >= 65 && simulatedProgress < 80) {
+          setCurrentStageIndex(5);
+          setMessage('Blending audio streams...');
+        } else if (simulatedProgress >= 80) {
+          setCurrentStageIndex(6);
+          setMessage('Finalizing blend...');
+        }
+      }
+    }, 800);
+
+    return () => {
+      clearInterval(progressInterval);
+      subscription.unsubscribe();
+    };
   };
 
   const handleCancel = () => {

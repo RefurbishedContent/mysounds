@@ -457,30 +457,102 @@ class BlendExportService {
   }
 
   private async triggerServerExport(blendId: string, config: any): Promise<void> {
+    const TIMEOUT_MS = 30000;
+
     try {
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-blend`;
+
+      console.log('[BlendExport] Triggering Edge Function:', {
+        url: apiUrl,
+        blendId,
+        timeout: `${TIMEOUT_MS}ms`
+      });
 
       const headers = {
         'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         'Content-Type': 'application/json',
       };
 
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          blendId,
-          config
-        })
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.error('[BlendExport] Request timeout - aborting');
+        controller.abort();
+      }, TIMEOUT_MS);
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            blendId,
+            config
+          }),
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        console.log('[BlendExport] Edge Function response:', {
+          status: response.status,
+          ok: response.ok,
+          statusText: response.statusText
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('[BlendExport] Edge Function error:', errorData);
+          throw new Error(errorData.error || `Failed to trigger export: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        console.log('[BlendExport] Edge Function success:', result);
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+
+        if (fetchError.name === 'AbortError') {
+          console.error('[BlendExport] Request timed out after 30 seconds');
+          await this.markBlendAsFailed(blendId, 'Export timed out after 30 seconds');
+          throw new Error('Export request timed out. Please try again.');
+        }
+
+        throw fetchError;
+      }
+    } catch (error: any) {
+      console.error('[BlendExport] Failed to trigger server export:', {
+        error: error.message,
+        stack: error.stack,
+        blendId
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to trigger export');
-      }
-    } catch (error) {
-      console.error('Failed to trigger server export:', error);
+      await this.markBlendAsFailed(blendId, error.message).catch(err => {
+        console.error('[BlendExport] Failed to mark blend as failed:', err);
+      });
+
       throw error;
+    }
+  }
+
+  private async markBlendAsFailed(blendId: string, errorMessage: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('blends')
+        .update({
+          status: 'failed',
+          export_settings: {
+            error: errorMessage,
+            failedAt: new Date().toISOString()
+          },
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', blendId);
+
+      if (error) {
+        console.error('[BlendExport] Failed to update blend status:', error);
+      } else {
+        console.log('[BlendExport] Blend marked as failed:', blendId);
+      }
+    } catch (err) {
+      console.error('[BlendExport] Error marking blend as failed:', err);
     }
   }
 
