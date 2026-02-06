@@ -62,8 +62,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
       const duration = songA.metadata?.duration || 300;
       setSongADuration(duration);
       setSongAStartMarker(0);
-      const endMarker = Math.max(DEFAULT_TRANSITION_DURATION, duration - DEFAULT_TRANSITION_DURATION);
-      setSongAMarkerPoint(endMarker);
+      setSongAMarkerPoint(0);
 
       const loadActualDuration = async () => {
         try {
@@ -73,8 +72,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
             if (actualDuration > 0) {
               setSongADuration(actualDuration);
               setSongAStartMarker(0);
-              const endMarker = Math.max(DEFAULT_TRANSITION_DURATION, actualDuration - DEFAULT_TRANSITION_DURATION);
-              setSongAMarkerPoint(endMarker);
+              setSongAMarkerPoint(0);
             }
           });
         } catch (error) {
@@ -91,7 +89,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
       const duration = songB.metadata?.duration || 300;
       setSongBDuration(duration);
       setSongBMarkerPoint(0);
-      setSongBEndMarker(Math.min(duration, DEFAULT_TRANSITION_DURATION));
+      setSongBEndMarker(0);
 
       const loadActualDuration = async () => {
         try {
@@ -101,7 +99,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
             if (actualDuration > 0) {
               setSongBDuration(actualDuration);
               setSongBMarkerPoint(0);
-              setSongBEndMarker(Math.min(actualDuration, DEFAULT_TRANSITION_DURATION));
+              setSongBEndMarker(0);
             }
           });
         } catch (error) {

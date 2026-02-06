@@ -212,7 +212,7 @@ export function AudioScrubber({
 
   return (
     <div className="bg-gray-800 rounded-lg p-4">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-8">
         <div className="flex items-center space-x-3">
           <button
             onClick={handlePlayPause}
@@ -247,7 +247,7 @@ export function AudioScrubber({
         </div>
       </div>
 
-      <div className="relative" ref={waveformContainerRef}>
+      <div className="relative pt-8" ref={waveformContainerRef}>
         <WaveformDisplay
           audioUrl={audioUrl}
           progress={progress}
