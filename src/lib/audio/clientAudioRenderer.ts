@@ -1,0 +1,247 @@
+import * as Tone from 'tone';
+import { supabase } from '../supabase';
+
+export interface RenderProgress {
+  stage: 'loading' | 'processing' | 'fading' | 'uploading' | 'complete';
+  progress: number;
+  message: string;
+}
+
+export interface TransitionRenderParams {
+  songAUrl: string;
+  songBUrl: string;
+  templateUrl: string;
+  songAStart: number;
+  songAEnd: number;
+  songBStart: number;
+  songBEnd: number;
+  songAKeyframes: Array<{ time: number; volume: number }>;
+  songBKeyframes: Array<{ time: number; volume: number }>;
+  templateDuration: number;
+  transitionId: string;
+  onProgress?: (progress: RenderProgress) => void;
+}
+
+export class ClientAudioRenderer {
+  private abortController: AbortController | null = null;
+
+  async renderTransition(params: TransitionRenderParams): Promise<string> {
+    this.abortController = new AbortController();
+    const {
+      songAUrl,
+      songBUrl,
+      templateUrl,
+      songAStart,
+      songAEnd,
+      songBStart,
+      songBEnd,
+      songAKeyframes,
+      songBKeyframes,
+      templateDuration,
+      transitionId,
+      onProgress
+    } = params;
+
+    try {
+      onProgress?.({ stage: 'loading', progress: 0, message: 'Loading audio files...' });
+
+      const [songABuffer, songBBuffer, templateBuffer] = await Promise.all([
+        this.loadAudioBuffer(songAUrl),
+        this.loadAudioBuffer(songBUrl),
+        this.loadAudioBuffer(templateUrl)
+      ]);
+
+      onProgress?.({ stage: 'loading', progress: 33, message: 'Audio files loaded' });
+
+      const sampleRate = songABuffer.sampleRate;
+      const totalDuration = templateDuration;
+
+      onProgress?.({ stage: 'processing', progress: 40, message: 'Processing audio segments...' });
+
+      const offlineContext = new OfflineAudioContext(2, totalDuration * sampleRate, sampleRate);
+
+      const songADuration = songAEnd - songAStart;
+      const songBDuration = songBEnd - songBStart;
+
+      const songASource = offlineContext.createBufferSource();
+      songASource.buffer = this.extractSegment(songABuffer, songAStart, songAEnd, sampleRate);
+
+      const songAGain = offlineContext.createGain();
+      songASource.connect(songAGain);
+      songAGain.connect(offlineContext.destination);
+
+      this.applyKeyframes(songAGain.gain, songAKeyframes, 0);
+      songASource.start(0);
+
+      onProgress?.({ stage: 'processing', progress: 55, message: 'Adding template audio...' });
+
+      const templateSource = offlineContext.createBufferSource();
+      templateSource.buffer = templateBuffer;
+      templateSource.connect(offlineContext.destination);
+      templateSource.start(0);
+
+      onProgress?.({ stage: 'fading', progress: 70, message: 'Applying fade transitions...' });
+
+      const songBOffset = totalDuration - songBDuration;
+      const songBSource = offlineContext.createBufferSource();
+      songBSource.buffer = this.extractSegment(songBBuffer, songBStart, songBEnd, sampleRate);
+
+      const songBGain = offlineContext.createGain();
+      songBSource.connect(songBGain);
+      songBGain.connect(offlineContext.destination);
+
+      this.applyKeyframes(songBGain.gain, songBKeyframes, songBOffset);
+      songBSource.start(songBOffset);
+
+      onProgress?.({ stage: 'fading', progress: 85, message: 'Rendering final audio...' });
+
+      const renderedBuffer = await offlineContext.startRendering();
+
+      onProgress?.({ stage: 'uploading', progress: 90, message: 'Converting to WAV...' });
+
+      const wavBlob = this.bufferToWave(renderedBuffer);
+
+      onProgress?.({ stage: 'uploading', progress: 95, message: 'Uploading to storage...' });
+
+      const fileName = `transition_${transitionId}_${Date.now()}.wav`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('transitions')
+        .upload(fileName, wavBlob, {
+          contentType: 'audio/wav',
+          upsert: true
+        });
+
+      if (uploadError) {
+        throw new Error(`Upload failed: ${uploadError.message}`);
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('transitions')
+        .getPublicUrl(fileName);
+
+      const publicUrl = urlData.publicUrl;
+
+      await supabase
+        .from('transitions')
+        .update({
+          output_url: publicUrl,
+          render_duration: totalDuration,
+          file_size: wavBlob.size
+        })
+        .eq('id', transitionId);
+
+      onProgress?.({ stage: 'complete', progress: 100, message: 'Rendering complete!' });
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Render error:', error);
+      throw error;
+    }
+  }
+
+  private async loadAudioBuffer(url: string): Promise<AudioBuffer> {
+    const response = await fetch(url);
+    const arrayBuffer = await response.arrayBuffer();
+    const audioContext = new AudioContext();
+    return await audioContext.decodeAudioData(arrayBuffer);
+  }
+
+  private extractSegment(
+    buffer: AudioBuffer,
+    startTime: number,
+    endTime: number,
+    sampleRate: number
+  ): AudioBuffer {
+    const startSample = Math.floor(startTime * sampleRate);
+    const endSample = Math.floor(endTime * sampleRate);
+    const segmentLength = endSample - startSample;
+
+    const audioContext = new AudioContext();
+    const segmentBuffer = audioContext.createBuffer(
+      buffer.numberOfChannels,
+      segmentLength,
+      sampleRate
+    );
+
+    for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+      const sourceData = buffer.getChannelData(channel);
+      const targetData = segmentBuffer.getChannelData(channel);
+
+      for (let i = 0; i < segmentLength; i++) {
+        const sourceIndex = startSample + i;
+        if (sourceIndex < sourceData.length) {
+          targetData[i] = sourceData[sourceIndex];
+        }
+      }
+    }
+
+    return segmentBuffer;
+  }
+
+  private applyKeyframes(
+    gainParam: AudioParam,
+    keyframes: Array<{ time: number; volume: number }>,
+    timeOffset: number
+  ): void {
+    if (keyframes.length === 0) return;
+
+    keyframes.forEach((kf, index) => {
+      const time = kf.time + timeOffset;
+      const linearVolume = kf.volume;
+
+      if (index === 0) {
+        gainParam.setValueAtTime(linearVolume, time);
+      } else {
+        gainParam.linearRampToValueAtTime(linearVolume, time);
+      }
+    });
+  }
+
+  private bufferToWave(buffer: AudioBuffer): Blob {
+    const numberOfChannels = buffer.numberOfChannels;
+    const length = buffer.length * numberOfChannels * 2;
+    const arrayBuffer = new ArrayBuffer(44 + length);
+    const view = new DataView(arrayBuffer);
+
+    const writeString = (offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+
+    const sampleRate = buffer.sampleRate;
+    const numChannels = numberOfChannels;
+
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + length, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * numChannels * 2, true);
+    view.setUint16(32, numChannels * 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, 'data');
+    view.setUint32(40, length, true);
+
+    let offset = 44;
+    for (let i = 0; i < buffer.length; i++) {
+      for (let channel = 0; channel < numberOfChannels; channel++) {
+        const sample = buffer.getChannelData(channel)[i];
+        const int16 = Math.max(-1, Math.min(1, sample)) * 0x7FFF;
+        view.setInt16(offset, int16, true);
+        offset += 2;
+      }
+    }
+
+    return new Blob([arrayBuffer], { type: 'audio/wav' });
+  }
+
+  abort(): void {
+    this.abortController?.abort();
+  }
+}
+
+export const clientAudioRenderer = new ClientAudioRenderer();

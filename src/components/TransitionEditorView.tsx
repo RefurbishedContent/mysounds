@@ -20,7 +20,7 @@ import BlendExportDialog from './BlendExportDialog';
 import ResetTransitionPointsModal from './ResetTransitionPointsModal';
 import { TransitionWaveformDisplay } from './TransitionWaveformDisplay';
 import RenderProgressModal from './RenderProgressModal';
-import { renderService, RenderProgress } from '../lib/renderService';
+import { clientAudioRenderer, RenderProgress } from '../lib/audio/clientAudioRenderer';
 
 interface TransitionEditorViewProps {
   songA: UploadResult;
@@ -893,40 +893,37 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       setRenderStage('rendering');
       setRenderMessage('Starting audio render process');
 
-      await renderService.triggerTransitionRender(
-        transitionId,
-        user.id,
-        (progress: RenderProgress) => {
-          setRenderProgress(progress.progress);
-          setRenderMessage(progress.message);
-        }
-      );
+      const songADuration = transition.songAMarkerPoint - transition.songAClipStart;
+      const songBDuration = transition.songBClipEnd - transition.songBMarkerPoint;
 
-      const result = await renderService.waitForRenderCompletion(
+      await clientAudioRenderer.renderTransition({
+        songAUrl: transition.songAUrl,
+        songBUrl: transition.songBUrl,
+        templateUrl: templateAudioUrl,
+        songAStart: transition.songAClipStart,
+        songAEnd: transition.songAMarkerPoint,
+        songBStart: transition.songBMarkerPoint,
+        songBEnd: transition.songBClipEnd,
+        songAKeyframes,
+        songBKeyframes,
+        templateDuration: transitionDuration,
         transitionId,
-        180000,
-        (progress: RenderProgress) => {
+        onProgress: (progress: RenderProgress) => {
           setRenderProgress(progress.progress);
           setRenderMessage(progress.message);
-          if (progress.stage === 'completed') {
+          if (progress.stage === 'complete') {
             setRenderStage('success');
-          } else if (progress.stage === 'failed') {
-            setRenderStage('error');
           }
         }
-      );
+      });
 
-      if (result.success) {
-        setRenderStage('success');
-        setRenderMessage('Transition rendered and saved successfully');
-        setRenderProgress(100);
+      setRenderStage('success');
+      setRenderMessage('Transition rendered and saved successfully');
+      setRenderProgress(100);
 
-        const updatedTransition = await transitionsService.getTransition(transitionId);
-        if (updatedTransition) {
-          setTransition(updatedTransition);
-        }
-      } else {
-        throw new Error(result.error || 'Render failed');
+      const updatedTransition = await transitionsService.getTransition(transitionId);
+      if (updatedTransition) {
+        setTransition(updatedTransition);
       }
     } catch (error) {
       console.error('Failed to save/render transition:', error);
