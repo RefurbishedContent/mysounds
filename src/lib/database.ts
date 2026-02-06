@@ -50,7 +50,25 @@ export interface TemplateData {
   author: string;
   downloads: number;
   rating: number;
-  templateData: any;
+  templateData: {
+    previewUrl?: string;
+    audioFormat?: string;
+    transitionType?: string;
+    fadeInDuration?: number;
+    fadeOutDuration?: number;
+    crossfadeDuration?: number;
+    description?: string;
+    [key: string]: any;
+  };
+  bpmMin?: number;
+  bpmMax?: number;
+  bpmFlexibility?: number;
+  energyMin?: number;
+  energyMax?: number;
+  genreTags?: Record<string, number>;
+  moodTags?: string[];
+  transitionStyle?: string;
+  technicalDescription?: string;
 }
 
 export interface RenderJobData {
@@ -874,7 +892,16 @@ class DatabaseService {
       author: dbTemplate.author,
       downloads: dbTemplate.downloads || 0,
       rating: Number(dbTemplate.rating) || 0,
-      templateData: dbTemplate.template_data || {}
+      templateData: dbTemplate.template_data || {},
+      bpmMin: dbTemplate.bpm_min || undefined,
+      bpmMax: dbTemplate.bpm_max || undefined,
+      bpmFlexibility: dbTemplate.bpm_flexibility || undefined,
+      energyMin: dbTemplate.energy_min ? Number(dbTemplate.energy_min) : undefined,
+      energyMax: dbTemplate.energy_max ? Number(dbTemplate.energy_max) : undefined,
+      genreTags: dbTemplate.genre_tags as Record<string, number> || undefined,
+      moodTags: dbTemplate.mood_tags || undefined,
+      transitionStyle: dbTemplate.transition_style || undefined,
+      technicalDescription: dbTemplate.technical_description || undefined
     };
   }
 

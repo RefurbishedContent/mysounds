@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { X, Play, Star, Crown, Clock, Zap, Music, TrendingUp, Award, Info, Volume2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Play, Square, Star, Crown, Clock, Zap, Music, TrendingUp, Award, Info, Volume2 } from 'lucide-react';
 import { TemplateData } from '../lib/database';
+import { audioPlayer } from '../lib/audioPlayer';
 import TemplateIcon from './TemplateIcon';
 
 interface TemplateDetailModalProps {
@@ -15,6 +16,30 @@ const TemplateDetailModal: React.FC<TemplateDetailModalProps> = ({
   onPreview
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
+  const previewUrl = template.templateData?.previewUrl;
+
+  // Check if this template's audio is currently playing
+  useEffect(() => {
+    const checkPlayingState = () => {
+      const currentUrl = audioPlayer.getCurrentUrl();
+      const playing = audioPlayer.isPlaying() && currentUrl === previewUrl;
+      setIsPlaying(playing);
+    };
+
+    // Check initial state
+    checkPlayingState();
+
+    // Check periodically
+    const interval = setInterval(checkPlayingState, 100);
+
+    return () => {
+      clearInterval(interval);
+      // Stop audio when modal is closed
+      if (audioPlayer.getCurrentUrl() === previewUrl) {
+        audioPlayer.stop();
+      }
+    };
+  }, [previewUrl]);
 
   const getDifficultyColor = (difficulty: TemplateData['difficulty']) => {
     switch (difficulty) {
@@ -40,7 +65,6 @@ const TemplateDetailModal: React.FC<TemplateDetailModalProps> = ({
   };
 
   const handlePreview = () => {
-    setIsPlaying(!isPlaying);
     if (onPreview) {
       onPreview(template);
     }
@@ -186,13 +210,20 @@ const TemplateDetailModal: React.FC<TemplateDetailModalProps> = ({
           <div className="flex gap-3 pt-4 border-t border-gray-700">
             <button
               onClick={handlePreview}
+              disabled={!previewUrl}
               className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
-                isPlaying
+                !previewUrl
+                  ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                  : isPlaying
                   ? 'bg-gray-700 hover:bg-gray-600 text-white'
                   : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white shadow-lg shadow-cyan-500/30'
               }`}
             >
-              <Play size={18} fill={isPlaying ? 'none' : 'currentColor'} />
+              {isPlaying ? (
+                <Square size={18} fill="currentColor" />
+              ) : (
+                <Play size={18} fill="currentColor" />
+              )}
               <span>{isPlaying ? 'Stop Preview' : 'Preview Sound'}</span>
             </button>
             <button

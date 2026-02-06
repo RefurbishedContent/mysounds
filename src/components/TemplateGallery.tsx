@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { Search, Filter, Star, Download, Play, Crown, Heart, Eye, GripVertical, X, ChevronLeft, ChevronRight, Zap, TrendingUp, Award, Music } from 'lucide-react';
 import { databaseService, TemplateData } from '../lib/database';
 import { UploadResult } from '../lib/storage';
+import { audioPlayer } from '../lib/audioPlayer';
 import TemplateIcon from './TemplateIcon';
 import TemplateDetailModal from './TemplateDetailModal';
 
@@ -884,7 +885,26 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
           template={selectedTemplateForDetail}
           onClose={() => setSelectedTemplateForDetail(null)}
           onPreview={(template) => {
-            console.log('Preview template:', template);
+            // Get the preview URL from template data
+            const previewUrl = template.templateData?.previewUrl;
+
+            if (!previewUrl) {
+              console.error('No preview URL found for template:', template.name);
+              console.error('Template data:', template.templateData);
+              alert('This template does not have a preview audio file.');
+              return;
+            }
+
+            console.log('Playing template:', template.name, 'URL:', previewUrl);
+
+            // Toggle play/stop
+            if (audioPlayer.isPlaying() && audioPlayer.getCurrentUrl() === previewUrl) {
+              console.log('Stopping audio playback');
+              audioPlayer.stop();
+            } else {
+              console.log('Starting audio playback');
+              audioPlayer.play(previewUrl);
+            }
           }}
         />
       )}
