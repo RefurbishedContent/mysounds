@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlaskConical, Scissors, AudioWaveform, Sliders, Zap, Settings, Layers, Volume2 } from 'lucide-react';
+import { FlaskConical, Scissors, AudioWaveform, Sliders, Zap } from 'lucide-react';
 
 interface LabsViewProps {
   onSelectTool: (tool: string) => void;
@@ -37,22 +37,6 @@ const LabsView: React.FC<LabsViewProps> = ({ onSelectTool }) => {
       title: 'Effects Rack',
       description: 'Apply professional effects to your transitions',
       gradient: 'from-pink-500 to-red-500',
-      comingSoon: true
-    },
-    {
-      id: 'equalizer',
-      icon: Volume2,
-      title: 'Equalizer',
-      description: 'Advanced EQ controls for perfect frequency balance',
-      gradient: 'from-green-500 to-teal-500',
-      comingSoon: true
-    },
-    {
-      id: 'multi-track',
-      icon: Layers,
-      title: 'Multi-Track',
-      description: 'Layer multiple tracks with precise timing control',
-      gradient: 'from-teal-500 to-cyan-500',
       comingSoon: true
     }
   ];
