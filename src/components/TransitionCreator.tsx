@@ -61,9 +61,9 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
     if (songA) {
       const duration = songA.metadata?.duration || 300;
       setSongADuration(duration);
+      setSongAStartMarker(0);
       const endMarker = Math.max(DEFAULT_TRANSITION_DURATION, duration - DEFAULT_TRANSITION_DURATION);
       setSongAMarkerPoint(endMarker);
-      setSongAStartMarker(Math.max(0, endMarker - DEFAULT_TRANSITION_DURATION));
 
       const loadActualDuration = async () => {
         try {
@@ -72,9 +72,9 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
             player.dispose();
             if (actualDuration > 0) {
               setSongADuration(actualDuration);
+              setSongAStartMarker(0);
               const endMarker = Math.max(DEFAULT_TRANSITION_DURATION, actualDuration - DEFAULT_TRANSITION_DURATION);
               setSongAMarkerPoint(endMarker);
-              setSongAStartMarker(Math.max(0, endMarker - DEFAULT_TRANSITION_DURATION));
             }
           });
         } catch (error) {
@@ -90,9 +90,8 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
     if (songB) {
       const duration = songB.metadata?.duration || 300;
       setSongBDuration(duration);
-      const startMarker = Math.min(DEFAULT_TRANSITION_DURATION, duration / 2);
-      setSongBMarkerPoint(startMarker);
-      setSongBEndMarker(Math.min(duration, startMarker + DEFAULT_TRANSITION_DURATION));
+      setSongBMarkerPoint(0);
+      setSongBEndMarker(Math.min(duration, DEFAULT_TRANSITION_DURATION));
 
       const loadActualDuration = async () => {
         try {
@@ -101,9 +100,8 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
             player.dispose();
             if (actualDuration > 0) {
               setSongBDuration(actualDuration);
-              const startMarker = Math.min(DEFAULT_TRANSITION_DURATION, actualDuration / 2);
-              setSongBMarkerPoint(startMarker);
-              setSongBEndMarker(Math.min(actualDuration, startMarker + DEFAULT_TRANSITION_DURATION));
+              setSongBMarkerPoint(0);
+              setSongBEndMarker(Math.min(actualDuration, DEFAULT_TRANSITION_DURATION));
             }
           });
         } catch (error) {
