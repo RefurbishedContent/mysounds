@@ -62,15 +62,35 @@ class BlendExportService {
 
       const transition = await this.getTransitionWithDetails(input.transitionId);
       if (!transition) {
-        throw new Error('Transition not found');
+        throw new Error(`Transition not found with ID: ${input.transitionId}`);
+      }
+
+      console.log('[BlendExport] Transition data loaded:', {
+        id: transition.id,
+        songAId: transition.songAId,
+        songBId: transition.songBId,
+        name: transition.name
+      });
+
+      if (!transition.songAId || !transition.songBId) {
+        throw new Error(`Transition is missing song references. SongA: ${transition.songAId}, SongB: ${transition.songBId}`);
       }
 
       const songA = await storageService.getUpload(transition.songAId);
       const songB = await storageService.getUpload(transition.songBId);
 
-      if (!songA || !songB) {
-        throw new Error('Source songs not found');
+      if (!songA) {
+        throw new Error(`Song A not found with ID: ${transition.songAId}`);
       }
+
+      if (!songB) {
+        throw new Error(`Song B not found with ID: ${transition.songBId}`);
+      }
+
+      console.log('[BlendExport] Source songs loaded:', {
+        songA: songA.originalName,
+        songB: songB.originalName
+      });
 
       const songAMarker = transition.songAMarkerPoint || 0;
       const songBMarker = transition.songBMarkerPoint || 0;
@@ -393,7 +413,7 @@ class BlendExportService {
       .subscribe();
   }
 
-  private async getTransitionWithDetails(transitionId: string): Promise<any> {
+  private async getTransitionWithDetails(transitionId: string): Promise<TransitionData | null> {
     const { data, error } = await supabase
       .from('transitions')
       .select('*')
@@ -404,7 +424,36 @@ class BlendExportService {
       throw new Error(`Failed to fetch transition: ${error.message}`);
     }
 
-    return data;
+    if (!data) {
+      return null;
+    }
+
+    return this.mapRowToTransition(data);
+  }
+
+  private mapRowToTransition(row: any): TransitionData {
+    return {
+      id: row.id,
+      userId: row.user_id,
+      name: row.name,
+      songAId: row.song_a_id,
+      songBId: row.song_b_id,
+      templateId: row.template_id,
+      transitionStartPoint: row.transition_start_point,
+      transitionDuration: row.transition_duration,
+      songAEndTime: row.song_a_end_time,
+      songBStartTime: row.song_b_start_time,
+      songAMarkerPoint: row.song_a_marker_point,
+      songBMarkerPoint: row.song_b_marker_point,
+      songAClipStart: row.song_a_clip_start,
+      songBClipEnd: row.song_b_clip_end,
+      status: row.status,
+      renderJobId: row.render_job_id,
+      outputUrl: row.output_url,
+      metadata: row.metadata,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
   }
 
   private async triggerServerExport(blendId: string, config: any): Promise<void> {
