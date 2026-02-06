@@ -26,27 +26,29 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong })
   const [selectedSong, setSelectedSong] = useState<UploadResult | null>(null);
 
   useEffect(() => {
-    loadData();
-  }, [user, currentTab]);
+    loadAllData();
+  }, [user]);
 
-  const loadData = async () => {
+  const loadAllData = async () => {
     if (!user) return;
 
     setLoading(true);
     try {
-      if (currentTab === 'songs') {
-        const uploads = await storageService.getUserUploads(user.id);
-        setSongs(uploads.filter(u => u.status === 'ready'));
-      } else {
-        const userBlends = await blendExportService.getUserBlends(user.id);
-        setBlends(userBlends);
-      }
+      const [uploads, userBlends] = await Promise.all([
+        storageService.getUserUploads(user.id),
+        blendExportService.getUserBlends(user.id)
+      ]);
+
+      setSongs(uploads.filter(u => u.status === 'ready'));
+      setBlends(userBlends);
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  const loadData = loadAllData;
 
   const loadSongs = loadData;
 
