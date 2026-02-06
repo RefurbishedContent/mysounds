@@ -7,9 +7,10 @@ interface SongCardProps {
   isSelected?: boolean;
   onSelect: (song: UploadResult) => void;
   showCheckbox?: boolean;
+  'data-tutorial'?: string;
 }
 
-const SongCard: React.FC<SongCardProps> = ({ song, isSelected, onSelect, showCheckbox }) => {
+const SongCard: React.FC<SongCardProps> = ({ song, isSelected, onSelect, showCheckbox, 'data-tutorial': dataTutorial }) => {
   const analysis = song.analysis || {};
   const bpm = analysis.bpm ? Math.round(analysis.bpm) : null;
   const key = analysis.key || null;
@@ -25,6 +26,7 @@ const SongCard: React.FC<SongCardProps> = ({ song, isSelected, onSelect, showChe
   return (
     <button
       onClick={() => onSelect(song)}
+      data-tutorial={dataTutorial}
       className={`
         relative group w-full text-left p-4 rounded-xl border-2 transition-all duration-200
         ${isSelected

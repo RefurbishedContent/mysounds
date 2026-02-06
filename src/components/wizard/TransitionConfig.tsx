@@ -15,7 +15,7 @@ const TransitionConfig: React.FC<TransitionConfigProps> = ({
   onStartPointChange
 }) => {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-tutorial="transition-config">
       <div>
         <h3 className="text-lg font-semibold text-white mb-2">Transition Settings</h3>
         <p className="text-sm text-gray-400">Fine-tune how your songs will blend together</p>

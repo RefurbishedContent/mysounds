@@ -22,6 +22,7 @@ import AIFusionView from './AIFusionView';
 import LabsView from './LabsView';
 import MobileBottomNav, { MobileNavView } from './MobileBottomNav';
 import ProjectCreationWizard from './ProjectCreationWizard';
+import NewProjectTutorialOverlay from './NewProjectTutorialOverlay';
 import { UploadResult, storageService } from '../lib/storage';
 import { transitionsService } from '../lib/transitionsService';
 
@@ -234,6 +235,12 @@ const AppShell: React.FC = () => {
   };
 
   const handleWizardComplete = (projectType: 'transition' | 'mixer', projectData: any) => {
+    if (onboarding.tutorialMode) {
+      onboarding.endTutorial();
+      setCurrentView('library');
+      return;
+    }
+
     if (projectType === 'transition') {
       if (projectData.redirectToCreateTransition) {
         setCurrentView('create-transition');
@@ -250,6 +257,9 @@ const AppShell: React.FC = () => {
   };
 
   const handleWizardCancel = () => {
+    if (onboarding.tutorialMode) {
+      onboarding.endTutorial();
+    }
     setCurrentView('library');
   };
 
@@ -409,17 +419,34 @@ const AppShell: React.FC = () => {
         return (
           <ProfileView
             onShowTutorial={() => {
-              onboarding.resetOnboarding();
-              setCurrentView('editor');
+              onboarding.startTutorial();
+              setCurrentView('project-wizard');
             }}
           />
         );
       case 'project-wizard':
         return (
-          <ProjectCreationWizard
-            onComplete={handleWizardComplete}
-            onCancel={handleWizardCancel}
-          />
+          <>
+            <ProjectCreationWizard
+              onComplete={handleWizardComplete}
+              onCancel={handleWizardCancel}
+              tutorialMode={onboarding.tutorialMode}
+            />
+            {onboarding.tutorialMode && (
+              <NewProjectTutorialOverlay
+                currentStep={onboarding.tutorialStep}
+                onAdvance={onboarding.advanceTutorialStep}
+                onComplete={() => {
+                  onboarding.endTutorial();
+                  setCurrentView('library');
+                }}
+                onSkip={() => {
+                  onboarding.endTutorial();
+                  setCurrentView('library');
+                }}
+              />
+            )}
+          </>
         );
       default:
         return (
@@ -590,6 +617,7 @@ const AppShell: React.FC = () => {
               {!isSidebarCollapsed && (
                 <button
                   onClick={handleCreateNew}
+                  data-tutorial="create-button"
                   className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/50"
                 >
                   <Plus size={20} />
@@ -654,8 +682,8 @@ const AppShell: React.FC = () => {
             <div className="p-4 border-t border-gray-700">
               <button
                 onClick={() => {
-                  onboarding.resetOnboarding();
-                  setCurrentView('editor');
+                  onboarding.startTutorial();
+                  setCurrentView('project-wizard');
                   setShowUserMenu(false);
                   setIsMobileSidebarOpen(false);
                 }}

@@ -124,13 +124,7 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({ onTracksReady }) => {
         if (Math.abs(currentDuration - otherDuration) > 300) {
           setError(`Warning: Track duration difference is ${Math.abs(currentDuration - otherDuration)}s. Consider using tracks with similar lengths for better mixing.`);
         }
-        
-        // Mark upload complete for onboarding
-        const uploadCompleteMarker = document.createElement('div');
-        uploadCompleteMarker.setAttribute('data-onboarding', 'upload-complete');
-        uploadCompleteMarker.style.display = 'none';
-        document.body.appendChild(uploadCompleteMarker);
-        
+
         onTracksReady(
           track === 'A' ? uploadResult : otherTrack,
           track === 'B' ? uploadResult : otherTrack
@@ -264,7 +258,7 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({ onTracksReady }) => {
   const bothTracksReady = trackA && trackB && trackAStatus.status === 'ready' && trackBStatus.status === 'ready';
 
   return (
-    <div className="space-y-6 py-4" data-onboarding="upload">
+    <div className="space-y-6 py-4">
       {/* Header */}
       <div className="text-center space-y-3">
         <h2 className="text-3xl font-bold text-white">Upload Your Tracks</h2>

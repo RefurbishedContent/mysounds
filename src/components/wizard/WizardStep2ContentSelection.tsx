@@ -8,6 +8,7 @@ import AISuggestions from './AISuggestions';
 import { storageService } from '../../lib/storage';
 import { blendExportService, BlendData } from '../../lib/blendExportService';
 import { useAuth } from '../../contexts/AuthContext';
+import { getDemoSongs } from '../../lib/demoData';
 
 interface WizardStep2ContentSelectionProps {
   projectType: ProjectType;
@@ -20,6 +21,7 @@ interface WizardStep2ContentSelectionProps {
   onNext: () => void;
   onBack: () => void;
   canProceed: boolean;
+  tutorialMode?: boolean;
 }
 
 const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = ({
@@ -32,7 +34,8 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
   onClearBlend,
   onNext,
   onBack,
-  canProceed
+  canProceed,
+  tutorialMode = false
 }) => {
   const { user } = useAuth();
   const [allSongs, setAllSongs] = useState<UploadResult[]>([]);
@@ -41,6 +44,12 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
 
   useEffect(() => {
     const loadContent = async () => {
+      if (tutorialMode) {
+        setAllSongs(getDemoSongs());
+        setLoading(false);
+        return;
+      }
+
       if (!user) return;
       try {
         setLoading(true);
@@ -61,7 +70,7 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
     };
 
     loadContent();
-  }, [user, projectType]);
+  }, [user, projectType, tutorialMode]);
 
   const handleSongSelect = (song: UploadResult, slot?: number) => {
     if (projectType === 'transition') {
@@ -209,6 +218,7 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
                 selectedSongs={selectedSongs}
                 onSelectSong={handleSongSelect}
                 emptyMessage="No songs in your library yet. Upload songs to get started!"
+                tutorialMode={tutorialMode}
               />
             </div>
           </div>
@@ -422,6 +432,7 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
               onSelectSong={onSelectSong}
               multiSelect={true}
               emptyMessage="No songs in your library yet. Upload songs to get started!"
+              tutorialMode={tutorialMode}
             />
           </div>
         </div>

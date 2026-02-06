@@ -14,9 +14,10 @@ import { UploadResult } from '../lib/storage';
 interface ProjectCreationWizardProps {
   onComplete: (projectType: 'transition' | 'mixer', projectData: any) => void;
   onCancel: () => void;
+  tutorialMode?: boolean;
 }
 
-const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ onComplete, onCancel }) => {
+const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ onComplete, onCancel, tutorialMode = false }) => {
   const { user } = useAuth();
   const wizard = useProjectWizard();
 
@@ -37,6 +38,11 @@ const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ onComplet
 
   const handleCreateProject = async () => {
     if (!user || !wizard.projectType) return;
+
+    if (tutorialMode) {
+      onComplete('transition', {});
+      return;
+    }
 
     wizard.setIsCreating(true);
     wizard.goToStep(4);
@@ -178,6 +184,7 @@ const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ onComplet
           onNext={wizard.nextStep}
           onBack={wizard.previousStep}
           canProceed={wizard.canProceedFromStep(2)}
+          tutorialMode={tutorialMode}
         />
       )}
 

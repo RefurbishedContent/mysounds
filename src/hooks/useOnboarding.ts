@@ -1,11 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { UploadResult } from '../lib/storage';
+import { getDemoSongs } from '../lib/demoData';
 
 export interface OnboardingState {
   showOnboarding: boolean;
   currentStep: number;
   completed: boolean;
   skipped: boolean;
+  tutorialMode: boolean;
+  tutorialStep: number;
+  tutorialDemoSongs: UploadResult[];
+  tutorialCompleted: boolean;
 }
 
 export const useOnboarding = () => {
@@ -14,7 +20,11 @@ export const useOnboarding = () => {
     showOnboarding: false,
     currentStep: 0,
     completed: false,
-    skipped: false
+    skipped: false,
+    tutorialMode: false,
+    tutorialStep: 0,
+    tutorialDemoSongs: [],
+    tutorialCompleted: false
   });
 
   // Check onboarding status when user changes
@@ -31,16 +41,20 @@ export const useOnboarding = () => {
 
     const completedKey = `onboarding_completed_${user.id}`;
     const skippedKey = `onboarding_skipped_${user.id}`;
-    
+    const tutorialCompletedKey = `tutorial_completed_${user.id}`;
+
     const completed = localStorage.getItem(completedKey) === 'true';
     const skipped = localStorage.getItem(skippedKey) === 'true';
-    
-    setState({
+    const tutorialCompleted = localStorage.getItem(tutorialCompletedKey) === 'true';
+
+    setState(prev => ({
+      ...prev,
       showOnboarding: !completed && !skipped,
       currentStep: 0,
       completed,
-      skipped
-    });
+      skipped,
+      tutorialCompleted
+    }));
   }, [user]);
 
   const completeOnboarding = () => {
@@ -85,11 +99,66 @@ export const useOnboarding = () => {
     }));
   };
 
+  const startTutorial = () => {
+    const demoSongs = getDemoSongs();
+    setState(prev => ({
+      ...prev,
+      tutorialMode: true,
+      tutorialStep: 0,
+      tutorialDemoSongs: demoSongs
+    }));
+  };
+
+  const endTutorial = () => {
+    if (user) {
+      localStorage.setItem(`tutorial_completed_${user.id}`, 'true');
+    }
+    setState(prev => ({
+      ...prev,
+      tutorialMode: false,
+      tutorialStep: 0,
+      tutorialDemoSongs: [],
+      tutorialCompleted: true
+    }));
+  };
+
+  const advanceTutorialStep = () => {
+    setState(prev => ({
+      ...prev,
+      tutorialStep: prev.tutorialStep + 1
+    }));
+  };
+
+  const setTutorialStep = (step: number) => {
+    setState(prev => ({
+      ...prev,
+      tutorialStep: step
+    }));
+  };
+
+  const resetTutorial = () => {
+    if (user) {
+      localStorage.removeItem(`tutorial_completed_${user.id}`);
+    }
+    setState(prev => ({
+      ...prev,
+      tutorialMode: false,
+      tutorialStep: 0,
+      tutorialDemoSongs: [],
+      tutorialCompleted: false
+    }));
+  };
+
   return {
     ...state,
     completeOnboarding,
     skipOnboarding,
     resetOnboarding,
-    setStep
+    setStep,
+    startTutorial,
+    endTutorial,
+    advanceTutorialStep,
+    setTutorialStep,
+    resetTutorial
   };
 };

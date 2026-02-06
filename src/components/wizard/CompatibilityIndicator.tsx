@@ -108,7 +108,7 @@ const CompatibilityIndicator: React.FC<CompatibilityIndicatorProps> = ({ songA, 
   const Icon = getIcon(compatibility.overall);
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 space-y-4">
+    <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 space-y-4" data-tutorial="compatibility-panel">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
           <TrendingUp size={20} className="text-cyan-400" />

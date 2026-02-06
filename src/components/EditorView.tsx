@@ -13,7 +13,6 @@ import Timeline from './Timeline';
 import TemplateGallery from './TemplateGallery';
 import TemplateInspector from './TemplateInspector';
 import RenderDialog from './RenderDialog';
-import OnboardingOverlay from './OnboardingOverlay';
 import AIPowerButton from './AIPowerButton';
 import AIRecommendationsPanel from './AIRecommendationsPanel';
 import { TemplateRecommendation } from '../lib/ai/aiService';
@@ -48,10 +47,6 @@ const EditorView: React.FC<EditorViewProps> = ({ projectId, template, onBack, on
   const [showUpsell, setShowUpsell] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error' | 'warning'; message: string } | null>(null);
-
-  // Onboarding state
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
   // Autosave state
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -133,18 +128,6 @@ const EditorView: React.FC<EditorViewProps> = ({ projectId, template, onBack, on
       setValidationErrors(newErrors);
     }
   }, [computeValidationErrors, validationErrors]);
-
-  // Check if user needs onboarding
-  useEffect(() => {
-    if (user && !projectId && !template) {
-      const completed = localStorage.getItem(`onboarding_completed_${user.id}`);
-      if (!completed) {
-        setShowOnboarding(true);
-      } else {
-        setOnboardingCompleted(true);
-      }
-    }
-  }, [user, projectId, template]);
 
   // Load existing project if editing
   useEffect(() => {
@@ -444,12 +427,6 @@ const EditorView: React.FC<EditorViewProps> = ({ projectId, template, onBack, on
       // Store interval for cleanup
       (window as any).playbackInterval = playbackInterval;
       
-      // Mark as played for onboarding
-      const playedMarker = document.createElement('div');
-      playedMarker.setAttribute('data-onboarding', 'has-played');
-      playedMarker.style.display = 'none';
-      document.body.appendChild(playedMarker);
-      
       showToast('success', 'Playing mix preview');
     } else {
       // Stop playback
@@ -571,12 +548,6 @@ const EditorView: React.FC<EditorViewProps> = ({ projectId, template, onBack, on
     setTemplatePlacements(prev => [...prev, placement]);
     triggerAutosave();
     showToast('success', `${template.name} template added to timeline`);
-    
-    // Mark template as placed for onboarding
-    const placedMarker = document.createElement('div');
-    placedMarker.setAttribute('data-onboarding', 'template-placed');
-    placedMarker.style.display = 'none';
-    document.body.appendChild(placedMarker);
     
     // Track analytics
     if (user) {
@@ -1083,13 +1054,11 @@ const EditorView: React.FC<EditorViewProps> = ({ projectId, template, onBack, on
                     return template ? (
                       <div className="absolute top-0 right-0 bottom-0 w-96 bg-gray-900 border-l border-gray-700 animate-slide-in-right overflow-y-auto">
                         <TemplateInspector
-                          data-onboarding="inspector"
                           template={template}
                           placement={selectedPlacement}
                           onClose={handleCloseInspector}
                           onUpdatePlacement={handleUpdatePlacement}
                           onRemovePlacement={handleRemovePlacement}
-                          showTips={!onboardingCompleted}
                         />
                       </div>
                     ) : null;
@@ -1117,37 +1086,7 @@ const EditorView: React.FC<EditorViewProps> = ({ projectId, template, onBack, on
           trigger={credits?.creditsRemaining === 0 ? 'no_credits' : 'low_credits'}
         />
       )}
-      
-      {/* Onboarding Overlay */}
-      {showOnboarding && (
-        <OnboardingOverlay
-          onComplete={() => {
-            setShowOnboarding(false);
-            setOnboardingCompleted(true);
-            
-            // Track onboarding completion
-            if (user) {
-              analyticsService.trackMilestone('onboarding_completed', {
-                completionTime: Date.now(),
-                skipped: false
-              }, user.id);
-            }
-          }}
-          onSkip={() => {
-            setShowOnboarding(false);
-            setOnboardingCompleted(true);
-            
-            // Track onboarding skip
-            if (user) {
-              analyticsService.trackMilestone('onboarding_skipped', {
-                skipTime: Date.now(),
-                currentStep: 0
-              }, user.id);
-            }
-          }}
-        />
-      )}
-      
+
       {/* Toast Notifications */}
       {toastMessage && (
         <div className="fixed bottom-4 right-4 z-50 animate-fade-in">

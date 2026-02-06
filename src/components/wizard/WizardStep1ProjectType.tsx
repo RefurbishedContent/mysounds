@@ -49,6 +49,7 @@ const WizardStep1ProjectType: React.FC<WizardStep1ProjectTypeProps> = ({ onSelec
               <button
                 key={type.id}
                 onClick={() => onSelectType(type.id)}
+                data-tutorial={type.id === 'transition' ? 'transition-project' : undefined}
                 className="group relative overflow-hidden bg-gray-800 border-2 border-gray-700 rounded-2xl p-8 text-left transition-all duration-300 hover:border-cyan-500 hover:shadow-2xl hover:shadow-cyan-500/20 hover:scale-105 hover:-translate-y-1"
                 style={{
                   animationDelay: `${index * 100}ms`
