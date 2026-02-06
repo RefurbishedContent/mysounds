@@ -3,13 +3,22 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AuthGateway from './components/AuthGateway';
 import AppShell from './components/AppShell';
 import LandingPage from './components/LandingPage';
+import ErrorBoundary from './components/ErrorBoundary';
+import ReloadDetector from './components/ReloadDetector';
 import './styles/theme.css';
+import './lib/debugMonitor';
+import './lib/sessionPersistence';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
   const [currentView, setCurrentView] = useState<'landing' | 'app'>('landing');
   const [showAuthGateway, setShowAuthGateway] = useState(false);
   const isInitialMount = useRef(true);
+
+  useEffect(() => {
+    console.log('🚀 App initialized with reload detection and debugging enabled');
+    console.log('📊 Press Ctrl+Shift+D to open debug panel');
+  }, []);
 
   // Only auto-navigate to app on initial mount if already authenticated
   useEffect(() => {
@@ -39,26 +48,29 @@ const AppContent: React.FC = () => {
   // Landing Page View
   if (currentView === 'landing') {
     return (
-      <div className="min-h-screen bg-gray-900">
-        <LandingPage onTryMixer={() => {
-          if (isAuthenticated) {
-            setCurrentView('app');
-          } else {
-            setShowAuthGateway(true);
-          }
-        }} />
-
-        {/* Auth Gateway */}
-        {showAuthGateway && (
-          <AuthGateway onClose={() => {
-            setShowAuthGateway(false);
-            // If user successfully authenticated, redirect to app
+      <>
+        <ReloadDetector />
+        <div className="min-h-screen bg-gray-900">
+          <LandingPage onTryMixer={() => {
             if (isAuthenticated) {
               setCurrentView('app');
+            } else {
+              setShowAuthGateway(true);
             }
           }} />
-        )}
-      </div>
+
+          {/* Auth Gateway */}
+          {showAuthGateway && (
+            <AuthGateway onClose={() => {
+              setShowAuthGateway(false);
+              // If user successfully authenticated, redirect to app
+              if (isAuthenticated) {
+                setCurrentView('app');
+              }
+            }} />
+          )}
+        </div>
+      </>
     );
   }
 
@@ -81,9 +93,12 @@ const AppContent: React.FC = () => {
     }
 
     return (
-      <div className="h-screen bg-gray-900 flex flex-col overflow-hidden">
-        <AppShell />
-      </div>
+      <>
+        <ReloadDetector />
+        <div className="h-screen bg-gray-900 flex flex-col overflow-hidden">
+          <AppShell />
+        </div>
+      </>
     );
   }
 
@@ -92,9 +107,11 @@ const AppContent: React.FC = () => {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

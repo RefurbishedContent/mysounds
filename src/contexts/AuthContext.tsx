@@ -29,21 +29,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [credits, setCredits] = useState<UserCredits | null>(null);
   const lastUserIdRef = useRef<string | null>(null);
+  const currentUserIdRef = useRef<string | null>(null);
 
   const refreshCredits = useCallback(async () => {
-    if (!authState.user) {
+    const userId = currentUserIdRef.current;
+    if (!userId) {
       setCredits(null);
       return;
     }
 
     try {
-      const userCredits = await databaseService.getUserCredits(authState.user.id);
+      const userCredits = await databaseService.getUserCredits(userId);
       setCredits(userCredits);
     } catch (error) {
       console.error('Failed to fetch user credits:', error);
       setCredits(null);
     }
-  }, [authState.user]);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -55,6 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const authTimeout = setTimeout(() => {
         if (mounted) {
           console.warn('Auth check timed out after 5 seconds, proceeding without auth');
+          currentUserIdRef.current = null;
           setAuthState({
             isAuthenticated: false,
             user: null,
@@ -76,6 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (error) {
           console.error('Session check error:', error);
+          currentUserIdRef.current = null;
           setAuthState({
             isAuthenticated: false,
             user: null,
@@ -105,6 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 plan: 'free'
               };
 
+              currentUserIdRef.current = user.id;
               setAuthState({
                 isAuthenticated: true,
                 user,
@@ -121,6 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               plan: profile.plan
             };
 
+            currentUserIdRef.current = user.id;
             setAuthState({
               isAuthenticated: true,
               user,
@@ -134,7 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
           } catch (profileError) {
             console.warn('Profile loading failed, using basic auth data:', profileError);
-            
+
             // Fallback to basic user data from auth
             const user: User = {
               id: session.user.id,
@@ -143,6 +149,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               plan: 'free'
             };
 
+            currentUserIdRef.current = user.id;
             setAuthState({
               isAuthenticated: true,
               user,
@@ -151,6 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } else {
           console.log('No session found');
+          currentUserIdRef.current = null;
           setAuthState({
             isAuthenticated: false,
             user: null,
@@ -161,6 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Auth check failed:', error);
         if (mounted) {
           clearTimeout(authTimeout);
+          currentUserIdRef.current = null;
           setAuthState({
             isAuthenticated: false,
             user: null,
@@ -188,6 +197,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             console.log('User session active:', session.user.email, 'Event:', event);
             lastUserIdRef.current = session.user.id;
+            currentUserIdRef.current = session.user.id;
 
             // Set auth state immediately with basic user data to avoid blocking
             const basicUser: User = {
@@ -221,6 +231,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     plan: profile.plan
                   };
 
+                  currentUserIdRef.current = user.id;
                   setAuthState({
                     isAuthenticated: true,
                     user,
@@ -243,6 +254,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else if (event === 'SIGNED_OUT') {
           console.log('User signed out');
           lastUserIdRef.current = null;
+          currentUserIdRef.current = null;
           setAuthState({
             isAuthenticated: false,
             user: null,
