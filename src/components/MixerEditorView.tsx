@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, SkipForward, SkipBack, Download, Save, Settings, Volume2, ArrowLeft } from 'lucide-react';
+import { Play, Pause, SkipForward, SkipBack, Download, Save, Settings, Volume2, ArrowLeft, Library, List } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { mixerService, MixSession, MixTrack } from '../lib/mixerService';
 import { blendExportService, BlendData } from '../lib/blendExportService';
@@ -19,7 +19,8 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [masterVolume, setMasterVolume] = useState(0.8);
   const [loading, setLoading] = useState(true);
-  const [showBlendLibrary, setShowBlendLibrary] = useState(true);
+  const [showBlendLibrary, setShowBlendLibrary] = useState(false);
+  const [showPlaylistQueue, setShowPlaylistQueue] = useState(true);
 
   useEffect(() => {
     const loadSession = async () => {
@@ -156,122 +157,147 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
-        {showBlendLibrary && (
-          <div className="w-80 flex-shrink-0 bg-gray-800 border-r border-gray-700 flex flex-col">
-            <div className="flex-shrink-0 px-4 py-3 border-b border-gray-700">
-              <h2 className="text-lg font-bold text-white">Blend Library</h2>
-              <p className="text-sm text-gray-400">{availableBlends.length} available</p>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {availableBlends.map((blend) => {
-                const isInQueue = tracks.some(t => t.blendId === blend.id);
-                return (
-                  <button
-                    key={blend.id}
-                    onClick={() => !isInQueue && handleAddBlendToQueue(blend)}
-                    disabled={isInQueue}
-                    className={`w-full p-3 rounded-lg text-left transition-all ${
-                      isInQueue
-                        ? 'bg-gray-700 opacity-50 cursor-not-allowed'
-                        : 'bg-gray-700 hover:bg-gray-600 hover:shadow-lg hover:shadow-cyan-500/10'
-                    }`}
-                  >
-                    <h3 className="font-medium text-white text-sm mb-1 line-clamp-1" title={blend.name}>
-                      {blend.name}
-                    </h3>
-                    <div className="flex items-center gap-2 text-xs text-gray-400">
-                      <span>{Math.floor(blend.duration / 60)}:{String(blend.duration % 60).padStart(2, '0')}</span>
-                      <span>•</span>
-                      <span>{blend.format.toUpperCase()}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+          {/* Toggle Buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowBlendLibrary(!showBlendLibrary)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                showBlendLibrary
+                  ? 'bg-cyan-500 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+              }`}
+            >
+              <Library size={18} />
+              <span>Blend Library</span>
+            </button>
+            <button
+              onClick={() => setShowPlaylistQueue(!showPlaylistQueue)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                showPlaylistQueue
+                  ? 'bg-cyan-500 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+              }`}
+            >
+              <List size={18} />
+              <span>Playlist Queue ({tracks.length})</span>
+            </button>
           </div>
-        )}
 
-        <div className="flex-1 flex flex-col">
-          <div className="flex-1 flex">
-            <div className="flex-1 flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 border-r border-gray-700 p-8">
-              <div className="w-full max-w-md space-y-6">
-                <div className="text-center">
-                  <div className="inline-block p-4 bg-cyan-500/10 rounded-full mb-4">
-                    <div className="w-32 h-32 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-full flex items-center justify-center relative">
-                      <div className="absolute inset-2 bg-gray-900 rounded-full flex items-center justify-center">
-                        <div className="text-center">
-                          <div className="text-4xl font-bold text-cyan-400">
-                            {currentTrack?.blend?.duration ? Math.round(currentTrack.blend.duration / 60) : 0}
-                          </div>
-                          <div className="text-xs text-gray-400 uppercase">BPM</div>
-                        </div>
+          {/* Blend Library */}
+          {showBlendLibrary && (
+            <div className="bg-gray-800 rounded-lg border border-gray-700">
+              <div className="px-4 py-3 border-b border-gray-700">
+                <h2 className="text-lg font-bold text-white">Blend Library</h2>
+                <p className="text-sm text-gray-400">{availableBlends.length} available</p>
+              </div>
+              <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
+                {availableBlends.map((blend) => {
+                  const isInQueue = tracks.some(t => t.blendId === blend.id);
+                  return (
+                    <button
+                      key={blend.id}
+                      onClick={() => !isInQueue && handleAddBlendToQueue(blend)}
+                      disabled={isInQueue}
+                      className={`p-3 rounded-lg text-left transition-all ${
+                        isInQueue
+                          ? 'bg-gray-700 opacity-50 cursor-not-allowed'
+                          : 'bg-gray-700 hover:bg-gray-600 hover:shadow-lg hover:shadow-cyan-500/10'
+                      }`}
+                    >
+                      <h3 className="font-medium text-white text-sm mb-1 line-clamp-1" title={blend.name}>
+                        {blend.name}
+                      </h3>
+                      <div className="flex items-center gap-2 text-xs text-gray-400">
+                        <span>{Math.floor(blend.duration / 60)}:{String(blend.duration % 60).padStart(2, '0')}</span>
+                        <span>•</span>
+                        <span>{blend.format.toUpperCase()}</span>
                       </div>
-                    </div>
-                  </div>
-                  <h3 className="text-sm text-gray-500 uppercase mb-1">Deck A - Current</h3>
-                  <h2 className="text-xl font-bold text-white mb-2">
-                    {currentTrack?.blend?.name || 'No track loaded'}
-                  </h2>
-                  {currentTrack && (
-                    <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
-                      <span>{currentTrack.blend?.format.toUpperCase()}</span>
-                      <span>•</span>
-                      <span>
-                        {Math.floor((currentTrack.blend?.duration || 0) / 60)}:
-                        {String((currentTrack.blend?.duration || 0) % 60).padStart(2, '0')}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="h-32 bg-gray-800 rounded-lg p-4 flex items-center justify-center">
-                  <div className="text-gray-500 text-sm">Waveform visualization</div>
-                </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
+          )}
 
-            <div className="flex-1 flex flex-col items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 p-8">
-              <div className="w-full max-w-md space-y-6">
-                <div className="text-center">
-                  <div className="inline-block p-4 bg-blue-500/10 rounded-full mb-4">
-                    <div className="w-32 h-32 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center relative">
-                      <div className="absolute inset-2 bg-gray-900 rounded-full flex items-center justify-center">
-                        <div className="text-center">
-                          <div className="text-4xl font-bold text-blue-400">
-                            {nextTrack?.blend?.duration ? Math.round(nextTrack.blend.duration / 60) : 0}
-                          </div>
-                          <div className="text-xs text-gray-400 uppercase">BPM</div>
-                        </div>
+          {/* Deck A - Current Track */}
+          <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg border border-gray-700 p-6">
+            <div className="flex items-center gap-6">
+              <div className="flex-shrink-0">
+                <div className="w-20 h-20 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-full flex items-center justify-center relative">
+                  <div className="absolute inset-2 bg-gray-900 rounded-full flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-cyan-400">
+                        {currentTrack?.blend?.duration ? Math.round(currentTrack.blend.duration / 60) : 0}
                       </div>
+                      <div className="text-xs text-gray-400 uppercase">BPM</div>
                     </div>
                   </div>
-                  <h3 className="text-sm text-gray-500 uppercase mb-1">Deck B - Next</h3>
-                  <h2 className="text-xl font-bold text-white mb-2">
-                    {nextTrack?.blend?.name || 'No track queued'}
-                  </h2>
-                  {nextTrack && (
-                    <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
-                      <span>{nextTrack.blend?.format.toUpperCase()}</span>
-                      <span>•</span>
-                      <span>
-                        {Math.floor((nextTrack.blend?.duration || 0) / 60)}:
-                        {String((nextTrack.blend?.duration || 0) % 60).padStart(2, '0')}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="h-32 bg-gray-800 rounded-lg p-4 flex items-center justify-center">
-                  <div className="text-gray-500 text-sm">Waveform visualization</div>
                 </div>
               </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-xs text-gray-500 uppercase mb-1">Deck A - Current</h3>
+                <h2 className="text-xl font-bold text-white mb-1 truncate">
+                  {currentTrack?.blend?.name || 'No track loaded'}
+                </h2>
+                {currentTrack && (
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <span>{currentTrack.blend?.format.toUpperCase()}</span>
+                    <span>•</span>
+                    <span>
+                      {Math.floor((currentTrack.blend?.duration || 0) / 60)}:
+                      {String((currentTrack.blend?.duration || 0) % 60).padStart(2, '0')}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="mt-4 h-24 bg-gray-800/50 rounded-lg p-4 flex items-center justify-center">
+              <div className="text-gray-500 text-sm">Waveform visualization</div>
             </div>
           </div>
 
-          <div className="flex-shrink-0 bg-gray-800 border-t border-gray-700 p-6">
-            <div className="max-w-2xl mx-auto space-y-4">
+          {/* Deck B - Next Track */}
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-lg border border-gray-700 p-6">
+            <div className="flex items-center gap-6">
+              <div className="flex-shrink-0">
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center relative">
+                  <div className="absolute inset-2 bg-gray-900 rounded-full flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-400">
+                        {nextTrack?.blend?.duration ? Math.round(nextTrack.blend.duration / 60) : 0}
+                      </div>
+                      <div className="text-xs text-gray-400 uppercase">BPM</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-xs text-gray-500 uppercase mb-1">Deck B - Next</h3>
+                <h2 className="text-xl font-bold text-white mb-1 truncate">
+                  {nextTrack?.blend?.name || 'No track queued'}
+                </h2>
+                {nextTrack && (
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <span>{nextTrack.blend?.format.toUpperCase()}</span>
+                    <span>•</span>
+                    <span>
+                      {Math.floor((nextTrack.blend?.duration || 0) / 60)}:
+                      {String((nextTrack.blend?.duration || 0) % 60).padStart(2, '0')}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="mt-4 h-24 bg-gray-800/50 rounded-lg p-4 flex items-center justify-center">
+              <div className="text-gray-500 text-sm">Waveform visualization</div>
+            </div>
+          </div>
+
+          {/* Transport Controls */}
+          <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
+            <div className="space-y-4">
               <div className="flex items-center justify-center space-x-4">
                 <button
                   onClick={() => setCurrentTrackIndex(Math.max(0, currentTrackIndex - 1))}
@@ -313,60 +339,62 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="w-96 flex-shrink-0 bg-gray-800 border-l border-gray-700 flex flex-col">
-          <div className="flex-shrink-0 px-4 py-3 border-b border-gray-700">
-            <h2 className="text-lg font-bold text-white">Playlist Queue</h2>
-            <p className="text-sm text-gray-400">{tracks.length} tracks</p>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-4 space-y-2">
-            {tracks.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-500 text-sm">No tracks in queue</p>
-                <p className="text-gray-600 text-xs mt-2">Add blends from the library</p>
+          {/* Playlist Queue */}
+          {showPlaylistQueue && (
+            <div className="bg-gray-800 rounded-lg border border-gray-700">
+              <div className="px-4 py-3 border-b border-gray-700">
+                <h2 className="text-lg font-bold text-white">Playlist Queue</h2>
+                <p className="text-sm text-gray-400">{tracks.length} tracks</p>
               </div>
-            ) : (
-              tracks.map((track, index) => (
-                <div
-                  key={track.id}
-                  className={`p-3 rounded-lg transition-all ${
-                    index === currentTrackIndex
-                      ? 'bg-cyan-500/20 border-2 border-cyan-500'
-                      : 'bg-gray-700 hover:bg-gray-600'
-                  }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-3 flex-1 min-w-0">
-                      <div className="w-8 h-8 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-white text-sm font-bold">{index + 1}</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-white text-sm mb-1 line-clamp-2" title={track.blend?.name}>
-                          {track.blend?.name}
-                        </h3>
-                        <div className="flex items-center gap-2 text-xs text-gray-400">
-                          <span>
-                            {Math.floor((track.blend?.duration || 0) / 60)}:
-                            {String((track.blend?.duration || 0) % 60).padStart(2, '0')}
-                          </span>
-                          <span>•</span>
-                          <span className="text-cyan-400">{track.crossfadeType}</span>
+              <div className="p-4 space-y-2 max-h-96 overflow-y-auto">
+                {tracks.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-gray-500 text-sm">No tracks in queue</p>
+                    <p className="text-gray-600 text-xs mt-2">Add blends from the library</p>
+                  </div>
+                ) : (
+                  tracks.map((track, index) => (
+                    <div
+                      key={track.id}
+                      className={`p-3 rounded-lg transition-all ${
+                        index === currentTrackIndex
+                          ? 'bg-cyan-500/20 border-2 border-cyan-500'
+                          : 'bg-gray-700 hover:bg-gray-600'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start space-x-3 flex-1 min-w-0">
+                          <div className="w-8 h-8 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span className="text-white text-sm font-bold">{index + 1}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium text-white text-sm mb-1 line-clamp-2" title={track.blend?.name}>
+                              {track.blend?.name}
+                            </h3>
+                            <div className="flex items-center gap-2 text-xs text-gray-400">
+                              <span>
+                                {Math.floor((track.blend?.duration || 0) / 60)}:
+                                {String((track.blend?.duration || 0) % 60).padStart(2, '0')}
+                              </span>
+                              <span>•</span>
+                              <span className="text-cyan-400">{track.crossfadeType}</span>
+                            </div>
+                          </div>
                         </div>
+                        <button
+                          onClick={() => handleRemoveTrack(track.id)}
+                          className="p-1 text-gray-400 hover:text-red-400 transition-colors flex-shrink-0 ml-2"
+                        >
+                          <span className="text-lg">×</span>
+                        </button>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleRemoveTrack(track.id)}
-                      className="p-1 text-gray-400 hover:text-red-400 transition-colors flex-shrink-0 ml-2"
-                    >
-                      <span className="text-lg">×</span>
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
