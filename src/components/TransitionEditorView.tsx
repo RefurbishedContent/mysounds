@@ -18,6 +18,7 @@ import { ClippedWaveformDisplay } from './ClippedWaveformDisplay';
 import { KeyframeFadeEditor, FadeKeyframe } from './KeyframeFadeEditor';
 import BlendExportDialog from './BlendExportDialog';
 import ResetTransitionPointsModal from './ResetTransitionPointsModal';
+import { TransitionWaveformDisplay } from './TransitionWaveformDisplay';
 
 interface TransitionEditorViewProps {
   songA: UploadResult;
@@ -131,6 +132,17 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   ]);
   const [songAFadeCurve, setSongAFadeCurve] = useState<FadeCurveType>('smooth');
   const [songBFadeCurve, setSongBFadeCurve] = useState<FadeCurveType>('smooth');
+  const [transitionFadeInKeyframes, setTransitionFadeInKeyframes] = useState<FadeKeyframe[]>([
+    { position: 0, value: 0 },
+    { position: 0.3, value: 1 },
+    { position: 1, value: 1 }
+  ]);
+  const [transitionFadeOutKeyframes, setTransitionFadeOutKeyframes] = useState<FadeKeyframe[]>([
+    { position: 0, value: 1 },
+    { position: 0.7, value: 1 },
+    { position: 1, value: 0 }
+  ]);
+  const [transitionFadeCurve, setTransitionFadeCurve] = useState<FadeCurveType>('smooth');
   const [showResetPointsModal, setShowResetPointsModal] = useState(false);
 
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -166,6 +178,15 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       }
       if (transition.metadata?.songBFadeCurve) {
         setSongBFadeCurve(transition.metadata.songBFadeCurve);
+      }
+      if (transition.metadata?.transitionFadeInKeyframes) {
+        setTransitionFadeInKeyframes(transition.metadata.transitionFadeInKeyframes);
+      }
+      if (transition.metadata?.transitionFadeOutKeyframes) {
+        setTransitionFadeOutKeyframes(transition.metadata.transitionFadeOutKeyframes);
+      }
+      if (transition.metadata?.transitionFadeCurve) {
+        setTransitionFadeCurve(transition.metadata.transitionFadeCurve);
       }
     }
   }, [transition]);
@@ -391,11 +412,24 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
         { position: 0.3, value: 1 },
         { position: 1, value: 1 }
       ];
+      const defaultTransitionFadeIn = [
+        { position: 0, value: 0 },
+        { position: 0.3, value: 1 },
+        { position: 1, value: 1 }
+      ];
+      const defaultTransitionFadeOut = [
+        { position: 0, value: 1 },
+        { position: 0.7, value: 1 },
+        { position: 1, value: 0 }
+      ];
 
       setSongAKeyframes(defaultKeyframesA);
       setSongBKeyframes(defaultKeyframesB);
       setSongAFadeCurve('smooth');
       setSongBFadeCurve('smooth');
+      setTransitionFadeInKeyframes(defaultTransitionFadeIn);
+      setTransitionFadeOutKeyframes(defaultTransitionFadeOut);
+      setTransitionFadeCurve('smooth');
       setSelectedTemplate(null);
       setDurationSize('medium');
       setTransitionDuration(12);
@@ -409,6 +443,9 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
             songBKeyframes: defaultKeyframesB,
             songAFadeCurve: 'smooth',
             songBFadeCurve: 'smooth',
+            transitionFadeInKeyframes: defaultTransitionFadeIn,
+            transitionFadeOutKeyframes: defaultTransitionFadeOut,
+            transitionFadeCurve: 'smooth',
             durationSize: 'medium'
           }
         });
@@ -506,19 +543,15 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     }
   };
 
-  const handlePlayTransition = () => {
-    if (!selectedTemplate) {
-      alert('Please select a template first');
+  const handlePlayTransition = async () => {
+    if (!transition || transition.songAMarkerPoint === undefined || transition.songBMarkerPoint === undefined) {
       return;
     }
 
+    await Tone.start();
+
     if (isPlayingTransition) {
-      if (playerTransitionRef.current) {
-        playerTransitionRef.current.stop();
-        playerTransitionRef.current.dispose();
-        playerTransitionRef.current = null;
-      }
-      setIsPlayingTransition(false);
+      handleStopAll();
       return;
     }
 
@@ -526,7 +559,60 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       handleStopAll();
     }
 
-    setIsPlayingTransition(!isPlayingTransition);
+    try {
+      const volumeNodeA = new Tone.Volume(0).toDestination();
+      const volumeNodeB = new Tone.Volume(0).toDestination();
+      volumeNodeARef.current = volumeNodeA;
+      volumeNodeBRef.current = volumeNodeB;
+
+      const playerA = new Tone.Player(songA.url);
+      const playerB = new Tone.Player(songB.url);
+
+      await Promise.all([
+        new Promise<void>((resolve) => {
+          playerA.load(songA.url).then(() => resolve());
+        }),
+        new Promise<void>((resolve) => {
+          playerB.load(songB.url).then(() => resolve());
+        })
+      ]);
+
+      const songATransitionStart = Math.max(0, transition.songAMarkerPoint - transitionDuration);
+      const songBTransitionEnd = transition.songBMarkerPoint + transitionDuration;
+
+      applyVolumeAutomation(volumeNodeA, transitionFadeOutKeyframes, transitionDuration, transitionFadeCurve);
+      applyVolumeAutomation(volumeNodeB, transitionFadeInKeyframes, transitionDuration, transitionFadeCurve);
+
+      playerA.connect(volumeNodeA);
+      playerB.connect(volumeNodeB);
+
+      playerA.sync().start(0, songATransitionStart, transitionDuration);
+      playerB.sync().start(0, transition.songBMarkerPoint, transitionDuration);
+
+      Tone.Transport.start();
+
+      playerARef.current = playerA;
+      playerBRef.current = playerB;
+      setIsPlayingTransition(true);
+
+      setTimeout(() => {
+        playerA.stop();
+        playerB.stop();
+        playerA.dispose();
+        playerB.dispose();
+        volumeNodeA.dispose();
+        volumeNodeB.dispose();
+        playerARef.current = null;
+        playerBRef.current = null;
+        volumeNodeARef.current = null;
+        volumeNodeBRef.current = null;
+        setIsPlayingTransition(false);
+        Tone.Transport.stop();
+      }, transitionDuration * 1000);
+    } catch (error) {
+      console.error('Failed to play transition:', error);
+      setIsPlayingTransition(false);
+    }
   };
 
   const handlePlaySongB = async () => {
@@ -670,7 +756,10 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
           songAKeyframes,
           songBKeyframes,
           songAFadeCurve,
-          songBFadeCurve
+          songBFadeCurve,
+          transitionFadeInKeyframes,
+          transitionFadeOutKeyframes,
+          transitionFadeCurve
         }
       });
 
@@ -710,6 +799,16 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       setSongBFadeCurve(curve);
       debouncedSaveFade({ songBFadeCurve: curve });
     }
+  };
+
+  const handleTransitionFadeInKeyframesChange = (newKeyframes: FadeKeyframe[]) => {
+    setTransitionFadeInKeyframes(newKeyframes);
+    debouncedSaveFade({ transitionFadeInKeyframes: newKeyframes });
+  };
+
+  const handleTransitionFadeOutKeyframesChange = (newKeyframes: FadeKeyframe[]) => {
+    setTransitionFadeOutKeyframes(newKeyframes);
+    debouncedSaveFade({ transitionFadeOutKeyframes: newKeyframes });
   };
 
   const formatTime = (seconds: number): string => {
@@ -1021,43 +1120,76 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                       </button>
                     )}
                   </div>
-                  <div
-                    className="relative h-full rounded overflow-hidden transition-all duration-300 border"
+                  <div className="relative h-full bg-gray-900 rounded overflow-hidden timeline-container border border-purple-500/40"
                     style={{
-                      background: selectedTemplate
-                        ? 'linear-gradient(90deg, rgba(6,182,212,0.2) 0%, rgba(168,85,247,0.3) 50%, rgba(236,72,153,0.2) 100%)'
-                        : 'linear-gradient(135deg, rgba(17,24,39,0.8) 0%, rgba(31,41,55,0.9) 50%, rgba(17,24,39,0.8) 100%)',
-                      borderColor: selectedTemplate
-                        ? 'rgba(168,85,247,0.4)'
-                        : 'rgba(75,85,99,0.3)',
-                      boxShadow: selectedTemplate
-                        ? '0 0 30px rgba(168,85,247,0.4), inset 0 0 30px rgba(168,85,247,0.1)'
-                        : 'inset 0 0 20px rgba(0,0,0,0.2)'
+                      boxShadow: '0 0 20px rgba(168,85,247,0.3), inset 0 0 20px rgba(168,85,247,0.1)'
                     }}
                   >
-                    {selectedTemplate ? (
+                    {transition && transition.songAMarkerPoint !== undefined && transition.songBMarkerPoint !== undefined ? (
                       <>
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-400/10 to-transparent animate-pulse" />
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="text-center space-y-1">
-                            <div className="flex items-center justify-center space-x-2">
-                              <Sparkles className="w-5 h-5 text-purple-400 animate-pulse" />
-                              <span className="text-sm font-bold text-purple-300">{selectedTemplate.name}</span>
-                              <Sparkles className="w-5 h-5 text-purple-400 animate-pulse" />
+                        <TransitionWaveformDisplay
+                          songAUrl={songA.url}
+                          songBUrl={songB.url}
+                          songAEndTime={transition.songAMarkerPoint}
+                          songBStartTime={transition.songBMarkerPoint}
+                          transitionDuration={transitionDuration}
+                          height={Math.max(80, trackHeight * 0.6) - 32}
+                          fadeInKeyframes={transitionFadeInKeyframes}
+                          fadeOutKeyframes={transitionFadeOutKeyframes}
+                          zoom={zoomLevel / 100}
+                        />
+
+                        <div className="absolute inset-0 pointer-events-auto">
+                          <div className="relative w-full h-full">
+                            <div className="absolute left-0 top-0 bottom-0 w-[45%] pointer-events-auto">
+                              <KeyframeFadeEditor
+                                keyframes={transitionFadeOutKeyframes}
+                                onChange={handleTransitionFadeOutKeyframesChange}
+                                color="#06b6d4"
+                                direction="fadeOut"
+                                height={Math.max(80, trackHeight * 0.6) - 32}
+                              />
                             </div>
-                            <div className="text-xs text-purple-400">{transitionDuration}s transition</div>
+                            <div className="absolute right-0 top-0 bottom-0 w-[45%] pointer-events-auto">
+                              <KeyframeFadeEditor
+                                keyframes={transitionFadeInKeyframes}
+                                onChange={handleTransitionFadeInKeyframesChange}
+                                color="#ec4899"
+                                direction="fadeIn"
+                                height={Math.max(80, trackHeight * 0.6) - 32}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {selectedTemplate && (
+                          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+                            <div className="flex items-center space-x-2 bg-purple-900/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-purple-400/50">
+                              <Sparkles className="w-3 h-3 text-purple-300" />
+                              <span className="text-xs font-bold text-purple-200">{selectedTemplate.name}</span>
+                              <span className="text-[10px] text-purple-300">({transitionDuration}s)</span>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-cyan-400 pointer-events-none z-20 shadow-[0_0_10px_rgba(6,182,212,0.8)]">
+                          <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-cyan-400 text-gray-900 text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap">
+                            A OUT
+                          </div>
+                        </div>
+
+                        <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-pink-400 pointer-events-none z-20 shadow-[0_0_10px_rgba(236,72,153,0.8)]">
+                          <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-pink-400 text-gray-900 text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap">
+                            B IN
                           </div>
                         </div>
                       </>
                     ) : (
-                      <>
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-700/5 to-transparent" />
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="text-center">
-                            <div className="text-xs text-gray-500">{transitionDuration}s transition</div>
-                          </div>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500">{transitionDuration}s transition</div>
                         </div>
-                      </>
+                      </div>
                     )}
                   </div>
                 </div>
