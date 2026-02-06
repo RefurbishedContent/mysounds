@@ -45,11 +45,25 @@ export class ClientAudioRenderer {
     try {
       onProgress?.({ stage: 'loading', progress: 0, message: 'Loading audio files...' });
 
-      const [songABuffer, songBBuffer, templateBuffer] = await Promise.all([
-        this.loadAudioBuffer(songAUrl),
-        this.loadAudioBuffer(songBUrl),
-        this.loadAudioBuffer(templateUrl)
-      ]);
+      console.log('Loading audio files:', { songAUrl, songBUrl, templateUrl });
+
+      let songABuffer: AudioBuffer;
+      let songBBuffer: AudioBuffer;
+      let templateBuffer: AudioBuffer;
+
+      try {
+        onProgress?.({ stage: 'loading', progress: 10, message: 'Loading Song A...' });
+        songABuffer = await this.loadAudioBuffer(songAUrl);
+
+        onProgress?.({ stage: 'loading', progress: 20, message: 'Loading Song B...' });
+        songBBuffer = await this.loadAudioBuffer(songBUrl);
+
+        onProgress?.({ stage: 'loading', progress: 30, message: 'Loading template audio...' });
+        templateBuffer = await this.loadAudioBuffer(templateUrl);
+      } catch (loadError: any) {
+        console.error('Audio loading failed:', loadError);
+        throw new Error(`Failed to load audio files: ${loadError.message}`);
+      }
 
       onProgress?.({ stage: 'loading', progress: 33, message: 'Audio files loaded' });
 
@@ -140,10 +154,59 @@ export class ClientAudioRenderer {
   }
 
   private async loadAudioBuffer(url: string): Promise<AudioBuffer> {
-    const response = await fetch(url);
-    const arrayBuffer = await response.arrayBuffer();
-    const audioContext = new AudioContext();
-    return await audioContext.decodeAudioData(arrayBuffer);
+    try {
+      let arrayBuffer: ArrayBuffer;
+
+      if (url.includes('supabase')) {
+        const urlParts = new URL(url);
+        const pathParts = urlParts.pathname.split('/');
+        const bucketIndex = pathParts.findIndex(p => p === 'storage' || p === 'object');
+
+        if (bucketIndex !== -1 && pathParts.length > bucketIndex + 2) {
+          const bucket = pathParts[bucketIndex + 2];
+          const filePath = pathParts.slice(bucketIndex + 3).join('/');
+
+          const { data, error } = await supabase.storage
+            .from(bucket)
+            .download(filePath);
+
+          if (error) {
+            console.error('Supabase download error:', error);
+            throw new Error(`Failed to download from Supabase: ${error.message}`);
+          }
+
+          if (!data) {
+            throw new Error('No data received from Supabase storage');
+          }
+
+          arrayBuffer = await data.arrayBuffer();
+        } else {
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          arrayBuffer = await response.arrayBuffer();
+        }
+      } else {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        arrayBuffer = await response.arrayBuffer();
+      }
+
+      if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+        throw new Error('Empty audio file received');
+      }
+
+      const audioContext = new AudioContext();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+      return audioBuffer;
+    } catch (error: any) {
+      console.error('Failed to load audio buffer from:', url, error);
+      throw new Error(`Audio loading failed: ${error.message}`);
+    }
   }
 
   private extractSegment(
