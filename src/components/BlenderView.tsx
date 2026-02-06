@@ -47,12 +47,6 @@ const BlenderView: React.FC<BlenderViewProps> = ({ onBack, onNavigate }) => {
     onNavigate('transition-editor', { transitionId });
   };
 
-  const handleGoToMixer = () => {
-    if (createdBlend) {
-      onNavigate('mixer', { blendId: createdBlend.id });
-    }
-  };
-
   const handleGoToLibrary = () => {
     onNavigate('library', { tab: 'blends' });
   };
@@ -112,12 +106,18 @@ const BlenderView: React.FC<BlenderViewProps> = ({ onBack, onNavigate }) => {
       )}
 
       {currentScreen === 'completion' && createdBlend && (
-        <BlenderCompletionScreen
-          blend={createdBlend}
-          onCreateAnother={handleCreateAnother}
-          onGoToMixer={handleGoToMixer}
-          onGoToLibrary={handleGoToLibrary}
-        />
+        <>
+          <BlenderProcessingScreen
+            transition={selectedTransition!}
+            onComplete={handleBlendComplete}
+            onBack={handleBackToSelection}
+          />
+          <BlenderCompletionScreen
+            blend={createdBlend}
+            onCreateAnother={handleCreateAnother}
+            onGoToLibrary={handleGoToLibrary}
+          />
+        </>
       )}
     </div>
   );

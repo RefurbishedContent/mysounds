@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Loader, Zap, Music, Layers, CheckCircle, X } from 'lucide-react';
 import { TransitionData } from '../../lib/transitionsService';
 import { BlendData, blendExportService, ExportProgress } from '../../lib/blendExportService';
@@ -33,10 +33,21 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
+  const hasStartedRef = useRef(false);
+  const cleanupFnRef = useRef<(() => void) | null>(null);
+
   useEffect(() => {
-    if (user) {
+    if (user && !hasStartedRef.current) {
+      hasStartedRef.current = true;
       startBlending();
     }
+
+    return () => {
+      if (cleanupFnRef.current) {
+        cleanupFnRef.current();
+        cleanupFnRef.current = null;
+      }
+    };
   }, [user]);
 
   const startBlending = async () => {
@@ -86,6 +97,8 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
   const subscribeToBlendUpdates = (blendId: string) => {
     console.log('[BlenderProcessing] Subscribing to blend updates:', blendId);
 
+    let progressInterval: NodeJS.Timeout | null = null;
+
     const subscription = blendExportService.subscribeToBlendUpdates(
       blendId,
       (updatedBlend) => {
@@ -96,15 +109,37 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
 
         if (updatedBlend.status === 'completed') {
           console.log('[BlenderProcessing] Blend completed successfully');
+
+          // Clear the progress interval immediately
+          if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+          }
+
           subscription.unsubscribe();
+
+          // Clean up the cleanup function
+          cleanupFnRef.current = null;
+
           setProgress(100);
           setCurrentStageIndex(7);
+          setMessage('Blend created successfully!');
+
           setTimeout(() => {
             onComplete(updatedBlend);
           }, 500);
         } else if (updatedBlend.status === 'failed') {
           console.error('[BlenderProcessing] Blend failed:', updatedBlend.exportSettings);
+
+          // Clear the progress interval
+          if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+          }
+
           subscription.unsubscribe();
+          cleanupFnRef.current = null;
+
           const errorMsg = updatedBlend.exportSettings?.error || 'Blend processing failed on the server';
           setError(errorMsg);
         }
@@ -112,7 +147,7 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
     );
 
     let simulatedProgress = 40;
-    const progressInterval = setInterval(() => {
+    progressInterval = setInterval(() => {
       if (simulatedProgress < 90) {
         simulatedProgress += Math.random() * 5;
         setProgress(Math.min(simulatedProgress, 90));
@@ -133,8 +168,11 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
       }
     }, 800);
 
-    return () => {
-      clearInterval(progressInterval);
+    // Store the cleanup function
+    cleanupFnRef.current = () => {
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
       subscription.unsubscribe();
     };
   };
