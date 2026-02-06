@@ -843,7 +843,7 @@ class DatabaseService {
    */
   async getUserMixSessions(userId: string): Promise<any[]> {
     const { data, error } = await supabase
-      .from('mixer_sessions')
+      .from('mix_sessions')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
