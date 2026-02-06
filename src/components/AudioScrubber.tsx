@@ -43,6 +43,8 @@ export function AudioScrubber({
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(currentTime);
   const [draggingMarkerId, setDraggingMarkerId] = useState<string | null>(null);
+  const [flashInMarker, setFlashInMarker] = useState(false);
+  const [flashEndMarker, setFlashEndMarker] = useState(false);
   const playerRef = useRef<Tone.Player | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
@@ -159,19 +161,35 @@ export function AudioScrubber({
   );
 
   const handleSetInMarker = () => {
+    console.log('[AudioScrubber] Set IN marker at:', playbackTime);
     if (playerRef.current && isPlaying) {
       playerRef.current.stop();
       setIsPlaying(false);
     }
-    onSetInMarker?.(playbackTime);
+    if (onSetInMarker) {
+      onSetInMarker(playbackTime);
+      console.log('[AudioScrubber] IN marker callback executed');
+      setFlashInMarker(true);
+      setTimeout(() => setFlashInMarker(false), 500);
+    } else {
+      console.warn('[AudioScrubber] No onSetInMarker callback provided');
+    }
   };
 
   const handleSetEndMarker = () => {
+    console.log('[AudioScrubber] Set END marker at:', playbackTime);
     if (playerRef.current && isPlaying) {
       playerRef.current.stop();
       setIsPlaying(false);
     }
-    onSetEndMarker?.(playbackTime);
+    if (onSetEndMarker) {
+      onSetEndMarker(playbackTime);
+      console.log('[AudioScrubber] END marker callback executed');
+      setFlashEndMarker(true);
+      setTimeout(() => setFlashEndMarker(false), 500);
+    } else {
+      console.warn('[AudioScrubber] No onSetEndMarker callback provided');
+    }
   };
 
   const handleMarkerMouseDown = useCallback((markerId: string, e: React.MouseEvent) => {
@@ -232,14 +250,20 @@ export function AudioScrubber({
         <div className="flex items-center space-x-2">
           <button
             onClick={handleSetInMarker}
-            className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg transition-colors text-white text-sm font-medium shadow-lg shadow-green-500/20"
+            disabled={!onSetInMarker}
+            className={`flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-all text-white text-sm font-medium shadow-lg shadow-green-500/20 ${
+              flashInMarker ? 'scale-110 ring-4 ring-green-400' : ''
+            }`}
           >
             <MapPin className="w-4 h-4" />
             <span>{inMarkerLabel}</span>
           </button>
           <button
             onClick={handleSetEndMarker}
-            className="flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg transition-colors text-white text-sm font-medium shadow-lg shadow-red-500/20"
+            disabled={!onSetEndMarker}
+            className={`flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-500 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-all text-white text-sm font-medium shadow-lg shadow-red-500/20 ${
+              flashEndMarker ? 'scale-110 ring-4 ring-red-400' : ''
+            }`}
           >
             <Square className="w-4 h-4" />
             <span>{endMarkerLabel}</span>

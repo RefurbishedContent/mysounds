@@ -62,7 +62,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
       const duration = songA.metadata?.duration || 300;
       setSongADuration(duration);
       setSongAStartMarker(0);
-      setSongAMarkerPoint(0);
+      setSongAMarkerPoint(Math.min(15, duration));
 
       const loadActualDuration = async () => {
         try {
@@ -72,7 +72,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
             if (actualDuration > 0) {
               setSongADuration(actualDuration);
               setSongAStartMarker(0);
-              setSongAMarkerPoint(0);
+              setSongAMarkerPoint(Math.min(15, actualDuration));
             }
           });
         } catch (error) {
@@ -89,7 +89,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
       const duration = songB.metadata?.duration || 300;
       setSongBDuration(duration);
       setSongBMarkerPoint(0);
-      setSongBEndMarker(0);
+      setSongBEndMarker(Math.min(15, duration));
 
       const loadActualDuration = async () => {
         try {
@@ -99,7 +99,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
             if (actualDuration > 0) {
               setSongBDuration(actualDuration);
               setSongBMarkerPoint(0);
-              setSongBEndMarker(0);
+              setSongBEndMarker(Math.min(15, actualDuration));
             }
           });
         } catch (error) {
@@ -769,12 +769,18 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                     setSongACurrentTime(time);
                   }}
                   onSetInMarker={(time) => {
+                    console.log('[TransitionCreator] Song A - Setting START marker at:', time);
                     const maxStart = songAMarkerPoint - 5;
-                    setSongAStartMarker(Math.max(0, Math.min(time, maxStart)));
+                    const newValue = Math.max(0, Math.min(time, maxStart));
+                    console.log('[TransitionCreator] Song A - START marker set to:', newValue);
+                    setSongAStartMarker(newValue);
                   }}
                   onSetEndMarker={(time) => {
+                    console.log('[TransitionCreator] Song A - Setting OUT marker at:', time);
                     const minEnd = songAStartMarker + 5;
-                    setSongAMarkerPoint(Math.max(minEnd, Math.min(time, songADuration)));
+                    const newValue = Math.max(minEnd, Math.min(time, songADuration));
+                    console.log('[TransitionCreator] Song A - OUT marker set to:', newValue);
+                    setSongAMarkerPoint(newValue);
                   }}
                   inMarkerLabel="Set START"
                   endMarkerLabel="Set OUT"
@@ -849,12 +855,18 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                     setSongBCurrentTime(time);
                   }}
                   onSetInMarker={(time) => {
+                    console.log('[TransitionCreator] Song B - Setting IN marker at:', time);
                     const maxStart = songBEndMarker - 5;
-                    setSongBMarkerPoint(Math.max(0, Math.min(time, maxStart)));
+                    const newValue = Math.max(0, Math.min(time, maxStart));
+                    console.log('[TransitionCreator] Song B - IN marker set to:', newValue);
+                    setSongBMarkerPoint(newValue);
                   }}
                   onSetEndMarker={(time) => {
+                    console.log('[TransitionCreator] Song B - Setting END marker at:', time);
                     const minEnd = songBMarkerPoint + 5;
-                    setSongBEndMarker(Math.max(minEnd, Math.min(time, songBDuration)));
+                    const newValue = Math.max(minEnd, Math.min(time, songBDuration));
+                    console.log('[TransitionCreator] Song B - END marker set to:', newValue);
+                    setSongBEndMarker(newValue);
                   }}
                   inMarkerLabel="Set IN"
                   endMarkerLabel="Set END"
