@@ -294,7 +294,7 @@ export function AudioScrubber({
               }}
             >
               <div
-                className="absolute -top-8 left-1/2 -translate-x-1/2 text-white text-xs px-2 py-1 rounded whitespace-nowrap font-medium shadow-lg flex items-center space-x-1 cursor-ew-resize"
+                className="absolute -top-4 left-1/2 -translate-x-1/2 text-white text-xs px-2 py-1 rounded whitespace-nowrap font-medium shadow-lg flex items-center space-x-1 cursor-ew-resize"
                 style={{ backgroundColor: marker.color }}
               >
                 <MapPin className="w-3 h-3" />
