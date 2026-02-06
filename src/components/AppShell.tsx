@@ -179,8 +179,8 @@ const AppShell: React.FC = () => {
     setMobileNavView(view);
 
     switch (view) {
-      case 'ai-fusion':
-        setCurrentView('create-with-ai');
+      case 'create-new':
+        setCurrentView('project-wizard');
         break;
       case 'labs':
         setCurrentView('transitions');
