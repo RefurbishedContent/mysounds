@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AuthGateway from './components/AuthGateway';
+import AuthPage from './components/AuthPage';
 import AppShell from './components/AppShell';
-import LandingPage from './components/LandingPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import ReloadDetector from './components/ReloadDetector';
 import './styles/theme.css';
@@ -12,18 +12,10 @@ import './lib/sessionPersistence';
 const AppContent: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
   const [currentView, setCurrentView] = useState<'landing' | 'app'>('landing');
-  const [showAuthGateway, setShowAuthGateway] = useState(false);
   const isInitialMount = useRef(true);
 
   useEffect(() => {
-    console.log('🚀 App initialized with reload detection and debugging enabled');
-    console.log('📊 Press Ctrl+Shift+D to open debug panel');
-  }, []);
-
-  // Only auto-navigate to app on initial mount if already authenticated
-  useEffect(() => {
     if (isInitialMount.current && !loading && isAuthenticated) {
-      console.log('Auto-navigating to app - user already authenticated');
       setCurrentView('app');
       isInitialMount.current = false;
     } else if (!loading) {
@@ -33,58 +25,28 @@ const AppContent: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg-primary)' }}>
         <div className="text-center space-y-4">
-          <div className="w-16 h-16 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl flex items-center justify-center mx-auto animate-pulse">
-            <div className="w-8 h-8 bg-white rounded-sm"></div>
+          <div className="w-14 h-14 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center mx-auto animate-pulse">
+            <div className="w-6 h-6 bg-white rounded-sm" />
           </div>
-          <p className="text-gray-400">Initializing DJ Blender...</p>
-          <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p style={{ color: 'var(--text-tertiary)' }}>Loading...</p>
+          <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto" />
         </div>
       </div>
     );
   }
 
-  // Landing Page View
   if (currentView === 'landing') {
-    return (
-      <>
-        <ReloadDetector />
-        <div className="min-h-screen bg-gray-900">
-          <LandingPage onTryMixer={() => {
-            if (isAuthenticated) {
-              setCurrentView('app');
-            } else {
-              setShowAuthGateway(true);
-            }
-          }} />
-
-          {/* Auth Gateway */}
-          {showAuthGateway && (
-            <AuthGateway onClose={() => {
-              setShowAuthGateway(false);
-              // If user successfully authenticated, redirect to app
-              if (isAuthenticated) {
-                setCurrentView('app');
-              }
-            }} />
-          )}
-        </div>
-      </>
-    );
+    return <AuthPage onAuthenticated={() => setCurrentView('app')} />;
   }
 
-  // App Shell View - Requires Authentication
   if (currentView === 'app') {
     if (!isAuthenticated) {
       return (
-        <div className="min-h-screen bg-gray-900">
+        <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
           <AuthGateway onClose={() => {
-            if (isAuthenticated) {
-              // User authenticated, stay in app
-              return;
-            } else {
-              // User cancelled, go back to landing
+            if (!isAuthenticated) {
               setCurrentView('landing');
             }
           }} />
@@ -95,7 +57,7 @@ const AppContent: React.FC = () => {
     return (
       <>
         <ReloadDetector />
-        <div className="h-screen bg-gray-900 flex flex-col overflow-hidden">
+        <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
           <AppShell />
         </div>
       </>
