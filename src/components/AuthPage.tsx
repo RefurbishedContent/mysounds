@@ -71,8 +71,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthenticated }) => {
 
       <div className="glass-surface rounded-2xl max-w-sm w-full p-8 animate-fade-in relative z-10">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center mx-auto shadow-lg" style={{ boxShadow: '0 0 30px rgba(6,182,212,0.3)' }}>
-            <div className="w-6 h-6 bg-white rounded-sm" />
+          <div className="w-14 h-14 rounded-xl flex items-center justify-center mx-auto shadow-lg overflow-hidden" style={{ boxShadow: '0 0 30px rgba(6,182,212,0.3)' }}>
+            <img src="https://images.ctfassets.net/ktdj7g8bqfli/5vsEjYHOcHlGsPgxTVzBH7/6520dd25ce317298ba6d146dd368824a/Option_1.jpg" alt="MySounds.AI" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-xl font-bold text-white mt-5">MySounds.AI</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--text-tertiary)' }}>
