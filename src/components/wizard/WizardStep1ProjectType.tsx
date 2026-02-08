@@ -50,31 +50,32 @@ const WizardStep1ProjectType: React.FC<WizardStep1ProjectTypeProps> = ({ onSelec
                 key={type.id}
                 onClick={() => onSelectType(type.id)}
                 data-tutorial={type.id === 'transition' ? 'transition-project' : undefined}
-                className="group relative overflow-hidden bg-gray-800 border-2 border-gray-700 rounded-2xl p-8 text-left transition-all duration-300 hover:border-cyan-500 hover:shadow-2xl hover:shadow-cyan-500/20 hover:scale-105 hover:-translate-y-1"
+                className="group relative overflow-hidden bg-gray-800 border-2 border-gray-700 rounded-2xl p-4 md:p-8 text-left transition-all duration-300 hover:border-cyan-500 hover:shadow-2xl hover:shadow-cyan-500/20 hover:scale-105 hover:-translate-y-1"
                 style={{
                   animationDelay: `${index * 100}ms`
                 }}
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${type.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}></div>
 
-                <div className="relative z-10 space-y-6">
-                  <div className="flex items-start justify-between">
-                    <div className={`w-16 h-16 bg-gradient-to-br ${type.gradient} rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-2xl transition-all duration-300 group-hover:scale-110`}>
-                      <Icon size={32} className="text-white" />
+                <div className="relative z-10 space-y-3 md:space-y-6">
+                  <div className="flex items-center md:items-start justify-between">
+                    <div className={`w-10 h-10 md:w-16 md:h-16 bg-gradient-to-br ${type.gradient} rounded-lg md:rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-2xl transition-all duration-300 group-hover:scale-110`}>
+                      <Icon size={20} className="text-white md:hidden" />
+                      <Icon size={32} className="text-white hidden md:block" />
                     </div>
-                    <ArrowRight className="text-gray-600 group-hover:text-cyan-400 transition-all duration-300 group-hover:translate-x-1" size={24} />
+                    <ArrowRight className="text-gray-600 group-hover:text-cyan-400 transition-all duration-300 group-hover:translate-x-1" size={20} />
                   </div>
 
-                  <div className="space-y-3">
-                    <h3 className="text-2xl font-bold text-white group-hover:text-cyan-400 transition-colors duration-300">
+                  <div className="space-y-1 md:space-y-3">
+                    <h3 className="text-lg md:text-2xl font-bold text-white group-hover:text-cyan-400 transition-colors duration-300">
                       {type.title}
                     </h3>
-                    <p className="text-gray-400 leading-relaxed">
+                    <p className="text-sm md:text-base text-gray-400 leading-relaxed">
                       {type.description}
                     </p>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="hidden md:block space-y-2">
                     {type.features.map((feature, idx) => (
                       <div key={idx} className="flex items-center space-x-2 text-sm text-gray-500">
                         <Zap size={14} className="text-cyan-500 flex-shrink-0" />
@@ -83,12 +84,13 @@ const WizardStep1ProjectType: React.FC<WizardStep1ProjectTypeProps> = ({ onSelec
                     ))}
                   </div>
 
-                  <div className="flex items-center space-x-4 pt-4 border-t border-gray-700">
-                    <div className="flex items-center space-x-1 text-sm">
-                      <Users size={14} className="text-gray-500" />
+                  <div className="flex items-center space-x-4 pt-2 md:pt-4 border-t border-gray-700">
+                    <div className="flex items-center space-x-1 text-xs md:text-sm">
+                      <Users size={12} className="text-gray-500 md:hidden" />
+                      <Users size={14} className="text-gray-500 hidden md:block" />
                       <span className="text-gray-400">{type.difficulty}</span>
                     </div>
-                    <div className="text-sm text-gray-400">
+                    <div className="text-xs md:text-sm text-gray-400">
                       {type.time}
                     </div>
                   </div>
