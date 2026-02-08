@@ -82,19 +82,19 @@ export const PlaylistQueueDrawer: React.FC<PlaylistQueueDrawerProps> = ({
       <div className="bg-gray-800 border-t border-gray-700">
         <button
           onClick={onToggle}
-          className="w-full px-6 py-3 flex items-center justify-between hover:bg-gray-750 transition-colors"
+          className="w-full px-3 md:px-6 py-2 md:py-3 flex items-center justify-between hover:bg-gray-750 transition-colors"
         >
-          <div className="flex items-center gap-4 flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <Music size={18} className="text-cyan-400" />
-              <span className="text-sm font-bold text-white">Queue</span>
-              <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs font-bold rounded">
+          <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
+              <Music size={16} className="text-cyan-400 md:w-[18px] md:h-[18px]" />
+              <span className="text-xs md:text-sm font-bold text-white">Queue</span>
+              <span className="px-1.5 md:px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-[10px] md:text-xs font-bold rounded">
                 {tracks.length}
               </span>
             </div>
 
-            {/* Upcoming Tracks Preview */}
-            <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
+            {/* Upcoming Tracks Preview - hidden on mobile */}
+            <div className="hidden md:flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
               <span className="text-xs text-gray-500">Up next:</span>
               <div className="flex gap-2 overflow-x-auto scrollbar-hide">
                 {upcomingTracks.map((track, idx) => (
@@ -109,24 +109,24 @@ export const PlaylistQueueDrawer: React.FC<PlaylistQueueDrawerProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-3 text-xs text-gray-400">
+            <div className="flex items-center gap-2 md:gap-3 text-[10px] md:text-xs text-gray-400 flex-shrink-0">
               <div className="flex items-center gap-1">
-                <Clock size={14} />
+                <Clock size={12} className="md:w-[14px] md:h-[14px]" />
                 <span>{formatTime(totalDuration)}</span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {isOpen ? <ChevronDown size={20} className="text-gray-400" /> : <ChevronUp size={20} className="text-gray-400" />}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {isOpen ? <ChevronDown size={18} className="text-gray-400" /> : <ChevronUp size={18} className="text-gray-400" />}
           </div>
         </button>
       </div>
 
       {/* Full Queue Drawer */}
       {isOpen && (
-        <div className="bg-gray-800 border-t border-gray-700 max-h-96 overflow-y-auto">
-          <div className="p-4">
+        <div className="bg-gray-800 border-t border-gray-700 max-h-[60vh] md:max-h-96 overflow-y-auto">
+          <div className="p-3 md:p-4">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-white">Playlist Queue</h3>
