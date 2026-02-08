@@ -64,8 +64,7 @@ const LabsView: React.FC<LabsViewProps> = ({ onSelectTool }) => {
               </div>
             </div>
             <p className="text-sm text-gray-300 leading-relaxed">
-              Access powerful editing and mixing tools to craft the perfect transitions.
-              Experiment with advanced features to achieve professional-quality results.
+              Professional tools for crafting and fine-tuning your mixes.
             </p>
           </div>
         </div>
