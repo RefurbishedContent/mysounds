@@ -276,7 +276,7 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
   };
 
   return (
-    <div className={`h-full flex flex-col ${compact ? '' : 'p-2 sm:p-3 md:p-4'}`}>
+    <div className={`min-h-full flex flex-col ${compact ? '' : 'p-2 sm:p-3 md:p-4'}`}>
       {/* Header */}
       {!compact && (
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-3">
