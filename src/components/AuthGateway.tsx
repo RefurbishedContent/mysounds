@@ -101,8 +101,8 @@ const AuthGateway: React.FC<AuthGatewayProps> = ({ onClose }) => {
       <div className="glass-surface rounded-2xl max-w-md w-full p-8 animate-fade-in">
         {/* Header */}
         <div className="text-center space-y-4 mb-8">
-          <div className="w-20 h-20 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto shadow-xl shadow-cyan-500/40">
-            <Music size={40} className="text-white" />
+          <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto shadow-xl shadow-cyan-500/40 overflow-hidden">
+            <img src="https://images.ctfassets.net/ktdj7g8bqfli/5vsEjYHOcHlGsPgxTVzBH7/01fa743c4568d87307c57ec1127492d1/ChatGPT_Image_Feb_7__2026__08_34_18_PM.png" alt="MySounds.AI" className="w-full h-full object-cover" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-white mb-2">
