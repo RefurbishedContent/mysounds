@@ -20,8 +20,8 @@ const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
 
           {/* Brand */}
           <div className="flex items-center space-x-2">
-            <div className="w-7 h-7 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg flex items-center justify-center">
-              <div className="w-3.5 h-3.5 bg-white rounded-sm"></div>
+            <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg flex items-center justify-center">
+              <div className="w-5 h-5 bg-white rounded-sm"></div>
             </div>
             <div>
               <h1 className="text-base font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">

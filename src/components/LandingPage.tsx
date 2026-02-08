@@ -58,9 +58,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onTryMixer }) => {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex items-center space-x-3">
-              <img src="https://images.ctfassets.net/ktdj7g8bqfli/5vsEjYHOcHlGsPgxTVzBH7/01fa743c4568d87307c57ec1127492d1/ChatGPT_Image_Feb_7__2026__08_34_18_PM.png" alt="MySounds.AI Logo" className="w-8 h-8 rounded-lg shadow-lg shadow-cyan-500/30 object-cover" />
+              <img src="https://images.ctfassets.net/ktdj7g8bqfli/5vsEjYHOcHlGsPgxTVzBH7/01fa743c4568d87307c57ec1127492d1/ChatGPT_Image_Feb_7__2026__08_34_18_PM.png" alt="MySounds.AI Logo" className="w-12 h-12 rounded-lg shadow-lg shadow-cyan-500/30 object-cover" />
               <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
                   MySounds.AI
                 </h1>
               </div>
@@ -247,8 +247,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onTryMixer }) => {
             {/* Brand */}
             <div className="space-y-4">
               <div className="flex items-center space-x-3">
-                <img src="https://images.ctfassets.net/ktdj7g8bqfli/5vsEjYHOcHlGsPgxTVzBH7/01fa743c4568d87307c57ec1127492d1/ChatGPT_Image_Feb_7__2026__08_34_18_PM.png" alt="MySounds.AI Logo" className="w-8 h-8 rounded-lg shadow-lg shadow-cyan-500/30 object-cover" />
-                <h3 className="text-xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+                <img src="https://images.ctfassets.net/ktdj7g8bqfli/5vsEjYHOcHlGsPgxTVzBH7/01fa743c4568d87307c57ec1127492d1/ChatGPT_Image_Feb_7__2026__08_34_18_PM.png" alt="MySounds.AI Logo" className="w-12 h-12 rounded-lg shadow-lg shadow-cyan-500/30 object-cover" />
+                <h3 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
                   MySounds.AI
                 </h3>
               </div>
