@@ -208,7 +208,11 @@ const AppShell: React.FC = () => {
   };
 
   const handleLabToolSelect = (tool: string) => {
-    setCurrentView(tool as AppView);
+    if (tool === 'transitions') {
+      handleCreateNewTransition();
+    } else {
+      setCurrentView(tool as AppView);
+    }
   };
 
   const handleResetTransitionPoints = async () => {
