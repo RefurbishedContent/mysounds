@@ -513,7 +513,7 @@ const AppShell: React.FC = () => {
               <img
                 src="https://images.ctfassets.net/ktdj7g8bqfli/7zKAOV8kPzAX777JwSdV2c/02fe7bcd6678306a3dc891913e9d0ab4/My_SOunds_AI_Logo_no_bg.png"
                 alt="MySounds.AI Logo"
-                className="w-8 h-8 rounded-lg shadow-lg object-cover"
+                className="w-12 h-12 rounded-lg shadow-lg object-cover"
               />
               <div className="hidden sm:block">
                 <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
