@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   ArrowLeft, Play, Pause, RotateCcw, Save, Sparkles, Zap, Clock, Timer,
   Download, ZoomIn, ZoomOut, ChevronRight, ChevronLeft, ChevronDown, ChevronUp,
-  Volume2, X, Navigation
+  Volume2, X, Navigation, SlidersHorizontal
 } from 'lucide-react';
 import * as Tone from 'tone';
 import { UploadResult } from '../lib/storage';
@@ -20,6 +20,7 @@ import BlendExportDialog from './BlendExportDialog';
 import ResetTransitionPointsModal from './ResetTransitionPointsModal';
 import { TransitionWaveformDisplay } from './TransitionWaveformDisplay';
 import RenderProgressModal from './RenderProgressModal';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 interface TransitionEditorViewProps {
   songA: UploadResult;
@@ -133,6 +134,8 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   onResetPoints,
 }) => {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
+  const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
   const [transition, setTransition] = useState<TransitionData | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateData | null>(null);
   const [templates, setTemplates] = useState<TemplateData[]>([]);
@@ -1024,8 +1027,163 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
         </div>
       </div>
 
+      {isMobile && (
+        <div className="bg-gray-800 border-b border-gray-700 flex-shrink-0">
+          <button
+            onClick={() => setIsMobileSettingsOpen(!isMobileSettingsOpen)}
+            className="w-full px-3 py-2.5 flex items-center justify-between"
+          >
+            <div className="flex items-center space-x-2">
+              <SlidersHorizontal className="w-4 h-4 text-cyan-400" />
+              <span className="text-xs font-semibold text-white">Settings</span>
+              <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                durationSize === 'short' ? 'bg-cyan-500/20 text-cyan-400' :
+                durationSize === 'medium' ? 'bg-blue-500/20 text-blue-400' :
+                'bg-teal-500/20 text-teal-400'
+              }`}>
+                {durationSize === 'short' ? `Short (${DURATION_RANGES.short.default}s)` :
+                 durationSize === 'medium' ? `Medium (${DURATION_RANGES.medium.default}s)` :
+                 `Long (${DURATION_RANGES.long.default}s)`}
+              </div>
+            </div>
+            {isMobileSettingsOpen ? (
+              <ChevronUp className="w-4 h-4 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-gray-400" />
+            )}
+          </button>
+
+          {isMobileSettingsOpen && (
+            <div className="px-3 pb-3 space-y-3 border-t border-gray-700">
+              <div className="pt-3">
+                <h3 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Duration</h3>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    onClick={() => handleDurationChange('short')}
+                    className={`p-2 rounded border-2 transition-all duration-200 ${
+                      durationSize === 'short'
+                        ? 'border-cyan-500 bg-cyan-500/10'
+                        : 'border-gray-700 bg-gray-900'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center space-x-1">
+                      <Zap className={`w-3 h-3 ${durationSize === 'short' ? 'text-cyan-400' : 'text-gray-400'}`} />
+                      <span className={`text-[10px] font-semibold ${durationSize === 'short' ? 'text-cyan-400' : 'text-white'}`}>
+                        Short
+                      </span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handleDurationChange('medium')}
+                    className={`p-2 rounded border-2 transition-all duration-200 ${
+                      durationSize === 'medium'
+                        ? 'border-blue-500 bg-blue-500/10'
+                        : 'border-gray-700 bg-gray-900'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center space-x-1">
+                      <Clock className={`w-3 h-3 ${durationSize === 'medium' ? 'text-blue-400' : 'text-gray-400'}`} />
+                      <span className={`text-[10px] font-semibold ${durationSize === 'medium' ? 'text-blue-400' : 'text-white'}`}>
+                        Medium
+                      </span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handleDurationChange('long')}
+                    className={`p-2 rounded border-2 transition-all duration-200 ${
+                      durationSize === 'long'
+                        ? 'border-teal-500 bg-teal-500/10'
+                        : 'border-gray-700 bg-gray-900'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center space-x-1">
+                      <Timer className={`w-3 h-3 ${durationSize === 'long' ? 'text-teal-400' : 'text-gray-400'}`} />
+                      <span className={`text-[10px] font-semibold ${durationSize === 'long' ? 'text-teal-400' : 'text-white'}`}>
+                        Long
+                      </span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Zoom</h3>
+                <div className="flex items-center space-x-2">
+                  <ZoomOut className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                  <input
+                    type="range"
+                    min="20"
+                    max="200"
+                    value={zoomLevel}
+                    onChange={(e) => setZoomLevel(Number(e.target.value))}
+                    className="flex-1"
+                  />
+                  <ZoomIn className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                  <span className="text-[10px] text-gray-400 w-8 text-right">{zoomLevel}%</span>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Track Height</h3>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    onClick={() => setTrackHeight(80)}
+                    className={`px-2 py-1.5 rounded text-[10px] ${trackHeight === 80 ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+                  >
+                    Small
+                  </button>
+                  <button
+                    onClick={() => setTrackHeight(120)}
+                    className={`px-2 py-1.5 rounded text-[10px] ${trackHeight === 120 ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+                  >
+                    Medium
+                  </button>
+                  <button
+                    onClick={() => setTrackHeight(180)}
+                    className={`px-2 py-1.5 rounded text-[10px] ${trackHeight === 180 ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+                  >
+                    Large
+                  </button>
+                </div>
+              </div>
+
+              {showAIRecommendations && aiRecommendations.length > 0 && (
+                <AIRecommendationsPanel
+                  recommendations={aiRecommendations}
+                  onSelectTemplate={(templateId) => {
+                    const template = aiRecommendations.find(r => r.templateId === templateId)?.template;
+                    if (template) {
+                      handleTemplateSelect(template);
+                    }
+                  }}
+                  onClose={() => setShowAIRecommendations(false)}
+                  isVisible={showAIRecommendations}
+                />
+              )}
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  onClick={handleRestart}
+                  className="px-2 py-2 bg-gray-700 border border-yellow-600/40 rounded transition-all flex items-center justify-center space-x-1.5 text-yellow-400 font-semibold text-[10px]"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Start Fresh</span>
+                </button>
+                <button
+                  onClick={() => setShowResetPointsModal(true)}
+                  className="px-2 py-2 bg-gray-700 border border-red-600/40 rounded transition-all flex items-center justify-center space-x-1.5 text-red-400 font-semibold text-[10px]"
+                >
+                  <Navigation className="w-3 h-3" />
+                  <span>Reset Points</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="flex-1 flex overflow-hidden">
-        {!isLeftPanelCollapsed && (
+        {!isMobile && !isLeftPanelCollapsed && (
           <div
             className="bg-gray-800 border-r border-gray-700 flex-shrink-0 overflow-y-auto relative"
             style={{ width: `${leftPanelWidth}px` }}
@@ -1178,7 +1336,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
         )}
 
         <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden relative">
-          {isLeftPanelCollapsed && (
+          {!isMobile && isLeftPanelCollapsed && (
             <button
               onClick={() => setIsLeftPanelCollapsed(!isLeftPanelCollapsed)}
               className="absolute left-2 top-4 z-10 bg-cyan-600 hover:bg-cyan-500 rounded p-1.5 transition-all shadow-lg"
@@ -1187,9 +1345,9 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
             </button>
           )}
 
-          <div className="flex-1 flex flex-col p-4 overflow-auto">
-            <div className="flex-1 bg-gray-800 rounded-lg border border-gray-700 p-6">
-              <div className="space-y-8">
+          <div className={`flex-1 flex flex-col ${isMobile ? 'p-2' : 'p-4'} overflow-auto`}>
+            <div className={`flex-1 bg-gray-800 rounded-lg border border-gray-700 ${isMobile ? 'p-3' : 'p-6'}`}>
+              <div className={isMobile ? 'space-y-4' : 'space-y-8'}>
                 <div style={{ height: `${trackHeight}px` }} className="relative">
                   <div className="flex items-center mb-2 space-x-2">
                     <div className="text-xs font-semibold text-cyan-400">Song A (Ending - Fade Out)</div>
@@ -1422,7 +1580,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                         <ChevronUp className="w-4 h-4 text-gray-400" />
                       </button>
                     </div>
-                    <div className="max-h-80 overflow-y-auto">
+                    <div className={`${isMobile ? 'max-h-60' : 'max-h-80'} overflow-y-auto`}>
                       <TemplateGallery
                         onSelectTemplate={handleTemplateSelect}
                         compact={true}
