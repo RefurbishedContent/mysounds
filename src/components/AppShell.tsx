@@ -511,7 +511,7 @@ const AppShell: React.FC = () => {
             {/* Brand */}
             <div className="flex items-center space-x-3">
               <img
-                src="https://images.ctfassets.net/ktdj7g8bqfli/5vsEjYHOcHlGsPgxTVzBH7/6520dd25ce317298ba6d146dd368824a/Option_1.jpg"
+                src="https://images.ctfassets.net/ktdj7g8bqfli/5vsEjYHOcHlGsPgxTVzBH7/01fa743c4568d87307c57ec1127492d1/ChatGPT_Image_Feb_7__2026__08_34_18_PM.png"
                 alt="MySounds.AI Logo"
                 className="w-8 h-8 rounded-lg shadow-lg object-cover"
               />

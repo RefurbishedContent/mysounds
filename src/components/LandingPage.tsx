@@ -58,9 +58,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onTryMixer }) => {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg shadow-cyan-500/30">
-                <div className="w-5 h-5 bg-gradient-to-br from-white to-cyan-100 rounded-sm opacity-90"></div>
-              </div>
+              <img src="https://images.ctfassets.net/ktdj7g8bqfli/5vsEjYHOcHlGsPgxTVzBH7/01fa743c4568d87307c57ec1127492d1/ChatGPT_Image_Feb_7__2026__08_34_18_PM.png" alt="MySounds.AI Logo" className="w-8 h-8 rounded-lg shadow-lg shadow-cyan-500/30 object-cover" />
               <div>
                 <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
                   MySounds.AI
@@ -249,9 +247,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onTryMixer }) => {
             {/* Brand */}
             <div className="space-y-4">
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg shadow-cyan-500/30">
-                  <div className="w-5 h-5 bg-gradient-to-br from-white to-cyan-100 rounded-sm opacity-90"></div>
-                </div>
+                <img src="https://images.ctfassets.net/ktdj7g8bqfli/5vsEjYHOcHlGsPgxTVzBH7/01fa743c4568d87307c57ec1127492d1/ChatGPT_Image_Feb_7__2026__08_34_18_PM.png" alt="MySounds.AI Logo" className="w-8 h-8 rounded-lg shadow-lg shadow-cyan-500/30 object-cover" />
                 <h3 className="text-xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
                   MySounds.AI
                 </h3>

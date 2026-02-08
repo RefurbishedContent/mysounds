@@ -28,7 +28,7 @@ const AppContent: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg-primary)' }}>
         <div className="text-center space-y-4">
           <div className="w-14 h-14 rounded-xl flex items-center justify-center mx-auto animate-pulse overflow-hidden">
-            <img src="https://images.ctfassets.net/ktdj7g8bqfli/5vsEjYHOcHlGsPgxTVzBH7/6520dd25ce317298ba6d146dd368824a/Option_1.jpg" alt="MySounds.AI" className="w-full h-full object-cover" />
+            <img src="https://images.ctfassets.net/ktdj7g8bqfli/5vsEjYHOcHlGsPgxTVzBH7/01fa743c4568d87307c57ec1127492d1/ChatGPT_Image_Feb_7__2026__08_34_18_PM.png" alt="MySounds.AI" className="w-full h-full object-cover" />
           </div>
           <p style={{ color: 'var(--text-tertiary)' }}>Loading...</p>
           <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto" />
