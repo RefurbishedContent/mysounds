@@ -114,16 +114,11 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong, o
   ];
 
   return (
-    <div className="h-full flex flex-col p-2 sm:p-3 md:p-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
-        <div>
-          <h1 className="text-xl font-bold text-white mb-1">Music Library</h1>
-          <p className="text-sm text-gray-400">Organize and manage your audio collection</p>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <div className="flex items-center space-x-0.5 bg-gray-800 rounded-lg p-0.5">
+    <div className="min-h-full flex flex-col p-2 sm:p-3 md:p-4">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <h1 className="text-lg sm:text-xl font-bold text-white truncate">Music Library</h1>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="flex items-center bg-gray-800 rounded-lg p-0.5">
             <button
               onClick={() => setViewMode('grid')}
               className={`p-1.5 rounded-md transition-all duration-200 ${
@@ -132,7 +127,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong, o
                   : 'text-gray-400 hover:text-white hover:bg-gray-700'
               }`}
             >
-              <Grid3X3 size={16} />
+              <Grid3X3 size={14} />
             </button>
             <button
               onClick={() => setViewMode('list')}
@@ -142,105 +137,94 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong, o
                   : 'text-gray-400 hover:text-white hover:bg-gray-700'
               }`}
             >
-              <List size={16} />
+              <List size={14} />
             </button>
           </div>
-
           <button
             onClick={() => setShowUploader(true)}
-            className="px-4 py-2 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105"
+            className="px-3 py-1.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center gap-1.5 shadow-lg shadow-cyan-500/20 text-sm"
           >
-            <Upload size={16} />
-            <span className="text-sm">Upload Music</span>
+            <Upload size={14} />
+            <span className="hidden sm:inline">Upload</span>
           </button>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex items-center space-x-1.5 mb-3">
-        <button
-          onClick={() => setCurrentTab('songs')}
-          className={`px-4 py-2 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-1.5 text-sm ${
-            currentTab === 'songs'
-              ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg'
-              : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
-          }`}
-        >
-          <Music size={16} />
-          <span>Songs</span>
-          <span className="px-1.5 py-0.5 bg-white/20 rounded-full text-xs">{songs.length}</span>
-        </button>
-        <button
-          onClick={() => setCurrentTab('blends')}
-          className={`px-4 py-2 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-1.5 text-sm ${
-            currentTab === 'blends'
-              ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg'
-              : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
-          }`}
-        >
-          <Sparkles size={16} />
-          <span>Blends</span>
-          <span className="px-1.5 py-0.5 bg-white/20 rounded-full text-xs">{blends.length}</span>
-        </button>
+      <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setCurrentTab('songs')}
+            className={`px-3 py-1.5 rounded-lg font-medium transition-all duration-200 flex items-center gap-1.5 text-xs ${
+              currentTab === 'songs'
+                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
+                : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
+            }`}
+          >
+            <Music size={13} />
+            <span>Songs</span>
+            <span className="px-1.5 py-0.5 bg-white/20 rounded-full text-[10px]">{songs.length}</span>
+          </button>
+          <button
+            onClick={() => setCurrentTab('blends')}
+            className={`px-3 py-1.5 rounded-lg font-medium transition-all duration-200 flex items-center gap-1.5 text-xs ${
+              currentTab === 'blends'
+                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
+                : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
+            }`}
+          >
+            <Sparkles size={13} />
+            <span>Blends</span>
+            <span className="px-1.5 py-0.5 bg-white/20 rounded-full text-[10px]">{blends.length}</span>
+          </button>
+        </div>
       </div>
 
-      {/* Search & Filters */}
-      <div className="flex flex-col gap-2 mb-3">
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search your music library..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
-            />
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Filter size={16} className="text-gray-500" />
-            <select
-              value={selectedFilter}
-              onChange={(e) => setSelectedFilter(e.target.value)}
-              className="px-3 py-2 text-sm bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
-            >
-              {filters.map(filter => (
-                <option key={filter.value} value={filter.value}>
-                  {filter.label}
-                </option>
-              ))}
-            </select>
-          </div>
+      <div className="flex items-center gap-1.5 mb-2">
+        <div className="relative flex-1 min-w-0">
+          <Search size={14} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Search..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-8 pr-2 py-1.5 text-xs bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-transparent transition-all duration-200"
+          />
         </div>
-
-        <div className="flex flex-col sm:flex-row gap-2">
-          <select
-            value={selectedGenre}
-            onChange={(e) => setSelectedGenre(e.target.value)}
-            className="px-3 py-2 text-sm bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
-          >
-            <option value="all">All Genres ({songs.length})</option>
-            {uniqueGenres.map(genre => {
-              const count = songs.filter(s => ((s as any).manualGenre || s.analysis?.genre) === genre).length;
-              return (
-                <option key={genre} value={genre}>
-                  {genre} ({count})
-                </option>
-              );
-            })}
-          </select>
-
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as 'recent' | 'name' | 'bpm')}
-            className="px-3 py-2 text-sm bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-200"
-          >
-            <option value="recent">Sort: Recent</option>
-            <option value="name">Sort: Name</option>
-            <option value="bpm">Sort: BPM</option>
-          </select>
-        </div>
+        <select
+          value={selectedFilter}
+          onChange={(e) => setSelectedFilter(e.target.value)}
+          className="px-2 py-1.5 text-xs bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all duration-200"
+        >
+          {filters.map(filter => (
+            <option key={filter.value} value={filter.value}>
+              {filter.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={selectedGenre}
+          onChange={(e) => setSelectedGenre(e.target.value)}
+          className="px-2 py-1.5 text-xs bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all duration-200 max-w-[100px] sm:max-w-none"
+        >
+          <option value="all">All Genres</option>
+          {uniqueGenres.map(genre => {
+            const count = songs.filter(s => ((s as any).manualGenre || s.analysis?.genre) === genre).length;
+            return (
+              <option key={genre} value={genre}>
+                {genre} ({count})
+              </option>
+            );
+          })}
+        </select>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as 'recent' | 'name' | 'bpm')}
+          className="px-2 py-1.5 text-xs bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all duration-200"
+        >
+          <option value="recent">Recent</option>
+          <option value="name">Name</option>
+          <option value="bpm">BPM</option>
+        </select>
       </div>
 
       {/* Content: Songs or Blends */}
