@@ -47,9 +47,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const ensureUserProfile = useCallback(async (userId: string, email: string, name: string) => {
+    try {
+      await supabase.from('users').upsert(
+        { id: userId, email, name },
+        { onConflict: 'id', ignoreDuplicates: true }
+      );
+    } catch (err) {
+      console.warn('ensureUserProfile failed (trigger likely handled it):', err);
+    }
+  }, []);
+
   useEffect(() => {
     let mounted = true;
-    
+
     const checkAuth = async () => {
       console.log('Starting auth check...');
       
@@ -93,38 +104,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           // Try to get user profile, but don't fail if it doesn't exist
           try {
-            const { data: profile, error: profileError } = await supabase
+            let { data: profile } = await supabase
               .from('users')
               .select('*')
               .eq('id', session.user.id)
-              .single();
+              .maybeSingle();
 
-            if (profileError) {
-              console.warn('Profile fetch error (this is normal for new users):', profileError);
-              // For now, just use the auth user data
-              const user: User = {
-                id: session.user.id,
-                email: session.user.email!,
-                name: session.user.user_metadata?.name || session.user.email!.split('@')[0],
-                plan: 'free'
-              };
-
-              currentUserIdRef.current = user.id;
-              setAuthState({
-                isAuthenticated: true,
-                user,
-                loading: false,
-              });
-              return;
+            if (!profile) {
+              const fallbackName = session.user.user_metadata?.name || session.user.email!.split('@')[0];
+              await ensureUserProfile(session.user.id, session.user.email!, fallbackName);
+              const { data: retryProfile } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', session.user.id)
+                .maybeSingle();
+              profile = retryProfile;
             }
 
-            const user: User = {
-              id: profile.id,
-              email: profile.email,
-              name: profile.name,
-              avatar: profile.avatar_url,
-              plan: profile.plan
-            };
+            const user: User = profile
+              ? {
+                  id: profile.id,
+                  email: profile.email,
+                  name: profile.name,
+                  avatar: profile.avatar_url,
+                  plan: profile.plan
+                }
+              : {
+                  id: session.user.id,
+                  email: session.user.email!,
+                  name: session.user.user_metadata?.name || session.user.email!.split('@')[0],
+                  plan: 'free'
+                };
 
             currentUserIdRef.current = user.id;
             setAuthState({
@@ -213,14 +223,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               loading: false,
             });
 
-            // Fetch full profile in background (non-blocking)
             (async () => {
               try {
-                const { data: profile } = await supabase
+                let { data: profile } = await supabase
                   .from('users')
                   .select('*')
                   .eq('id', session.user.id)
                   .maybeSingle();
+
+                if (!profile) {
+                  const fallbackName = session.user.user_metadata?.name || session.user.email!.split('@')[0];
+                  await ensureUserProfile(session.user.id, session.user.email!, fallbackName);
+                  const { data: retryProfile } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', session.user.id)
+                    .maybeSingle();
+                  profile = retryProfile;
+                }
 
                 if (profile) {
                   const user: User = {
@@ -239,7 +259,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   });
                 }
 
-                // Refresh credits on sign-in (but not on every token refresh to avoid excessive calls)
                 if (event === 'SIGNED_IN') {
                   refreshCredits().catch(err => {
                     console.warn('Failed to fetch credits:', err);
@@ -247,7 +266,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
               } catch (error) {
                 console.error('Error updating user profile:', error);
-                // Already set basic user data above, so no need to do anything here
               }
             })();
           }
@@ -296,7 +314,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string, name: string) => {
     console.log('AuthContext signUp called for:', email);
-    
+
     try {
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
@@ -312,11 +330,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Supabase signUp error:', error);
         throw new Error(error.message);
       }
-      
+
       console.log('Supabase signUp successful:', data.user?.email);
-      
-      // Note: User profile creation will be handled by the auth state change listener
-      
+
+      if (data.user) {
+        await ensureUserProfile(data.user.id, data.user.email!, name.trim());
+      }
+
     } catch (error) {
       console.error('SignUp function error:', error);
       throw error;
