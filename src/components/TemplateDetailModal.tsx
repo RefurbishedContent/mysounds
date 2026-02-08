@@ -74,104 +74,97 @@ const TemplateDetailModal: React.FC<TemplateDetailModalProps> = ({
   const avgEnergy = (template.energyMin + template.energyMax) / 2;
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-gray-800 rounded-2xl border border-gray-600 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="sticky top-0 bg-gray-800 border-b border-gray-700 p-6 z-10">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h2 className="text-2xl font-bold text-white">{template.name}</h2>
-                <div className="flex items-center gap-1.5">
-                  {template.isPopular && (
-                    <span className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/30 w-6 h-6">
-                      <Star size={12} fill="white" />
-                    </span>
-                  )}
-                  {template.isPremium && (
-                    <span className="bg-gradient-to-r from-yellow-600 to-orange-600 text-white font-bold rounded-full flex items-center justify-center shadow-lg shadow-yellow-500/30 w-6 h-6">
-                      <Crown size={12} fill="white" />
-                    </span>
-                  )}
-                </div>
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
+      <div className="bg-gray-800 rounded-t-2xl sm:rounded-2xl border border-gray-600 shadow-2xl w-full sm:max-w-lg max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 bg-gray-800 border-b border-gray-700 px-4 py-3 sm:px-5 sm:py-4 z-10">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="text-lg sm:text-xl font-bold text-white truncate">{template.name}</h2>
+                {template.isPopular && (
+                  <span className="flex-shrink-0 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-full flex items-center justify-center w-5 h-5">
+                    <Star size={10} fill="white" />
+                  </span>
+                )}
+                {template.isPremium && (
+                  <span className="flex-shrink-0 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-full flex items-center justify-center w-5 h-5">
+                    <Crown size={10} fill="white" />
+                  </span>
+                )}
               </div>
-              <p className="text-gray-400 text-sm mb-3">{template.description}</p>
-              <div className="flex items-center gap-4 text-sm text-gray-400">
+              <div className="flex items-center gap-3 text-xs text-gray-400">
+                <span>by <span className="text-cyan-400 font-medium">{template.author}</span></span>
                 <span className="flex items-center gap-1">
-                  by <span className="text-cyan-400 font-medium">{template.author}</span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <Star size={12} className="text-yellow-500" fill="currentColor" />
+                  <Star size={10} className="text-yellow-500" fill="currentColor" />
                   {template.rating}
                 </span>
-                <span>{template.downloads.toLocaleString()} downloads</span>
+                <span>{template.downloads.toLocaleString()} dl</span>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all duration-200"
+              className="flex-shrink-0 p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all duration-200"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
-          <div className="flex items-center gap-6">
-            <div className="w-48 h-48 rounded-xl overflow-hidden border-2 border-cyan-500/20 shadow-lg shadow-cyan-500/10">
+        <div className="px-4 py-3 sm:px-5 sm:py-4 space-y-4">
+          <div className="flex gap-3">
+            <div className="w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0 rounded-xl overflow-hidden border border-cyan-500/20">
               <TemplateIcon category={template.category} name={template.name} />
             </div>
 
-            <div className="flex-1 grid grid-cols-2 gap-4">
-              <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Clock className="text-cyan-400" size={16} />
-                  <span className="text-xs text-gray-400 uppercase tracking-wide">Duration</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm text-gray-400 leading-relaxed mb-3 line-clamp-3">{template.description}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-gray-900/50 border border-gray-700 rounded-lg px-2.5 py-2">
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                    <Clock size={10} className="text-cyan-400" />
+                    Duration
+                  </div>
+                  <div className="text-sm font-bold text-white">{template.duration}s</div>
                 </div>
-                <div className="text-2xl font-bold text-white">{template.duration}s</div>
-              </div>
-
-              <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="text-cyan-400" size={16} />
-                  <span className="text-xs text-gray-400 uppercase tracking-wide">BPM</span>
+                <div className="bg-gray-900/50 border border-gray-700 rounded-lg px-2.5 py-2">
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                    <TrendingUp size={10} className="text-cyan-400" />
+                    BPM
+                  </div>
+                  <div className="text-sm font-bold text-white">{avgBPM} <span className="text-[10px] text-gray-500 font-normal">{template.bpmMin}-{template.bpmMax}</span></div>
                 </div>
-                <div className="text-2xl font-bold text-white">{avgBPM}</div>
-                <div className="text-xs text-gray-400">{template.bpmMin}-{template.bpmMax}</div>
-              </div>
-
-              <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Zap className="text-cyan-400" size={16} />
-                  <span className="text-xs text-gray-400 uppercase tracking-wide">Energy</span>
+                <div className="bg-gray-900/50 border border-gray-700 rounded-lg px-2.5 py-2">
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                    <Zap size={10} className="text-cyan-400" />
+                    Energy
+                  </div>
+                  <div className="text-sm font-bold text-white">{getEnergyLevel(avgEnergy)}</div>
                 </div>
-                <div className="text-lg font-bold text-white">{getEnergyLevel(avgEnergy)}</div>
-                <div className="text-xs text-gray-400">{(template.energyMin * 100).toFixed(0)}%-{(template.energyMax * 100).toFixed(0)}%</div>
-              </div>
-
-              <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Award className="text-cyan-400" size={16} />
-                  <span className="text-xs text-gray-400 uppercase tracking-wide">Difficulty</span>
-                </div>
-                <div className={`inline-flex px-3 py-1 rounded-full text-sm font-semibold border ${getDifficultyColor(template.difficulty)}`}>
-                  {template.difficulty.charAt(0).toUpperCase() + template.difficulty.slice(1)}
+                <div className="bg-gray-900/50 border border-gray-700 rounded-lg px-2.5 py-2">
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                    <Award size={10} className="text-cyan-400" />
+                    Level
+                  </div>
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold border ${getDifficultyColor(template.difficulty)}`}>
+                    {template.difficulty.charAt(0).toUpperCase() + template.difficulty.slice(1)}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div>
-              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-2">
-                <Music size={14} />
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                <Music size={12} />
                 Genre & Style
               </h3>
-              <div className="flex flex-wrap gap-2">
-                <span className="px-3 py-1.5 bg-cyan-600/20 border border-cyan-500/30 text-cyan-300 rounded-full text-sm font-medium">
+              <div className="flex flex-wrap gap-1.5">
+                <span className="px-2.5 py-1 bg-cyan-600/20 border border-cyan-500/30 text-cyan-300 rounded-full text-xs font-medium">
                   {template.category.charAt(0).toUpperCase() + template.category.slice(1)}
                 </span>
                 {template.transitionStyle && (
-                  <span className="px-3 py-1.5 bg-blue-600/20 border border-blue-500/30 text-blue-300 rounded-full text-sm font-medium">
+                  <span className="px-2.5 py-1 bg-blue-600/20 border border-blue-500/30 text-blue-300 rounded-full text-xs font-medium">
                     {template.transitionStyle}
                   </span>
                 )}
@@ -180,13 +173,13 @@ const TemplateDetailModal: React.FC<TemplateDetailModalProps> = ({
 
             {template.moodTags && template.moodTags.length > 0 && (
               <div>
-                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-2">
-                  <Info size={14} />
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                  <Info size={12} />
                   Mood Tags
                 </h3>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {template.moodTags.map((mood, index) => (
-                    <span key={index} className="px-3 py-1.5 bg-gray-700 border border-gray-600 text-gray-300 rounded-full text-sm">
+                    <span key={index} className="px-2.5 py-1 bg-gray-700 border border-gray-600 text-gray-300 rounded-full text-xs">
                       {mood}
                     </span>
                   ))}
@@ -196,22 +189,22 @@ const TemplateDetailModal: React.FC<TemplateDetailModalProps> = ({
 
             {template.technicalDescription && (
               <div>
-                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-2">
-                  <Volume2 size={14} />
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                  <Volume2 size={12} />
                   Technical Details
                 </h3>
-                <p className="text-gray-300 text-sm leading-relaxed bg-gray-900/50 border border-gray-700 rounded-lg p-4">
+                <p className="text-gray-300 text-xs leading-relaxed bg-gray-900/50 border border-gray-700 rounded-lg p-3">
                   {template.technicalDescription}
                 </p>
               </div>
             )}
           </div>
 
-          <div className="flex gap-3 pt-4 border-t border-gray-700">
+          <div className="flex gap-2 pt-3 border-t border-gray-700">
             <button
               onClick={handlePreview}
               disabled={!previewUrl}
-              className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+              className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
                 !previewUrl
                   ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
                   : isPlaying
@@ -220,15 +213,15 @@ const TemplateDetailModal: React.FC<TemplateDetailModalProps> = ({
               }`}
             >
               {isPlaying ? (
-                <Square size={18} fill="currentColor" />
+                <Square size={16} fill="currentColor" />
               ) : (
-                <Play size={18} fill="currentColor" />
+                <Play size={16} fill="currentColor" />
               )}
-              <span>{isPlaying ? 'Stop Preview' : 'Preview Sound'}</span>
+              <span>{isPlaying ? 'Stop' : 'Preview'}</span>
             </button>
             <button
               onClick={onClose}
-              className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-semibold transition-all duration-200"
+              className="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-semibold transition-all duration-200"
             >
               Close
             </button>
