@@ -261,16 +261,15 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
           </div>
 
           <div className="bg-gray-800 border border-gray-700 rounded-lg p-8 mb-6">
-            <div className="w-full h-64 bg-gray-900 rounded-lg flex items-center justify-center mb-6 border-2 border-dashed border-gray-700 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 via-cyan-500/10 to-blue-500/10 animate-pulse" />
-
-              <div className="relative z-10 text-center">
-                <div className="mb-4">
-                  <Loader className="w-16 h-16 text-teal-500 animate-spin mx-auto" />
-                </div>
-                <p className="text-gray-400 text-sm mb-2">Animation Placeholder</p>
-                <p className="text-gray-500 text-xs">Energy particle mixing animation will appear here</p>
-              </div>
+            <div className="w-full h-64 bg-gray-900 rounded-lg mb-6 overflow-hidden">
+              <video
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+                src="https://videos.ctfassets.net/ktdj7g8bqfli/6I4PPm5DMIXCR2LxeXybCZ/91123aef97f6b78e90bcab7953589328/Loadoing_screen.mp4"
+              />
             </div>
 
             <div className="mb-6">
