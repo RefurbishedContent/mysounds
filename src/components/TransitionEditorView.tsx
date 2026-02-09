@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ArrowLeft, Sparkles, Zap, Clock, Timer,
   ChevronRight, ChevronDown, ChevronUp,
-  Music, Play, Pause, Check, X
+  Play, Pause, Check
 } from 'lucide-react';
 import * as Tone from 'tone';
 import { UploadResult } from '../lib/storage';
@@ -68,11 +68,12 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
 
   const [templateAudioUrl, setTemplateAudioUrl] = useState<string | null>(null);
   const [isPlayingTemplate, setIsPlayingTemplate] = useState(false);
-  const [showWaveformModal, setShowWaveformModal] = useState(false);
+  const [playbackProgress, setPlaybackProgress] = useState(0);
   const playerRef = React.useRef<Tone.Player | null>(null);
   const analyserRef = useRef<Tone.Analyser | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const progressIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
     loadData();
@@ -94,6 +95,9 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       analyserRef.current?.dispose();
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
       }
     };
   }, []);
@@ -210,11 +214,26 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       ctx.fillRect(x, y, barWidth - 1, barHeight);
     });
 
+    // Draw playhead
+    const playheadX = playbackProgress * width;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(playheadX, 0);
+    ctx.lineTo(playheadX, height);
+    ctx.stroke();
+
+    // Draw playhead circle at top
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.beginPath();
+    ctx.arc(playheadX, 8, 6, 0, Math.PI * 2);
+    ctx.fill();
+
     animationFrameRef.current = requestAnimationFrame(drawWaveform);
   };
 
   const handlePlayTemplate = async () => {
-    if (!templateAudioUrl) return;
+    if (!templateAudioUrl || !selectedTemplate) return;
 
     await Tone.start();
 
@@ -222,8 +241,6 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       stopTemplatePlayback();
       return;
     }
-
-    setShowWaveformModal(true);
 
     try {
       const analyser = new Tone.Analyser('waveform', 512);
@@ -234,11 +251,25 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
         analyser.toDestination();
         player.start();
         setIsPlayingTemplate(true);
+        setPlaybackProgress(0);
         drawWaveform();
+
+        // Track playback progress
+        const duration = selectedTemplate.duration;
+        const startTime = Tone.now();
+        progressIntervalRef.current = window.setInterval(() => {
+          const elapsed = Tone.now() - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          setPlaybackProgress(progress);
+
+          if (progress >= 1) {
+            stopTemplatePlayback();
+          }
+        }, 50);
 
         player.onstop = () => {
           setIsPlayingTemplate(false);
-          setShowWaveformModal(false);
+          setPlaybackProgress(0);
           player.dispose();
           analyser.dispose();
           playerRef.current = null;
@@ -247,13 +278,17 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
             cancelAnimationFrame(animationFrameRef.current);
             animationFrameRef.current = null;
           }
+          if (progressIntervalRef.current) {
+            clearInterval(progressIntervalRef.current);
+            progressIntervalRef.current = null;
+          }
         };
       });
       playerRef.current = player;
     } catch (error) {
       console.error('Failed to play template:', error);
       setIsPlayingTemplate(false);
-      setShowWaveformModal(false);
+      setPlaybackProgress(0);
     }
   };
 
@@ -271,8 +306,12 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
     }
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
     setIsPlayingTemplate(false);
-    setShowWaveformModal(false);
+    setPlaybackProgress(0);
   };
 
   const handleAIAnalysisComplete = (recommendations: TemplateRecommendation[]) => {
@@ -486,6 +525,8 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                   stopTemplatePlayback();
                   setSelectedTemplate(null);
                 }}
+                canvasRef={canvasRef}
+                playbackProgress={playbackProgress}
               />
             )}
 
@@ -573,51 +614,6 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
           </button>
         </div>
       </div>
-
-      {showWaveformModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="max-w-3xl w-full bg-gray-800 rounded-2xl border-2 border-cyan-500/40 shadow-2xl shadow-cyan-500/20 overflow-hidden">
-            <div className="p-4 bg-gray-900/50 border-b border-cyan-500/20 flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center animate-pulse">
-                  <Music className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-white">{selectedTemplate?.name}</p>
-                  <p className="text-xs text-cyan-400">Playing Preview</p>
-                </div>
-              </div>
-              <button
-                onClick={stopTemplatePlayback}
-                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
-            </div>
-            <div className="p-6 bg-gradient-to-br from-gray-900 to-gray-800">
-              <canvas
-                ref={canvasRef}
-                width={800}
-                height={200}
-                className="w-full h-48 rounded-lg"
-                style={{
-                  background: 'linear-gradient(to bottom, rgba(6,182,212,0.05), rgba(59,130,246,0.05))',
-                  border: '1px solid rgba(6,182,212,0.2)',
-                }}
-              />
-              <div className="mt-4 flex items-center justify-center">
-                <button
-                  onClick={stopTemplatePlayback}
-                  className="px-6 py-2 bg-cyan-500 hover:bg-cyan-400 text-white rounded-lg font-semibold transition-colors flex items-center space-x-2"
-                >
-                  <Pause className="w-4 h-4" />
-                  <span>Stop</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {aiToastMessage && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
@@ -733,7 +729,9 @@ const SelectedTemplateCard: React.FC<{
   isPlaying: boolean;
   onPlayToggle: () => void;
   onClear: () => void;
-}> = ({ template, isPlaying, onPlayToggle, onClear }) => {
+  canvasRef: React.RefObject<HTMLCanvasElement>;
+  playbackProgress: number;
+}> = ({ template, isPlaying, onPlayToggle, onClear, canvasRef, playbackProgress }) => {
   return (
     <div className="relative rounded-lg overflow-hidden"
       style={{
@@ -746,32 +744,58 @@ const SelectedTemplateCard: React.FC<{
           background: 'linear-gradient(135deg, rgba(6,182,212,0.04) 0%, transparent 50%, rgba(59,130,246,0.04) 100%)',
         }}
       />
-      <div className="relative bg-gray-800/90 p-3 flex items-center justify-between">
-        <div className="flex items-center space-x-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-cyan-500/30">
-            <Check className="w-4 h-4 text-white" />
+      <div className="relative bg-gray-800/90">
+        <div className="p-3 flex items-center justify-between border-b border-gray-700/50">
+          <div className="flex items-center space-x-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-cyan-500/30">
+              <Check className="w-4 h-4 text-white" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-white truncate">{template.name}</p>
+              <p className="text-[10px] text-cyan-400/80">{template.duration}s -- Selected Template</p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-white truncate">{template.name}</p>
-            <p className="text-[10px] text-cyan-400/80">{template.duration}s -- Selected Template</p>
-          </div>
-        </div>
-        <div className="flex items-center space-x-2 flex-shrink-0">
-          {template.templateData?.previewUrl && (
+          <div className="flex items-center space-x-2 flex-shrink-0">
+            {template.templateData?.previewUrl && (
+              <button
+                onClick={onPlayToggle}
+                className="w-7 h-7 rounded-full bg-cyan-500/20 hover:bg-cyan-500/30 flex items-center justify-center transition-colors"
+              >
+                {isPlaying ? <Pause className="w-3.5 h-3.5 text-cyan-400" /> : <Play className="w-3.5 h-3.5 text-cyan-400" />}
+              </button>
+            )}
             <button
-              onClick={onPlayToggle}
-              className="w-7 h-7 rounded-full bg-cyan-500/20 hover:bg-cyan-500/30 flex items-center justify-center transition-colors"
+              onClick={onClear}
+              className="text-[10px] text-gray-400 hover:text-white transition-colors px-2 py-1"
             >
-              {isPlaying ? <Pause className="w-3.5 h-3.5 text-cyan-400" /> : <Play className="w-3.5 h-3.5 text-cyan-400" />}
+              Change
             </button>
-          )}
-          <button
-            onClick={onClear}
-            className="text-[10px] text-gray-400 hover:text-white transition-colors px-2 py-1"
-          >
-            Change
-          </button>
+          </div>
         </div>
+
+        {template.templateData?.previewUrl && (
+          <div className="p-3 bg-gray-900/30">
+            <div className="relative">
+              <canvas
+                ref={canvasRef}
+                width={800}
+                height={80}
+                className="w-full h-20 rounded-lg"
+                style={{
+                  background: 'linear-gradient(to bottom, rgba(6,182,212,0.05), rgba(59,130,246,0.05))',
+                  border: '1px solid rgba(6,182,212,0.2)',
+                }}
+              />
+              {!isPlaying && playbackProgress === 0 && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-xs text-gray-500 bg-gray-800/80 px-3 py-1.5 rounded-lg border border-gray-700/50">
+                    Click play to preview
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
