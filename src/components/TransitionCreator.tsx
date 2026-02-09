@@ -298,17 +298,6 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
               </div>
             </div>
           </div>
-
-          {currentStep === 'set-transition-points' && (
-            <button
-              onClick={handleBeginEditing}
-              disabled={saving || !songAMarkerPoint || !songBMarkerPoint || hasErrors}
-              className="px-6 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2"
-            >
-              <Sparkles size={20} />
-              <span>{saving ? 'Creating...' : 'Begin Editing'}</span>
-            </button>
-          )}
         </div>
       </div>
 
@@ -557,7 +546,20 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
               </div>
             </div>
 
-            <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 space-y-8">
+            <div className="bg-gray-900/50 rounded-lg border border-gray-700/50 p-4">
+              <div className="flex items-center justify-center space-x-8">
+                <div className="flex items-center space-x-2">
+                  <div className="w-0.5 h-8 bg-gradient-to-b from-green-500/80 via-green-500 to-green-500/80" style={{ boxShadow: '0 0 10px #10b981' }}></div>
+                  <span className="text-sm text-gray-300">Start/In Point</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-0.5 h-8 bg-gradient-to-b from-red-500/80 via-red-500 to-red-500/80" style={{ boxShadow: '0 0 10px #ef4444' }}></div>
+                  <span className="text-sm text-gray-300">End/Out Point</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex-1 min-w-0 mr-4">
@@ -599,6 +601,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                   inMarkerLabel="Set START"
                   endMarkerLabel="Set OUT"
                   isPlaying={isPlayingA}
+                  showGradient={true}
                   markers={[
                     {
                       id: 'song-a-start',
@@ -623,26 +626,16 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                   ]}
                 />
 
-                <div className="mt-4 bg-gray-900 rounded-lg p-4 border border-red-500/30">
+                <div className="mt-4 bg-gray-900 rounded-lg p-4 border border-gray-700/50">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                      <div className="w-2 h-2 bg-cyan-400 rounded-full"></div>
                       <span className="text-sm text-gray-300">
-                        Extraction Range: <span className="text-green-400 font-mono">{formatTime(songAStartMarker)}</span> (START) to <span className="text-red-400 font-mono">{formatTime(songAMarkerPoint)}</span> (OUT)
+                        Selected Region: <span className="text-cyan-400 font-mono">{formatTime(songAStartMarker)}</span> to <span className="text-pink-400 font-mono">{formatTime(songAMarkerPoint)}</span>
                       </span>
                     </div>
                     <span className="text-xs text-gray-500">({formatTime(songAMarkerPoint - songAStartMarker)} clip)</span>
                   </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-center py-4">
-                <div className="flex items-center space-x-3 px-6 py-3 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-green-500/20 rounded-full border border-purple-500/30">
-                  <Sparkles className="w-5 h-5 text-purple-400" />
-                  <span className="text-sm font-medium text-purple-300">
-                    {DEFAULT_TRANSITION_DURATION}s Mash Up Blend
-                  </span>
-                  <Sparkles className="w-5 h-5 text-purple-400" />
                 </div>
               </div>
 
@@ -687,6 +680,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                   inMarkerLabel="Set IN"
                   endMarkerLabel="Set END"
                   isPlaying={isPlayingB}
+                  showGradient={true}
                   markers={[
                     {
                       id: 'song-b-start',
@@ -711,12 +705,12 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                   ]}
                 />
 
-                <div className="mt-4 bg-gray-900 rounded-lg p-4 border border-red-500/30">
+                <div className="mt-4 bg-gray-900 rounded-lg p-4 border border-gray-700/50">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                      <div className="w-2 h-2 bg-cyan-400 rounded-full"></div>
                       <span className="text-sm text-gray-300">
-                        Extraction Range: <span className="text-green-400 font-mono">{formatTime(songBMarkerPoint)}</span> (IN) to <span className="text-red-400 font-mono">{formatTime(songBEndMarker)}</span> (END)
+                        Selected Region: <span className="text-cyan-400 font-mono">{formatTime(songBMarkerPoint)}</span> to <span className="text-pink-400 font-mono">{formatTime(songBEndMarker)}</span>
                       </span>
                     </div>
                     <span className="text-xs text-gray-500">({formatTime(songBEndMarker - songBMarkerPoint)} clip)</span>
@@ -759,24 +753,15 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
               </div>
             )}
 
-            <div className="bg-cyan-900/20 border border-cyan-700/50 rounded-lg p-6">
-              <div className="flex items-start space-x-4">
-                <div className="flex-shrink-0">
-                  <Sparkles className="w-6 h-6 text-cyan-400" />
-                </div>
-                <div>
-                  <h4 className="text-cyan-300 font-semibold mb-2">Ready to Begin Editing</h4>
-                  <p className="text-cyan-100/80 text-sm mb-4">
-                    Your mash up points are set. Click "Begin Editing" to enter the full editor where you can:
-                  </p>
-                  <ul className="text-cyan-100/70 text-sm space-y-1 list-disc list-inside">
-                    <li>Browse and apply mash up templates</li>
-                    <li>Fine-tune timing and crossfades</li>
-                    <li>Use AI Fusion for automatic blending</li>
-                    <li>Preview your mash up in real-time</li>
-                  </ul>
-                </div>
-              </div>
+            <div className="flex justify-center">
+              <button
+                onClick={handleBeginEditing}
+                disabled={saving || !songAMarkerPoint || !songBMarkerPoint || hasErrors}
+                className="w-full max-w-md px-8 py-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-3 shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40"
+              >
+                <span className="text-lg">{saving ? 'Creating...' : 'Next'}</span>
+                <ChevronRight size={24} />
+              </button>
             </div>
           </div>
         )}

@@ -9,6 +9,12 @@ interface WaveformDisplayProps {
   progressColor?: string;
   onSeek?: (progress: number) => void;
   showScrubber?: boolean;
+  gradientRegion?: {
+    startTime: number;
+    endTime: number;
+    startColor: string;
+    endColor: string;
+  };
 }
 
 export function WaveformDisplay({
@@ -18,7 +24,8 @@ export function WaveformDisplay({
   color = '#3b82f6',
   progressColor = '#60a5fa',
   onSeek,
-  showScrubber = false
+  showScrubber = false,
+  gradientRegion
 }: WaveformDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -80,9 +87,10 @@ export function WaveformDisplay({
       color,
       progressColor,
       progress,
-      centerLine: true
+      centerLine: true,
+      gradientRegion
     });
-  }, [waveformData, progress, color, progressColor, height, containerWidth]);
+  }, [waveformData, progress, color, progressColor, height, containerWidth, gradientRegion]);
 
   const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!onSeek || !canvasRef.current) return;
@@ -140,15 +148,6 @@ export function WaveformDisplay({
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
         />
-      )}
-
-      {showScrubber && progress > 0 && (
-        <div
-          className="absolute top-0 bottom-0 w-0.5 bg-blue-500 pointer-events-none"
-          style={{ left: `${progress * 100}%` }}
-        >
-          <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-blue-500 rounded-full" />
-        </div>
       )}
     </div>
   );

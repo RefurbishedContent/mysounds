@@ -24,6 +24,7 @@ interface AudioScrubberProps {
   markerTime?: number;
   markerColor?: string;
   markers?: AudioMarker[];
+  showGradient?: boolean;
 }
 
 export function AudioScrubber({
@@ -38,7 +39,8 @@ export function AudioScrubber({
   isPlaying: externalIsPlaying,
   markerTime,
   markerColor = '#06b6d4',
-  markers = []
+  markers = [],
+  showGradient = false
 }: AudioScrubberProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(currentTime);
@@ -228,46 +230,29 @@ export function AudioScrubber({
 
   const progress = playbackTime / duration;
 
+  const gradientRegion = showGradient && markers.length >= 2 ? {
+    startTime: Math.min(markers[0].time, markers[1].time),
+    endTime: Math.max(markers[0].time, markers[1].time),
+    startColor: '#3b82f6',
+    endColor: '#ec4899'
+  } : undefined;
+
   return (
     <div className="bg-gray-800 rounded-lg p-4">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={handlePlayPause}
-            className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors"
-            title={isPlaying ? 'Pause' : 'Play'}
-          >
-            {isPlaying ? (
-              <Pause className="w-5 h-5 text-white" />
-            ) : (
-              <Play className="w-5 h-5 text-white" />
-            )}
-          </button>
-          <div className="text-sm font-mono text-gray-300">
-            {formatTime(playbackTime)} / {formatTime(duration)}
-          </div>
-        </div>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={handleSetInMarker}
-            disabled={!onSetInMarker}
-            className={`flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-all text-white text-sm font-medium shadow-lg shadow-green-500/20 ${
-              flashInMarker ? 'scale-110 ring-4 ring-green-400' : ''
-            }`}
-          >
-            <MapPin className="w-4 h-4" />
-            <span>{inMarkerLabel}</span>
-          </button>
-          <button
-            onClick={handleSetEndMarker}
-            disabled={!onSetEndMarker}
-            className={`flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-500 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-all text-white text-sm font-medium shadow-lg shadow-red-500/20 ${
-              flashEndMarker ? 'scale-110 ring-4 ring-red-400' : ''
-            }`}
-          >
-            <Square className="w-4 h-4" />
-            <span>{endMarkerLabel}</span>
-          </button>
+      <div className="flex items-center space-x-3 mb-6">
+        <button
+          onClick={handlePlayPause}
+          className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors"
+          title={isPlaying ? 'Pause' : 'Play'}
+        >
+          {isPlaying ? (
+            <Pause className="w-5 h-5 text-white" />
+          ) : (
+            <Play className="w-5 h-5 text-white" />
+          )}
+        </button>
+        <div className="text-sm font-mono text-gray-300">
+          {formatTime(playbackTime)} / {formatTime(duration)}
         </div>
       </div>
 
@@ -277,7 +262,9 @@ export function AudioScrubber({
           progress={progress}
           height={120}
           onSeek={handleWaveformClick}
-          showScrubber={true}
+          showScrubber={false}
+          progressColor="#ffffff"
+          gradientRegion={gradientRegion}
         />
         {markerTime !== undefined && markerTime > 0 && markers.length === 0 && (
           <div
@@ -305,26 +292,18 @@ export function AudioScrubber({
         {markers.map((marker) => (
           <div
             key={marker.id}
-            className="absolute top-0 bottom-0 cursor-ew-resize"
+            className="absolute top-0 bottom-0 cursor-ew-resize group"
             style={{ left: `${(marker.time / duration) * 100}%` }}
             onMouseDown={(e) => handleMarkerMouseDown(marker.id, e)}
           >
             <div
-              className="absolute -top-3 -bottom-3 transition-all hover:scale-110"
+              className="absolute -top-3 -bottom-3 transition-all group-hover:scale-110"
               style={{
                 width: '3px',
                 boxShadow: `0 0 20px ${marker.color}, 0 0 40px ${marker.color}80`,
                 background: `linear-gradient(to bottom, ${marker.color}cc, ${marker.color}, ${marker.color}cc)`
               }}
-            >
-              <div
-                className="absolute -top-4 left-1/2 -translate-x-1/2 text-white text-xs px-2 py-1 rounded whitespace-nowrap font-medium shadow-lg flex items-center space-x-1 cursor-ew-resize"
-                style={{ backgroundColor: marker.color }}
-              >
-                <MapPin className="w-3 h-3" />
-                <span>{marker.label}</span>
-              </div>
-            </div>
+            />
           </div>
         ))}
       </div>

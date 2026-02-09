@@ -104,6 +104,12 @@ export class WaveformGenerator {
       progressColor?: string;
       progress?: number;
       centerLine?: boolean;
+      gradientRegion?: {
+        startTime: number;
+        endTime: number;
+        startColor: string;
+        endColor: string;
+      };
     } = {}
   ): void {
     const ctx = canvas.getContext('2d');
@@ -114,12 +120,14 @@ export class WaveformGenerator {
       backgroundColor = '#1f2937',
       progressColor = '#60a5fa',
       progress = 0,
-      centerLine = true
+      centerLine = true,
+      gradientRegion
     } = options;
 
     const width = canvas.width;
     const height = canvas.height;
     const peaks = waveformData.peaks;
+    const duration = waveformData.duration;
 
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, width, height);
@@ -132,8 +140,19 @@ export class WaveformGenerator {
       const x = i * barWidth;
       const barHeight = peaks[i] * maxBarHeight;
       const isPast = (i / peaks.length) <= progress;
+      const currentTime = (i / peaks.length) * duration;
 
-      ctx.fillStyle = isPast ? progressColor : color;
+      let barColor = isPast ? progressColor : color;
+
+      if (gradientRegion && currentTime >= gradientRegion.startTime && currentTime <= gradientRegion.endTime) {
+        const regionProgress = (currentTime - gradientRegion.startTime) / (gradientRegion.endTime - gradientRegion.startTime);
+        barColor = this.interpolateColor(gradientRegion.startColor, gradientRegion.endColor, regionProgress);
+        if (isPast) {
+          barColor = this.lightenColor(barColor, 0.3);
+        }
+      }
+
+      ctx.fillStyle = barColor;
 
       ctx.fillRect(
         x,
@@ -151,6 +170,40 @@ export class WaveformGenerator {
       ctx.lineTo(width, centerY);
       ctx.stroke();
     }
+  }
+
+  private interpolateColor(color1: string, color2: string, progress: number): string {
+    const c1 = this.hexToRgb(color1);
+    const c2 = this.hexToRgb(color2);
+
+    if (!c1 || !c2) return color1;
+
+    const r = Math.round(c1.r + (c2.r - c1.r) * progress);
+    const g = Math.round(c1.g + (c2.g - c1.g) * progress);
+    const b = Math.round(c1.b + (c2.b - c1.b) * progress);
+
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+
+  private hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+  }
+
+  private lightenColor(color: string, amount: number): string {
+    if (color.startsWith('rgb')) {
+      const match = color.match(/\d+/g);
+      if (!match) return color;
+      const r = Math.min(255, parseInt(match[0]) + Math.round(255 * amount));
+      const g = Math.min(255, parseInt(match[1]) + Math.round(255 * amount));
+      const b = Math.min(255, parseInt(match[2]) + Math.round(255 * amount));
+      return `rgb(${r}, ${g}, ${b})`;
+    }
+    return color;
   }
 
   drawStereoWaveform(
