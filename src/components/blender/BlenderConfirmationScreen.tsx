@@ -27,10 +27,7 @@ const BlenderConfirmationScreen: React.FC<BlenderConfirmationScreenProps> = ({
   const isMobile = useIsMobile();
 
   const songAContribution = transition.songAMarkerPoint || 0;
-  const songBDuration = songB.metadata?.duration || 0;
-  const songBContribution = songBDuration > 0
-    ? songBDuration - (transition.songBMarkerPoint || 0)
-    : (transition.songBClipEnd || 0) - (transition.songBMarkerPoint || 0);
+  const songBContribution = (transition.songBClipEnd || 0) - (transition.songBMarkerPoint || 0);
   const totalDuration = songAContribution + transitionDuration + songBContribution;
 
   const formatTime = (seconds: number) => {
