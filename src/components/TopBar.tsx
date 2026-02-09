@@ -7,7 +7,10 @@ interface TopBarProps {
 
 const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
   return (
-    <div className="bg-gray-800 border-b border-gray-700 px-3 py-2">
+    <div
+      className="bg-gray-800 border-b border-cyan-500/20 px-3 py-2"
+      style={{ boxShadow: '0 4px 30px rgba(6,182,212,0.06), 0 1px 10px rgba(6,182,212,0.04)' }}
+    >
       <div className="flex items-center justify-between">
         {/* Left Section */}
         <div className="flex items-center space-x-3">

@@ -19,10 +19,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggleCollapse }) => {
   ];
 
   return (
-    <div className={`
-      bg-gray-800 border-r border-gray-700 transition-all duration-300 ease-in-out relative
-      ${isCollapsed ? 'w-14' : 'w-50'}
-    `}>
+    <div
+      className={`
+        bg-gray-800 border-r border-cyan-500/20 transition-all duration-300 ease-in-out relative
+        ${isCollapsed ? 'w-14' : 'w-50'}
+      `}
+      style={{ boxShadow: '4px 0 30px rgba(6,182,212,0.06), 1px 0 10px rgba(6,182,212,0.04)' }}
+    >
       <button
         onClick={onToggleCollapse}
         className="absolute -right-3 top-6 z-50 w-6 h-6 bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl"

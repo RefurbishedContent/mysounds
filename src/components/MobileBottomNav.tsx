@@ -18,7 +18,13 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ currentView, onNaviga
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-gray-800/95 backdrop-blur-lg border-t border-gray-700" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50 bg-gray-800/95 backdrop-blur-lg border-t border-cyan-500/20"
+      style={{
+        paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))',
+        boxShadow: '0 -4px 30px rgba(6,182,212,0.08), 0 -1px 10px rgba(6,182,212,0.05)',
+      }}
+    >
       <div className="flex items-center justify-around h-16 px-2">
         {navItems.map((item) => {
           const Icon = item.icon;
