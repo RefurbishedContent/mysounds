@@ -50,37 +50,14 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
     };
   }, [user]);
 
-  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
   const startBlending = async () => {
     if (!user) return;
 
+    // Reset error state
     setError(null);
     setProgress(0);
     setCurrentStageIndex(0);
     setMessage('Initializing...');
-
-    const introStages = [
-      { index: 0, label: 'Preparing audio files...', targetProgress: 10, duration: 1750 },
-      { index: 1, label: 'Loading Song A segment...', targetProgress: 20, duration: 1750 },
-      { index: 2, label: 'Loading transition template...', targetProgress: 30, duration: 1750 },
-      { index: 3, label: 'Processing transition effects...', targetProgress: 40, duration: 1750 },
-    ];
-
-    for (const stage of introStages) {
-      setCurrentStageIndex(stage.index);
-      setMessage(stage.label);
-
-      const steps = 10;
-      const stepDuration = stage.duration / steps;
-      const prevProgress = stage.index === 0 ? 0 : introStages[stage.index - 1].targetProgress;
-      const progressPerStep = (stage.targetProgress - prevProgress) / steps;
-
-      for (let i = 1; i <= steps; i++) {
-        await delay(stepDuration);
-        setProgress(prevProgress + progressPerStep * i);
-      }
-    }
 
     try {
       const blend = await blendExportService.createBlend(
@@ -90,9 +67,31 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
           format: 'wav',
           quality: 'standard'
         },
-        () => {}
+        (progressUpdate: ExportProgress) => {
+          setMessage(progressUpdate.message);
+          setProgress(progressUpdate.progress);
+
+          if (progressUpdate.progress >= 0 && progressUpdate.progress < 20) {
+            setCurrentStageIndex(0);
+          } else if (progressUpdate.progress >= 20 && progressUpdate.progress < 30) {
+            setCurrentStageIndex(1);
+          } else if (progressUpdate.progress >= 30 && progressUpdate.progress < 40) {
+            setCurrentStageIndex(2);
+          } else if (progressUpdate.progress >= 40 && progressUpdate.progress < 60) {
+            setCurrentStageIndex(3);
+          } else if (progressUpdate.progress >= 60 && progressUpdate.progress < 70) {
+            setCurrentStageIndex(4);
+          } else if (progressUpdate.progress >= 70 && progressUpdate.progress < 85) {
+            setCurrentStageIndex(5);
+          } else if (progressUpdate.progress >= 85 && progressUpdate.progress < 95) {
+            setCurrentStageIndex(6);
+          } else {
+            setCurrentStageIndex(7);
+          }
+        }
       );
 
+      // Subscribe to blend updates immediately
       subscribeToBlendUpdates(blend.id);
     } catch (err) {
       console.error('Blending failed:', err);
