@@ -61,6 +61,14 @@ const AppShell: React.FC = () => {
   const [transitionSongB, setTransitionSongB] = useState<UploadResult | undefined>();
   const [editingTransitionId, setEditingTransitionId] = useState<string | undefined>();
   const [activeMixSessionId, setActiveMixSessionId] = useState<string | undefined>();
+  const [libraryInitialTab, setLibraryInitialTab] = useState<'songs' | 'blends' | undefined>();
+
+  const navigateTo = (view: AppView) => {
+    if (view !== 'library' && view !== 'files') {
+      setLibraryInitialTab(undefined);
+    }
+    setCurrentView(view);
+  };
 
   const handleCreateNew = () => {
     setCurrentView('project-wizard');
@@ -180,19 +188,19 @@ const AppShell: React.FC = () => {
 
     switch (view) {
       case 'create-new':
-        setCurrentView('project-wizard');
+        navigateTo('project-wizard');
         break;
       case 'labs':
-        setCurrentView('transitions');
+        navigateTo('transitions');
         break;
       case 'library':
-        setCurrentView('library');
+        navigateTo('library');
         break;
       case 'templates':
-        setCurrentView('templates');
+        navigateTo('templates');
         break;
       case 'profile':
-        setCurrentView('profile');
+        navigateTo('profile');
         break;
     }
   };
@@ -349,7 +357,10 @@ const AppShell: React.FC = () => {
             onBack={() => setCurrentView('transitions')}
             onSave={() => setCurrentView('transitions')}
             onResetPoints={handleResetTransitionPoints}
-            onNavigateToLibrary={() => setCurrentView('library')}
+            onNavigateToLibrary={() => {
+              setLibraryInitialTab('blends');
+              setCurrentView('library');
+            }}
           />
         ) : null;
       case 'templates':
@@ -370,6 +381,7 @@ const AppShell: React.FC = () => {
         return (
           <LibraryView
             onCreateTransitionWithSong={handleCreateTransitionWithSong}
+            initialTab={libraryInitialTab}
             onNavigate={(view, params) => {
               if (view === 'mixer') {
                 setCurrentView('mixer');
@@ -650,7 +662,7 @@ const AppShell: React.FC = () => {
                         onClick={() => {
                           if (isDisabled) return;
                           if (item.view) {
-                            setCurrentView(item.view);
+                            navigateTo(item.view);
                             setIsMobileSidebarOpen(false);
                           } else if (item.action) {
                             item.action();

@@ -10,11 +10,12 @@ import SongDetailModal from './SongDetailModal';
 interface LibraryViewProps {
   onCreateTransitionWithSong?: (song: UploadResult) => void;
   onNavigate?: (view: string, params?: any) => void;
+  initialTab?: 'songs' | 'blends';
 }
 
-const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong, onNavigate }) => {
+const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong, onNavigate, initialTab }) => {
   const { user } = useAuth();
-  const [currentTab, setCurrentTab] = useState<'songs' | 'blends'>('songs');
+  const [currentTab, setCurrentTab] = useState<'songs' | 'blends'>(initialTab || 'songs');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
@@ -25,6 +26,12 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong, o
   const [loading, setLoading] = useState(true);
   const [showUploader, setShowUploader] = useState(false);
   const [selectedSong, setSelectedSong] = useState<UploadResult | null>(null);
+
+  useEffect(() => {
+    if (initialTab) {
+      setCurrentTab(initialTab);
+    }
+  }, [initialTab]);
 
   useEffect(() => {
     loadAllData();
