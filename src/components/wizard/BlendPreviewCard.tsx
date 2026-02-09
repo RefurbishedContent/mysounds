@@ -172,7 +172,7 @@ export const BlendPreviewCard: React.FC<BlendPreviewCardProps> = ({
 
           {blend.transitionDuration && (
             <div className="text-xs text-gray-500">
-              {blend.transitionDuration}s transition
+              {blend.transitionDuration}s mash up
             </div>
           )}
         </div>

@@ -329,9 +329,9 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     if (songAClipDuration < minRequiredLength || songBClipDuration < minRequiredLength) {
       const durationName = duration === 6 ? 'Short (6s)' : duration === 12 ? 'Medium (12s)' : 'Long (20s)';
       setLengthWarningMessage(
-        `${durationName} transition requires at least ${minRequiredLength.toFixed(1)}s of each song. ` +
+        `${durationName} mash up requires at least ${minRequiredLength.toFixed(1)}s of each song. ` +
         `Song A has ${songAClipDuration.toFixed(1)}s and Song B has ${songBClipDuration.toFixed(1)}s. ` +
-        `Please return to the previous step to adjust your transition markers.`
+        `Please return to the previous step to adjust your mash up markers.`
       );
       setShowLengthWarning(true);
       return false;
@@ -641,7 +641,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
 
   const handlePlayTransition = async () => {
     if (!selectedTemplate || !templateAudioUrl) {
-      alert('Please select a transition template first');
+      alert('Please select a mash up template first');
       return;
     }
 
@@ -834,7 +834,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
 
   const handleSave = async () => {
     if (!selectedTemplate) {
-      alert('Please select a transition template first');
+      alert('Please select a mash up template first');
       return;
     }
 
@@ -897,7 +897,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       });
 
       setRenderStage('success');
-      setRenderMessage('Transition saved successfully!');
+      setRenderMessage('Mash up saved successfully!');
       setRenderProgress(100);
 
       const updatedTransition = await transitionsService.getTransition(transitionId);

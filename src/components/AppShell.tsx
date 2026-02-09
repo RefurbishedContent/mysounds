@@ -76,7 +76,7 @@ const AppShell: React.FC = () => {
     {
       title: 'Labs',
       items: [
-        { id: 'transitions', icon: Waveform, label: 'Transitions', view: 'transitions' },
+        { id: 'transitions', icon: Waveform, label: 'Mash Ups', view: 'transitions' },
         { id: 'blender', icon: Layers, label: 'Blender', view: 'blender' },
         { id: 'mixer', icon: Sliders, label: 'Mixer', view: 'mixer' },
       ]
@@ -334,7 +334,7 @@ const AppShell: React.FC = () => {
                 <Share2 size={24} className="text-white" />
               </div>
               <h2 className="text-lg font-bold text-white">Coming Soon</h2>
-              <p className="text-sm text-gray-400">Share your transitions</p>
+              <p className="text-sm text-gray-400">Share your mash ups</p>
             </div>
           </div>
         );

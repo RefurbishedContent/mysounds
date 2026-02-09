@@ -362,7 +362,7 @@ export const BlendLibraryPanel: React.FC<BlendLibraryPanelProps> = ({
               <div className="text-center">
                 <p className="text-gray-400 text-sm">No blends found</p>
                 <p className="text-gray-600 text-xs mt-2">
-                  {searchQuery ? 'Try a different search term' : 'Create your first blend in the Transition Editor'}
+                  {searchQuery ? 'Try a different search term' : 'Create your first blend in the Mash Up Editor'}
                 </p>
               </div>
             </div>

@@ -72,7 +72,7 @@ const BlenderStartScreen: React.FC<BlenderStartScreenProps> = ({
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
           <Loader className="w-12 h-12 text-teal-500 animate-spin mx-auto mb-3" />
-          <p className="text-gray-400">Loading transitions...</p>
+          <p className="text-gray-400">Loading mash ups...</p>
         </div>
       </div>
     );
@@ -85,16 +85,16 @@ const BlenderStartScreen: React.FC<BlenderStartScreenProps> = ({
           <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
             <Layers className="w-10 h-10 text-gray-600" />
           </div>
-          <h3 className="text-xl font-bold text-white mb-2">No Transitions Yet</h3>
+          <h3 className="text-xl font-bold text-white mb-2">No Mash Ups Yet</h3>
           <p className="text-gray-400 mb-6">
-            You need to create transitions before you can use the Blender.
-            Head to the Transitions tool to get started.
+            You need to create mash ups before you can use the Blender.
+            Head to the Mash Ups tool to get started.
           </p>
           <button
             onClick={() => onEditTransition('new')}
             className="px-6 py-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg font-medium hover:from-teal-600 hover:to-cyan-600 transition-all"
           >
-            Create First Transition
+            Create First Mash Up
           </button>
         </div>
       </div>
@@ -109,7 +109,7 @@ const BlenderStartScreen: React.FC<BlenderStartScreenProps> = ({
             <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">Total Transitions</p>
+                  <p className="text-xs text-gray-400 mb-1">Total Mash Ups</p>
                   <p className="text-2xl font-bold text-white">{totalCount}</p>
                 </div>
                 <Layers className="w-8 h-8 text-teal-500" />
@@ -140,7 +140,7 @@ const BlenderStartScreen: React.FC<BlenderStartScreenProps> = ({
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
               <input
                 type="text"
-                placeholder="Search transitions by name or song..."
+                placeholder="Search mash ups by name or song..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-teal-500 text-sm"
@@ -175,7 +175,7 @@ const BlenderStartScreen: React.FC<BlenderStartScreenProps> = ({
 
           {filteredTransitions.length === 0 && (
             <div className="text-center py-12">
-              <p className="text-gray-400">No transitions found matching your criteria.</p>
+              <p className="text-gray-400">No mash ups found matching your criteria.</p>
             </div>
           )}
         </div>

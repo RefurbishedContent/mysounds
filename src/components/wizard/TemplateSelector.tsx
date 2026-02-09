@@ -64,7 +64,7 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-lg font-semibold text-white mb-2">Transition Template</h3>
+        <h3 className="text-lg font-semibold text-white mb-2">Mash Up Template</h3>
         <p className="text-sm text-gray-400">Choose how your songs will blend together</p>
       </div>
 
@@ -94,7 +94,7 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
               )}
             </div>
             <p className="text-sm text-gray-400">
-              AI will analyze your songs and automatically select the optimal transition template
+              AI will analyze your songs and automatically select the optimal mash up template
             </p>
           </div>
         </div>

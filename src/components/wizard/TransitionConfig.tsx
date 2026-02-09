@@ -17,7 +17,7 @@ const TransitionConfig: React.FC<TransitionConfigProps> = ({
   return (
     <div className="space-y-6" data-tutorial="transition-config">
       <div>
-        <h3 className="text-lg font-semibold text-white mb-2">Transition Settings</h3>
+        <h3 className="text-lg font-semibold text-white mb-2">Mash Up Settings</h3>
         <p className="text-sm text-gray-400">Fine-tune how your songs will blend together</p>
       </div>
 
@@ -26,7 +26,7 @@ const TransitionConfig: React.FC<TransitionConfigProps> = ({
           <div className="flex items-center justify-between">
             <label className="text-sm font-medium text-white flex items-center space-x-2">
               <Sliders size={16} className="text-cyan-400" />
-              <span>Transition Duration</span>
+              <span>Mash Up Duration</span>
             </label>
             <span className="text-lg font-bold text-cyan-400">{duration}s</span>
           </div>
@@ -76,15 +76,15 @@ const TransitionConfig: React.FC<TransitionConfigProps> = ({
             <span>120s (Late)</span>
           </div>
           <p className="text-xs text-gray-400">
-            Where in the first song the transition should begin
+            Where in the first song the mash up should begin
           </p>
         </div>
       </div>
 
       <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
         <p className="text-sm text-blue-300">
-          <span className="font-semibold">Tip:</span> Shorter transitions work best for energetic tracks,
-          while longer transitions create smoother blends for melodic songs.
+          <span className="font-semibold">Tip:</span> Shorter mash ups work best for energetic tracks,
+          while longer mash ups create smoother blends for melodic songs.
         </p>
       </div>
     </div>

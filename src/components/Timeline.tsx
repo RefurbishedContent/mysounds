@@ -88,7 +88,7 @@ const Timeline: React.FC<TimelineProps> = ({
     },
     {
       id: 'transition',
-      name: 'Transitions & Effects',
+      name: 'Mash Ups & Effects',
       type: 'transition',
       color: '#A855F7',
       height: 60,

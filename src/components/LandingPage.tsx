@@ -34,12 +34,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onTryMixer }) => {
     {
       icon: Layers,
       title: "AI Template Selection",
-      description: "Our AI analyzes both tracks and selects the perfect transition template based on key, tempo, and energy patterns."
+      description: "Our AI analyzes both tracks and selects the perfect mash up template based on key, tempo, and energy patterns."
     },
     {
       icon: Shuffle,
       title: "Instant Fusion",
-      description: "AI predicts optimal transition points and seamlessly blends your songs into one cohesive track."
+      description: "AI predicts optimal mash up points and seamlessly blends your songs into one cohesive track."
     }
   ];
 
@@ -152,7 +152,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onTryMixer }) => {
                       </div>
                       <div>
                         <h3 className="text-xl font-semibold text-white mb-2">Watch MySounds.ai Demo</h3>
-                        <p className="text-gray-300">See AI predict perfect transitions between any two songs</p>
+                        <p className="text-gray-300">See AI predict perfect mash ups between any two songs</p>
                       </div>
                     </div>
                   </div>
@@ -182,7 +182,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onTryMixer }) => {
                 <div className="text-center mt-6 space-y-2">
                   <h4 className="text-lg font-semibold text-white">AI-Powered Song Fusion</h4>
                   <p className="text-gray-400 max-w-2xl mx-auto">
-                    Watch how MySounds.ai intelligently combines any two songs using AI templates that predict the perfect transition points, creating seamless fusion tracks automatically.
+                    Watch how MySounds.ai intelligently combines any two songs using AI templates that predict the perfect mash up points, creating seamless fusion tracks automatically.
                   </p>
                 </div>
               </div>

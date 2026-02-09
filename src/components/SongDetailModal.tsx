@@ -545,7 +545,7 @@ const SongDetailModal: React.FC<SongDetailModalProps> = ({ song, onClose, onCrea
                 <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
                 <div className="relative flex items-center justify-center space-x-2">
                   <Zap size={20} />
-                  <span>Create Transition</span>
+                  <span>Create Mash Up</span>
                 </div>
               </button>
             </div>

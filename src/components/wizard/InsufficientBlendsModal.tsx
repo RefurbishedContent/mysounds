@@ -48,7 +48,7 @@ export const InsufficientBlendsModal: React.FC<InsufficientBlendsModalProps> = (
           <div className="space-y-1.5">
             <h4 className="text-sm font-semibold text-white">What are Blends?</h4>
             <p className="text-sm text-gray-400">
-              Blends are seamless transitions between two songs, created in the Transition Editor.
+              Blends are seamless mash ups between two songs, created in the Mash Up Editor.
               The mixer combines multiple blends to create longer, professional DJ mixes.
             </p>
           </div>
@@ -60,7 +60,7 @@ export const InsufficientBlendsModal: React.FC<InsufficientBlendsModalProps> = (
             onClick={onCreateTransition}
             className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white rounded-lg font-semibold shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/50 transition-all duration-200"
           >
-            <span>Create Transition Blend</span>
+            <span>Create Mash Up Blend</span>
             <ArrowRight size={18} />
           </button>
 

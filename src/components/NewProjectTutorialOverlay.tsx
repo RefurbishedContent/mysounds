@@ -22,7 +22,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'welcome',
     title: 'Welcome to MySounds.AI!',
-    description: 'Let me show you how to create professional DJ transitions in just a few clicks using our AI-powered workflow.',
+    description: 'Let me show you how to create professional DJ mash ups in just a few clicks using our AI-powered workflow.',
     target: 'center',
     position: 'center',
     icon: Sparkles
@@ -39,16 +39,16 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'project-type',
     title: 'Choose Project Type',
-    description: 'Select "Transition Project" to create a seamless transition between two songs. Our AI will analyze and blend them perfectly.',
+    description: 'Select "Mash Up Project" to create a seamless mash up between two songs. Our AI will analyze and blend them perfectly.',
     target: '[data-tutorial="transition-project"]',
     position: 'bottom',
     icon: Music,
-    action: 'Select "Transition Project"'
+    action: 'Select "Mash Up Project"'
   },
   {
     id: 'song-selection',
     title: 'Select Your Songs',
-    description: 'This is the song selection interface. We\'ve pre-selected two compatible demo tracks: "Summer Beats" (Song A) and "Midnight Groove" (Song B). Notice the Match Quality indicator showing how well these tracks blend together based on BPM, key, and energy analysis. The AI has automatically calculated a compatibility score to help you create the perfect transition.',
+    description: 'This is the song selection interface. We\'ve pre-selected two compatible demo tracks: "Summer Beats" (Song A) and "Midnight Groove" (Song B). Notice the Match Quality indicator showing how well these tracks blend together based on BPM, key, and energy analysis. The AI has automatically calculated a compatibility score to help you create the perfect mash up.',
     target: '[data-tutorial="song-selection-interface"]',
     position: 'bottom',
     icon: Music,
@@ -56,17 +56,17 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     id: 'set-transition-points',
-    title: 'Set Transition Points',
-    description: 'Next, you\'ll set the exact points where songs transition. Use the waveform display to mark START, OUT, IN, and END points. The AI suggests optimal positions, but you can drag markers to fine-tune.',
+    title: 'Set Mash Up Points',
+    description: 'Next, you\'ll set the exact points where songs mash up. Use the waveform display to mark START, OUT, IN, and END points. The AI suggests optimal positions, but you can drag markers to fine-tune.',
     target: '[data-tutorial="transition-points-interface"]',
     position: 'bottom',
     icon: Zap,
-    action: 'Click "Continue" to proceed to transition point setup'
+    action: 'Click "Continue" to proceed to mash up point setup'
   },
   {
     id: 'timeline-editor',
     title: 'Professional Timeline Editor',
-    description: 'This is where the magic happens! The Professional Timeline Editor lets you fine-tune your transition with precision. Adjust fade curves, select transition templates, and preview your blend in real-time. Each track shows its waveform with visual fade automation.',
+    description: 'This is where the magic happens! The Professional Timeline Editor lets you fine-tune your mash up with precision. Adjust fade curves, select mash up templates, and preview your blend in real-time. Each track shows its waveform with visual fade automation.',
     target: '[data-tutorial="timeline-editor"]',
     position: 'bottom',
     icon: Settings,
@@ -75,7 +75,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'complete',
     title: 'You\'re All Set!',
-    description: 'That\'s it! You now know how to create AI-powered transitions. Upload your own tracks to start creating professional mixes.',
+    description: 'That\'s it! You now know how to create AI-powered mash ups. Upload your own tracks to start creating professional mixes.',
     target: 'center',
     position: 'center',
     icon: CheckCircle

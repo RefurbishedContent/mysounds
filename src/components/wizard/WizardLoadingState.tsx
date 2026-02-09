@@ -15,9 +15,9 @@ const loadingMessages = [
 
 const tips = [
   'Use the mixer to layer multiple tracks with precision',
-  'Transitions work best when songs have similar BPM',
+  'Mash ups work best when songs have similar BPM',
   'Try different templates to find the perfect blend',
-  'Adjust fade curves for smoother transitions',
+  'Adjust fade curves for smoother mash ups',
   'Export in high quality for the best results'
 ];
 

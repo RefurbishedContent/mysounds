@@ -10,8 +10,8 @@ const LabsView: React.FC<LabsViewProps> = ({ onSelectTool }) => {
     {
       id: 'transitions',
       icon: AudioWaveform,
-      title: 'Transitions',
-      description: 'Create and edit custom transitions between songs',
+      title: 'Mash Ups',
+      description: 'Create and edit custom mash ups between songs',
       gradient: 'from-cyan-500 to-blue-500',
       action: () => onSelectTool('transitions')
     },
@@ -19,7 +19,7 @@ const LabsView: React.FC<LabsViewProps> = ({ onSelectTool }) => {
       id: 'blender',
       icon: Layers,
       title: 'Blender',
-      description: 'Blend configured transitions into complete audio files',
+      description: 'Blend configured mash ups into complete audio files',
       gradient: 'from-teal-500 to-cyan-500',
       action: () => onSelectTool('blender')
     },
@@ -43,7 +43,7 @@ const LabsView: React.FC<LabsViewProps> = ({ onSelectTool }) => {
       id: 'effects',
       icon: Zap,
       title: 'Effects Rack',
-      description: 'Apply professional effects to your transitions',
+      description: 'Apply professional effects to your mash ups',
       gradient: 'from-pink-500 to-red-500',
       comingSoon: true
     }

@@ -89,7 +89,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
       case 'upload_completed':
         return `Uploaded "${activity.event_data?.filename || 'track'}"`;
       case 'project_created':
-        return 'Created new transition';
+        return 'Created new mash up';
       case 'render_completed':
         return 'Render completed';
       case 'template_placed':
@@ -110,7 +110,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
     {
       id: 'new-transition',
       icon: AudioWaveform,
-      title: 'New Transition',
+      title: 'New Mash Up',
       description: 'Blend two tracks seamlessly',
       gradient: 'from-cyan-500 to-blue-600',
       action: onCreateNew,
@@ -135,7 +135,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
       id: 'templates',
       icon: FileAudio,
       title: 'Browse Templates',
-      description: 'Explore transition styles',
+      description: 'Explore mash up styles',
       gradient: 'from-pink-500 to-rose-600',
       action: () => onNavigate('templates'),
     },
@@ -204,7 +204,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-white">{stats.totalTransitions}</p>
-                    <p className="text-xs text-gray-400">Transitions</p>
+                    <p className="text-xs text-gray-400">Mash Ups</p>
                   </div>
                 </div>
               </div>
@@ -314,7 +314,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
             <div className="space-y-4">
               <div className="bg-gray-750 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-400">Transitions Created</span>
+                  <span className="text-sm text-gray-400">Mash Ups Created</span>
                   <span className="text-lg font-bold text-white">{stats.totalTransitions}</span>
                 </div>
                 <div className="w-full bg-gray-700 rounded-full h-2">
@@ -392,7 +392,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
               <div className="flex-1">
                 <h3 className="text-xl font-bold text-white mb-2">Welcome to MySounds.AI</h3>
                 <p className="text-gray-400 mb-4">
-                  Get started by uploading your first tracks. Our AI will analyze them and help you create seamless transitions.
+                  Get started by uploading your first tracks. Our AI will analyze them and help you create seamless mash ups.
                 </p>
                 <div className="flex gap-3">
                   <button

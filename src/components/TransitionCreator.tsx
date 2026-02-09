@@ -263,7 +263,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
       setShowEditor(true);
     } catch (error) {
       console.error('Failed to create transition:', error);
-      alert('Failed to create transition');
+      alert('Failed to create mash up');
     } finally {
       setSaving(false);
     }
@@ -339,14 +339,14 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
               <ArrowLeft size={20} className="text-gray-400" />
             </button>
             <div>
-              <h1 className="text-xl font-bold text-white">Create New Transition</h1>
+              <h1 className="text-xl font-bold text-white">Create New Mash Up</h1>
               <div className="flex items-center space-x-2 mt-1">
                 <span className={`text-xs ${currentStep === 'select-songs' ? 'text-cyan-400' : 'text-gray-500'}`}>
                   Select Songs
                 </span>
                 <ChevronRight size={12} className="text-gray-600" />
                 <span className={`text-xs ${currentStep === 'set-transition-points' ? 'text-cyan-400' : 'text-gray-500'}`}>
-                  Set Transition Points
+                  Set Mash Up Points
                 </span>
               </div>
             </div>
@@ -762,12 +762,12 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
         {currentStep === 'set-transition-points' && songA && songB && (
           <div className="max-w-7xl mx-auto px-4 py-6 space-y-6" data-tutorial="transition-points-interface">
             <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-white mb-2">Set Transition Points</h2>
+              <h2 className="text-2xl font-bold text-white mb-2">Set Mash Up Points</h2>
               <p className="text-gray-400 mb-4">Drag markers to control when songs start, fade, and end</p>
 
               <div className="max-w-md mx-auto">
                 <label className="block text-sm font-medium text-gray-300 mb-2 text-left">
-                  Transition Name (Optional)
+                  Mash Up Name (Optional)
                 </label>
                 <input
                   type="text"
@@ -870,7 +870,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                 <div className="flex items-center space-x-3 px-6 py-3 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-green-500/20 rounded-full border border-purple-500/30">
                   <Sparkles className="w-5 h-5 text-purple-400" />
                   <span className="text-sm font-medium text-purple-300">
-                    {DEFAULT_TRANSITION_DURATION}s Transition Blend
+                    {DEFAULT_TRANSITION_DURATION}s Mash Up Blend
                   </span>
                   <Sparkles className="w-5 h-5 text-purple-400" />
                 </div>
@@ -997,13 +997,13 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                 <div>
                   <h4 className="text-cyan-300 font-semibold mb-2">Ready to Begin Editing</h4>
                   <p className="text-cyan-100/80 text-sm mb-4">
-                    Your transition points are set. Click "Begin Editing" to enter the full editor where you can:
+                    Your mash up points are set. Click "Begin Editing" to enter the full editor where you can:
                   </p>
                   <ul className="text-cyan-100/70 text-sm space-y-1 list-disc list-inside">
-                    <li>Browse and apply transition templates</li>
+                    <li>Browse and apply mash up templates</li>
                     <li>Fine-tune timing and crossfades</li>
                     <li>Use AI Fusion for automatic blending</li>
-                    <li>Preview your transition in real-time</li>
+                    <li>Preview your mash up in real-time</li>
                   </ul>
                 </div>
               </div>

@@ -50,14 +50,14 @@ const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition, onE
   };
 
   const handleDelete = async (transitionId: string) => {
-    if (!confirm('Are you sure you want to delete this transition?')) return;
+    if (!confirm('Are you sure you want to delete this mash up?')) return;
 
     try {
       await transitionsService.deleteTransition(transitionId);
       setTransitions(prev => prev.filter(t => t.id !== transitionId));
     } catch (error) {
       console.error('Failed to delete transition:', error);
-      alert('Failed to delete transition');
+      alert('Failed to delete mash up');
     }
   };
 
@@ -83,8 +83,8 @@ const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition, onE
     <div className="h-full flex flex-col p-2 sm:p-3 md:p-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
         <div>
-          <h1 className="text-xl font-bold text-white mb-1">My Transitions</h1>
-          <p className="text-sm text-gray-400">View and manage your saved song transitions</p>
+          <h1 className="text-xl font-bold text-white mb-1">My Mash Ups</h1>
+          <p className="text-sm text-gray-400">View and manage your saved song mash ups</p>
         </div>
 
         <button
@@ -92,7 +92,7 @@ const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition, onE
           className="px-4 py-2 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105"
         >
           <Plus size={16} />
-          <span className="text-sm">Create New Transition</span>
+          <span className="text-sm">Create New Mash Up</span>
         </button>
       </div>
 
@@ -101,7 +101,7 @@ const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition, onE
           <Search size={16} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-500" />
           <input
             type="text"
-            placeholder="Search transitions..."
+            placeholder="Search mash ups..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-2 text-sm bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200"
@@ -127,7 +127,7 @@ const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition, onE
           <div className="flex items-center justify-center h-64">
             <div className="text-center space-y-4">
               <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-              <p className="text-gray-400">Loading transitions...</p>
+              <p className="text-gray-400">Loading mash ups...</p>
             </div>
           </div>
         ) : filteredTransitions.length === 0 ? (
@@ -137,9 +137,9 @@ const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition, onE
                 <Sparkles size={32} className="text-cyan-400" />
               </div>
               <div className="space-y-1.5">
-                <h2 className="text-lg font-bold text-white">No Transitions Yet</h2>
+                <h2 className="text-lg font-bold text-white">No Mash Ups Yet</h2>
                 <p className="text-sm text-gray-400">
-                  Create your first transition by blending two songs together
+                  Create your first mash up by blending two songs together
                 </p>
               </div>
               <button
@@ -147,7 +147,7 @@ const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition, onE
                 className="px-4 py-2.5 bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 hover:from-cyan-500 hover:via-blue-500 hover:to-purple-500 text-white rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg shadow-cyan-500/30 hover:shadow-2xl hover:shadow-cyan-400/60 hover:scale-105 mx-auto"
               >
                 <Plus size={16} />
-                <span className="text-sm">Create New Transition</span>
+                <span className="text-sm">Create New Mash Up</span>
               </button>
             </div>
           </div>
@@ -177,7 +177,7 @@ const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition, onE
                         ? 'bg-yellow-900/30 text-yellow-400'
                         : 'bg-gray-700 text-gray-400'
                     }`}
-                    title={transition.status === 'ready' ? 'Click to blend this transition' : ''}
+                    title={transition.status === 'ready' ? 'Click to blend this mash up' : ''}
                   >
                     {transition.status}
                   </span>
@@ -215,7 +215,7 @@ const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition, onE
 
                 <div className="bg-gray-900/50 rounded-lg p-2 mb-3">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-400">Transition Duration</span>
+                    <span className="text-gray-400">Mash Up Duration</span>
                     <span className="text-white font-medium">{transition.transitionDuration}s</span>
                   </div>
                   <div className="flex items-center justify-between text-xs mt-1.5">

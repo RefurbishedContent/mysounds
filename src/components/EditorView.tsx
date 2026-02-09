@@ -969,7 +969,7 @@ const EditorView: React.FC<EditorViewProps> = ({ projectId, template, onBack, on
                       <div className="p-1.5 bg-gradient-to-r from-cyan-600/20 to-purple-600/20 rounded-lg border border-cyan-500/30">
                         <Layers size={16} className="text-cyan-400" />
                       </div>
-                      <span className="text-white text-sm font-medium">Transition Templates</span>
+                      <span className="text-white text-sm font-medium">Mash Up Templates</span>
                     </div>
                     <button
                       onClick={() => setIsGalleryCollapsed(false)}
@@ -989,8 +989,8 @@ const EditorView: React.FC<EditorViewProps> = ({ projectId, template, onBack, on
                           <Layers size={20} className="text-cyan-400" />
                         </div>
                         <div>
-                          <h3 className="text-white font-semibold">Transition Templates</h3>
-                          <p className="text-gray-400 text-sm">Drag templates to the Transitions & Effects track above to blend your tracks</p>
+                          <h3 className="text-white font-semibold">Mash Up Templates</h3>
+                          <p className="text-gray-400 text-sm">Drag templates to the Mash Ups & Effects track above to blend your tracks</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
