@@ -167,7 +167,7 @@ const MashUpProcessingStep: React.FC<MashUpProcessingStepProps> = ({
                 muted
                 playsInline
                 className="w-full h-full object-cover"
-                src="https://videos.ctfassets.net/ktdj7g8bqfli/6I4PPm5DMIXCR2LxeXybCZ/91123aef97f6b78e90bcab7953589328/Loadoing_screen.mp4"
+                src="https://yuotfcbbzrsdpxohoiks.supabase.co/storage/v1/object/sign/Video/Loading%20Screen%20Video%20MySoundsAI.mov?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jYTc4YWI4OS1mMWQ5LTRkNWUtYWYyNS1lYjAyZDY0ZGQwNTUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJWaWRlby9Mb2FkaW5nIFNjcmVlbiBWaWRlbyBNeVNvdW5kc0FJLm1vdiIsImlhdCI6MTc3MDY3MDE5MiwiZXhwIjoxODAyMjA2MTkyfQ.-az3CuvQfC3POO2fTVSafphZTJ5eeauVvBg5K6bxUm4"
               />
             </div>
 
