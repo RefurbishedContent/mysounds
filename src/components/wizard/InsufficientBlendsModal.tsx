@@ -24,9 +24,9 @@ export const InsufficientBlendsModal: React.FC<InsufficientBlendsModalProps> = (
               <AlertCircle size={20} className="text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-bold text-white mb-1">Not Enough Blends</h3>
+              <h3 className="text-lg font-bold text-white mb-1">Not Enough Mash Ups</h3>
               <p className="text-sm text-gray-300">
-                You need at least 2 blends to create a mixer project
+                You need at least 2 mash ups to create a mixer project
               </p>
             </div>
           </div>
@@ -36,7 +36,7 @@ export const InsufficientBlendsModal: React.FC<InsufficientBlendsModalProps> = (
         <div className="p-4 space-y-3 overflow-y-auto flex-1">
           <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-400">Current Blends</span>
+              <span className="text-sm font-medium text-gray-400">Current Mash Ups</span>
               <span className="text-2xl font-bold text-white">{blendCount}</span>
             </div>
             <div className="flex items-center justify-between">
@@ -46,10 +46,10 @@ export const InsufficientBlendsModal: React.FC<InsufficientBlendsModalProps> = (
           </div>
 
           <div className="space-y-1.5">
-            <h4 className="text-sm font-semibold text-white">What are Blends?</h4>
+            <h4 className="text-sm font-semibold text-white">What are Mash Ups?</h4>
             <p className="text-sm text-gray-400">
-              Blends are seamless mash ups between two songs, created in the Mash Up Editor.
-              The mixer combines multiple blends to create longer, professional DJ mixes.
+              Mash Ups are seamless transitions between two songs, created in the Mash Up Editor.
+              The mixer combines multiple mash ups to create longer, professional DJ mixes.
             </p>
           </div>
         </div>
@@ -60,7 +60,7 @@ export const InsufficientBlendsModal: React.FC<InsufficientBlendsModalProps> = (
             onClick={onCreateTransition}
             className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white rounded-lg font-semibold shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/50 transition-all duration-200"
           >
-            <span>Create Mash Up Blend</span>
+            <span>Create Mash Up</span>
             <ArrowRight size={18} />
           </button>
 
@@ -80,7 +80,7 @@ export const InsufficientBlendsModal: React.FC<InsufficientBlendsModalProps> = (
           </div>
 
           <p className="text-xs text-gray-500 text-center">
-            You can create an empty mixer and add blends later
+            You can create an empty mixer and add mash ups later
           </p>
         </div>
       </div>

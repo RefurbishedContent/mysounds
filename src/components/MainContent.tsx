@@ -164,7 +164,7 @@ const MainContent: React.FC = () => {
                 
                 <div className="flex justify-between text-sm text-gray-400">
                   <span>Track 1: Main Mix</span>
-                  <span>Ready to blend</span>
+                  <span>Ready to mash up</span>
                 </div>
               </div>
             </div>

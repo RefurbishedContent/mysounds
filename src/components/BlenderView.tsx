@@ -72,11 +72,11 @@ const BlenderView: React.FC<BlenderViewProps> = ({ onBack, onNavigate }) => {
                 </div>
                 <div>
                   <h1 className="text-xl font-bold text-white">Blender</h1>
-                  <p className="text-xs text-gray-400">Create seamless audio blends</p>
+                  <p className="text-xs text-gray-400">Create seamless mash ups</p>
                 </div>
               </div>
               <p className="text-sm text-gray-300 leading-relaxed">
-                Select a configured transition and blend it into a complete audio file.
+                Select a configured transition and mash it up into a complete audio file.
                 Perfect for creating professional mashups and mixes.
               </p>
             </div>

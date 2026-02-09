@@ -12,8 +12,8 @@ const WizardStep1ProjectType: React.FC<WizardStep1ProjectTypeProps> = ({ onSelec
       id: 'transition' as ProjectType,
       icon: AudioWaveform,
       title: 'Mash Up Project',
-      description: 'Blend two songs together with AI-powered mash ups',
-      features: ['Smart beat matching', 'Harmonic key blending', 'Custom mash up effects'],
+      description: 'Mash up two songs together with AI-powered transitions',
+      features: ['Smart beat matching', 'Harmonic key mixing', 'Custom mash up effects'],
       gradient: 'from-cyan-500 via-blue-500 to-purple-500',
       difficulty: 'Beginner Friendly',
       time: '5-10 min'

@@ -990,7 +990,7 @@ const EditorView: React.FC<EditorViewProps> = ({ projectId, template, onBack, on
                         </div>
                         <div>
                           <h3 className="text-white font-semibold">Mash Up Templates</h3>
-                          <p className="text-gray-400 text-sm">Drag templates to the Mash Ups & Effects track above to blend your tracks</p>
+                          <p className="text-gray-400 text-sm">Drag templates to the Mash Ups & Effects track above to mash up your tracks</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">

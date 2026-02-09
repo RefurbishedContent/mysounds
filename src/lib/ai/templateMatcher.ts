@@ -332,7 +332,7 @@ export class TemplateMatcher {
       ? 'Good energy transition'
       : energyScore >= 50
       ? 'Moderate energy compatibility'
-      : 'Energy levels require careful blending';
+      : 'Energy levels require careful mixing';
 
     const overallScore = (bpmScore + keyScore + genreScore + energyScore) / 4;
     let recommendation = '';

@@ -145,7 +145,7 @@ export const PlaylistQueueDrawer: React.FC<PlaylistQueueDrawerProps> = ({
               <div className="text-center py-12">
                 <Music size={48} className="mx-auto text-gray-600 mb-3" />
                 <p className="text-gray-400 text-sm">No tracks in queue</p>
-                <p className="text-gray-600 text-xs mt-2">Add blends from your library</p>
+                <p className="text-gray-600 text-xs mt-2">Add mash ups from your library</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -254,7 +254,7 @@ export const PlaylistQueueDrawer: React.FC<PlaylistQueueDrawerProps> = ({
                         {compatScore && !isPast && (
                           <div className="mt-2 pt-2 border-t border-gray-600/50">
                             <div className="flex items-center gap-2">
-                              <span className="text-xs text-gray-500">Blend compatibility:</span>
+                              <span className="text-xs text-gray-500">Mash up compatibility:</span>
                               <div className="flex-1 h-1.5 bg-gray-900 rounded-full overflow-hidden">
                                 <div
                                   className={`h-full rounded-full ${

@@ -54,8 +54,8 @@ const BlenderCompletionScreen: React.FC<BlenderCompletionScreenProps> = ({
             <div className="w-11 h-11 md:w-14 md:h-14 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-2 md:mb-3 shadow-lg shadow-teal-500/50">
               <CheckCircle className="w-5 h-5 md:w-7 md:h-7 text-white" />
             </div>
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-0.5 md:mb-1">Blend Complete!</h2>
-            <p className="text-xs md:text-sm text-gray-400">Your audio blend has been saved to your library</p>
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-0.5 md:mb-1">Mash Up Complete!</h2>
+            <p className="text-xs md:text-sm text-gray-400">Your mash up has been saved to your library</p>
           </div>
 
           <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-3 md:p-4 mb-3 md:mb-4">
@@ -136,7 +136,7 @@ const BlenderCompletionScreen: React.FC<BlenderCompletionScreenProps> = ({
               <div className="absolute inset-0 bg-gradient-to-r from-teal-400 to-cyan-400 opacity-0 group-hover:opacity-20 blur-xl transition-opacity" />
               <div className="relative flex items-center justify-center space-x-2.5">
                 <Library className="w-4 h-4" />
-                <span className="font-bold text-sm md:text-base">View Blend in Library</span>
+                <span className="font-bold text-sm md:text-base">View Mash Up in Library</span>
               </div>
             </button>
 
@@ -146,7 +146,7 @@ const BlenderCompletionScreen: React.FC<BlenderCompletionScreenProps> = ({
             >
               <div className="flex items-center justify-center space-x-2.5">
                 <RefreshCw className="w-4 h-4 text-gray-300" />
-                <span className="font-bold text-sm md:text-base">Start Another Blend</span>
+                <span className="font-bold text-sm md:text-base">Start Another Mash Up</span>
               </div>
             </button>
           </div>

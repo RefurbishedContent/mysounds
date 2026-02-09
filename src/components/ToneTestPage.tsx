@@ -120,7 +120,7 @@ const ToneTestPage: React.FC<ToneTestPageProps> = ({ onBack }) => {
                 <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">3</div>
                 <div>
                   <h3 className="text-white font-medium">Test Crossfading</h3>
-                  <p className="text-gray-400 text-sm">Use the crossfade slider to blend between Song A and Song B</p>
+                  <p className="text-gray-400 text-sm">Use the crossfade slider to mix between Song A and Song B</p>
                 </div>
               </div>
               

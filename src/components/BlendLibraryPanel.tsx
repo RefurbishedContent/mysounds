@@ -208,7 +208,7 @@ export const BlendLibraryPanel: React.FC<BlendLibraryPanelProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search blends..."
+              placeholder="Search mash ups..."
               className="w-full pl-9 pr-8 py-2 bg-gray-900 border border-gray-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
             />
             {searchQuery && (
@@ -258,7 +258,7 @@ export const BlendLibraryPanel: React.FC<BlendLibraryPanelProps> = ({
             }`}
           >
             <Grid size={16} className="text-cyan-500" />
-            <span className="flex-1 text-left text-sm text-white font-medium">All Blends</span>
+            <span className="flex-1 text-left text-sm text-white font-medium">All Mash Ups</span>
             <span className="text-xs text-gray-400">{blends.length}</span>
           </button>
 
@@ -344,10 +344,10 @@ export const BlendLibraryPanel: React.FC<BlendLibraryPanelProps> = ({
                   : selectedFolder
                     ? folders.find(f => f.id === selectedFolder)?.name
                     : !selectedFolder && !selectedBin && !searchQuery
-                      ? 'All Blends'
+                      ? 'All Mash Ups'
                       : 'Search Results'}
               </h3>
-              <p className="text-sm text-gray-400">{filteredBlends.length} blends</p>
+              <p className="text-sm text-gray-400">{filteredBlends.length} mash ups</p>
             </div>
           </div>
         </div>
@@ -360,9 +360,9 @@ export const BlendLibraryPanel: React.FC<BlendLibraryPanelProps> = ({
           ) : filteredBlends.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <p className="text-gray-400 text-sm">No blends found</p>
+                <p className="text-gray-400 text-sm">No mash ups found</p>
                 <p className="text-gray-600 text-xs mt-2">
-                  {searchQuery ? 'Try a different search term' : 'Create your first blend in the Mash Up Editor'}
+                  {searchQuery ? 'Try a different search term' : 'Create your first mash up in the Mash Up Editor'}
                 </p>
               </div>
             </div>

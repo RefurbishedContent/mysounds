@@ -109,7 +109,7 @@ class BlendExportService {
       onProgress?.({
         stage: 'creating-record',
         progress: 20,
-        message: 'Creating blend record...'
+        message: 'Creating mash up record...'
       });
 
       const { data: blendRecord, error: dbError } = await supabase
@@ -452,7 +452,7 @@ class BlendExportService {
       { progress: 55, message: 'Applying crossfade transition...', delay: 1000 },
       { progress: 70, message: 'Mixing audio tracks...', delay: 900 },
       { progress: 85, message: 'Normalizing volume levels...', delay: 700 },
-      { progress: 95, message: 'Finalizing blend...', delay: 600 },
+      { progress: 95, message: 'Finalizing mash up...', delay: 600 },
     ];
 
     for (const stage of stages) {
@@ -467,7 +467,7 @@ class BlendExportService {
     onProgress?.({
       stage: 'completing',
       progress: 100,
-      message: 'Blend created successfully!'
+      message: 'Mash up created successfully!'
     });
 
     await delay(500);

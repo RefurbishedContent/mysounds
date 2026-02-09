@@ -327,11 +327,11 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
           <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
             <div className="max-w-full lg:max-w-5xl xl:max-w-6xl mx-auto space-y-4 px-2">
               <div className="text-center space-y-1">
-                <h2 className="text-xl font-bold text-white">Select Your Blends</h2>
+                <h2 className="text-xl font-bold text-white">Select Your Mash Ups</h2>
                 <p className="text-sm text-gray-400">
                   {allBlends.length < 2
-                    ? `You have ${allBlends.length} blend${allBlends.length === 1 ? '' : 's'}. Create at least 2 blends to start mixing`
-                    : 'Choose blends to create a seamless mix'
+                    ? `You have ${allBlends.length} mash up${allBlends.length === 1 ? '' : 's'}. Create at least 2 mash ups to start mixing`
+                    : 'Choose mash ups to create a seamless mix'
                   }
                 </p>
               </div>
@@ -340,7 +340,7 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
                 <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-white">
-                      Selected Blends ({selectedBlends.length})
+                      Selected Mash Ups ({selectedBlends.length})
                     </h3>
                     <span className="text-sm text-gray-400">
                       {selectedBlends.length < 2 && '2 minimum for playback'}
@@ -377,19 +377,19 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
               )}
 
               <div>
-                <h3 className="text-lg font-semibold text-white mb-4">Your Blend Library</h3>
+                <h3 className="text-lg font-semibold text-white mb-4">Your Mash Up Library</h3>
                 {allBlends.length === 0 ? (
                   <div className="bg-gray-800 border-2 border-dashed border-gray-600 rounded-xl p-12 text-center">
                     <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Music size={32} className="text-gray-500" />
                     </div>
-                    <h3 className="text-lg font-semibold text-white mb-2">No Blends Yet</h3>
-                    <p className="text-gray-400 mb-6">Create transition blends first to use them in your mix</p>
+                    <h3 className="text-lg font-semibold text-white mb-2">No Mash Ups Yet</h3>
+                    <p className="text-gray-400 mb-6">Create mash ups first to use them in your mix</p>
                     <button
                       onClick={handleCreateTransition}
                       className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white rounded-lg font-semibold shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/50 transition-all duration-200"
                     >
-                      <span>Create Your First Blend</span>
+                      <span>Create Your First Mash Up</span>
                       <ArrowRight size={20} />
                     </button>
                   </div>
@@ -430,7 +430,7 @@ const WizardStep2ContentSelection: React.FC<WizardStep2ContentSelectionProps> = 
                 onClick={onNext}
                 className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white rounded-lg font-medium shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/50 transition-all duration-200"
               >
-                <span>Continue {selectedBlends.length > 0 ? `with ${selectedBlends.length} Blend${selectedBlends.length === 1 ? '' : 's'}` : ''}</span>
+                <span>Continue {selectedBlends.length > 0 ? `with ${selectedBlends.length} Mash Up${selectedBlends.length === 1 ? '' : 's'}` : ''}</span>
                 <ArrowRight size={20} />
               </button>
             </div>

@@ -19,7 +19,7 @@ const LabsView: React.FC<LabsViewProps> = ({ onSelectTool }) => {
       id: 'mixer',
       icon: Sliders,
       title: 'Mixer',
-      description: 'Advanced mixing controls for fine-tuning your blends',
+      description: 'Advanced mixing controls for fine-tuning your mash ups',
       gradient: 'from-blue-500 to-purple-500',
       action: () => onSelectTool('mixer')
     },

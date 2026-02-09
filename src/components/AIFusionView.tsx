@@ -10,8 +10,8 @@ const AIFusionView: React.FC<AIFusionViewProps> = ({ onSelectTool }) => {
     {
       id: 'smart-blend',
       icon: Sparkles,
-      title: 'Smart Blend',
-      description: 'AI-powered song blending with automatic transition detection',
+      title: 'Smart Mash Up',
+      description: 'AI-powered song mixing with automatic transition detection',
       gradient: 'from-cyan-500 to-blue-500',
       action: () => onSelectTool('library')
     },
@@ -73,7 +73,7 @@ const AIFusionView: React.FC<AIFusionViewProps> = ({ onSelectTool }) => {
             </div>
             <p className="text-gray-300 leading-relaxed">
               Harness the power of artificial intelligence to create seamless transitions,
-              intelligent mashups, and professional-quality song blends in seconds.
+              intelligent mashups, and professional-quality mash ups in seconds.
             </p>
           </div>
         </div>
@@ -124,7 +124,7 @@ const AIFusionView: React.FC<AIFusionViewProps> = ({ onSelectTool }) => {
                 <div>
                   <h4 className="text-lg font-bold text-white mb-2">Get Started</h4>
                   <p className="text-gray-400 text-sm mb-4">
-                    Upload your music library to begin creating AI-powered transitions and blends.
+                    Upload your music library to begin creating AI-powered transitions and mash ups.
                     Our intelligent algorithms will analyze your tracks and suggest the best combinations.
                   </p>
                   <button

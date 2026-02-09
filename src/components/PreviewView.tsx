@@ -45,7 +45,7 @@ const PreviewView: React.FC = () => {
           <div className="space-y-3">
             <h2 className="text-2xl font-bold text-white">No Audio to Preview</h2>
             <p className="text-gray-400 leading-relaxed">
-              Create a project and add mixing templates to preview your audio blend. 
+              Create a project and add mixing templates to preview your audio mash up. 
               The preview system lets you hear exactly how your mix will sound before exporting.
             </p>
           </div>

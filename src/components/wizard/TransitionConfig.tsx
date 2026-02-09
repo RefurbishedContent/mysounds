@@ -18,7 +18,7 @@ const TransitionConfig: React.FC<TransitionConfigProps> = ({
     <div className="space-y-6" data-tutorial="transition-config">
       <div>
         <h3 className="text-lg font-semibold text-white mb-2">Mash Up Settings</h3>
-        <p className="text-sm text-gray-400">Fine-tune how your songs will blend together</p>
+        <p className="text-sm text-gray-400">Fine-tune how your songs will mash up together</p>
       </div>
 
       <div className="space-y-6 bg-gray-800 border border-gray-700 rounded-xl p-6">
@@ -84,7 +84,7 @@ const TransitionConfig: React.FC<TransitionConfigProps> = ({
       <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
         <p className="text-sm text-blue-300">
           <span className="font-semibold">Tip:</span> Shorter mash ups work best for energetic tracks,
-          while longer mash ups create smoother blends for melodic songs.
+          while longer mash ups create smoother mixes for melodic songs.
         </p>
       </div>
     </div>

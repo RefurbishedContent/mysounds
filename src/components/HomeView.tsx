@@ -111,7 +111,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
       id: 'new-transition',
       icon: AudioWaveform,
       title: 'New Mash Up',
-      description: 'Blend two tracks seamlessly',
+      description: 'Mash up two tracks seamlessly',
       gradient: 'from-cyan-500 to-blue-600',
       action: onCreateNew,
     },
@@ -226,7 +226,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-white">{stats.totalBlends}</p>
-                    <p className="text-xs text-gray-400">Total Blends</p>
+                    <p className="text-xs text-gray-400">Total Mash Ups</p>
                   </div>
                 </div>
               </div>

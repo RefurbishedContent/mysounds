@@ -66,7 +66,7 @@ const BlenderVisualizationScreen: React.FC<BlenderVisualizationScreenProps> = ({
             <span className="text-sm">Back to Selection</span>
           </button>
           <h2 className="text-xl font-bold text-white mb-1">{transition.name}</h2>
-          <p className="text-sm text-gray-400">Preview your blend configuration</p>
+          <p className="text-sm text-gray-400">Preview your mash up configuration</p>
         </div>
       </div>
 
@@ -78,7 +78,7 @@ const BlenderVisualizationScreen: React.FC<BlenderVisualizationScreenProps> = ({
                 <div className="flex items-center space-x-3">
                   <Clock className="w-5 h-5 text-teal-500" />
                   <div>
-                    <p className="text-sm text-gray-400">Total Blend Duration</p>
+                    <p className="text-sm text-gray-400">Total Mash Up Duration</p>
                     <p className="text-2xl font-bold text-white">{formatTime(totalDuration)}</p>
                   </div>
                 </div>
@@ -167,7 +167,7 @@ const BlenderVisualizationScreen: React.FC<BlenderVisualizationScreenProps> = ({
                   <div className="mt-4 pt-3 border-t border-cyan-500/30">
                     <div className="flex items-center space-x-1 text-xs text-cyan-300">
                       <ArrowRight className="w-3 h-3 animate-pulse" />
-                      <span>Blending Zone</span>
+                      <span>Mash Up Zone</span>
                     </div>
                   </div>
                 </div>
@@ -238,7 +238,7 @@ const BlenderVisualizationScreen: React.FC<BlenderVisualizationScreenProps> = ({
                 <div className="absolute inset-0 bg-gradient-to-r from-teal-400 to-cyan-400 rounded-xl opacity-0 group-hover:opacity-20 blur-xl transition-opacity" />
                 <span className="relative flex items-center space-x-2">
                   <Zap className="w-5 h-5" />
-                  <span>Create Blend</span>
+                  <span>Create Mash Up</span>
                 </span>
               </button>
             </div>

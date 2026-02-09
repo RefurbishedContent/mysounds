@@ -159,7 +159,7 @@ const TemplateInspector: React.FC<TemplateInspectorProps> = ({
         tips.push({
           icon: Music,
           title: 'Key Matching',
-          tip: 'Enable harmonic mixing for smoother transitions. Compatible keys create more musical blends.'
+          tip: 'Enable harmonic mixing for smoother transitions. Compatible keys create more musical mash ups.'
         });
         break;
       case 'hip-hop':
@@ -195,7 +195,7 @@ const TemplateInspector: React.FC<TemplateInspectorProps> = ({
         tips.push({
           icon: Music,
           title: 'Breakdown Timing',
-          tip: 'Start transitions during breakdowns when percussion drops out for smoother blending.'
+          tip: 'Start transitions during breakdowns when percussion drops out for smoother mixing.'
         });
         break;
       case 'ambient':
@@ -206,7 +206,7 @@ const TemplateInspector: React.FC<TemplateInspectorProps> = ({
         });
         tips.push({
           icon: Volume2,
-          title: 'Gentle Blending',
+          title: 'Gentle Mixing',
           tip: 'Keep volume changes subtle. Ambient music benefits from very gradual level adjustments.'
         });
         break;

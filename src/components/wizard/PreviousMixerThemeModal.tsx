@@ -112,7 +112,7 @@ const PreviousMixerThemeModal: React.FC<PreviousMixerThemeModalProps> = ({ onClo
                       <div className="flex-1 min-w-0">
                         <h4 className="font-medium text-white mb-1 truncate">{session.name}</h4>
                         <p className="text-xs text-gray-400 mb-3">
-                          Created {formatDate(session.createdAt)} • {session.totalBlendsCount} blends
+                          Created {formatDate(session.createdAt)} • {session.totalBlendsCount} mash ups
                         </p>
                         <div className="flex space-x-2">
                           <div

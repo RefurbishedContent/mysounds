@@ -155,8 +155,8 @@ const WizardStep3Configuration: React.FC<WizardStep3ConfigurationProps> = ({
                   <div className="flex items-center space-x-3">
                     <ListMusic size={24} className="text-cyan-400" />
                     <div>
-                      <h3 className="text-lg font-semibold text-white">Blend Playback Order</h3>
-                      <p className="text-sm text-gray-400">The order your blends will play in the mixer</p>
+                      <h3 className="text-lg font-semibold text-white">Mash Up Playback Order</h3>
+                      <p className="text-sm text-gray-400">The order your mash ups will play in the mixer</p>
                     </div>
                   </div>
                 </div>
@@ -166,9 +166,9 @@ const WizardStep3Configuration: React.FC<WizardStep3ConfigurationProps> = ({
                     <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Music size={32} className="text-gray-500" />
                     </div>
-                    <h4 className="text-lg font-semibold text-white mb-2">No blends selected yet</h4>
+                    <h4 className="text-lg font-semibold text-white mb-2">No mash ups selected yet</h4>
                     <p className="text-sm text-gray-400 mb-6">
-                      Add blends from Step 2 to build your mix
+                      Add mash ups from Step 2 to build your mix
                     </p>
                     {onGoToStep2 && (
                       <button
@@ -214,7 +214,7 @@ const WizardStep3Configuration: React.FC<WizardStep3ConfigurationProps> = ({
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-sm mt-2">
-                        <span className="text-gray-400">Total Blends:</span>
+                        <span className="text-gray-400">Total Mash Ups:</span>
                         <span className="text-white font-semibold">{selectedBlends.length}</span>
                       </div>
                     </div>

@@ -65,7 +65,7 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
     <div className="space-y-4">
       <div>
         <h3 className="text-lg font-semibold text-white mb-2">Mash Up Template</h3>
-        <p className="text-sm text-gray-400">Choose how your songs will blend together</p>
+        <p className="text-sm text-gray-400">Choose how your songs will mash up together</p>
       </div>
 
       <button

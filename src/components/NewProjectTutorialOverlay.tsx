@@ -39,7 +39,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'project-type',
     title: 'Choose Project Type',
-    description: 'Select "Mash Up Project" to create a seamless mash up between two songs. Our AI will analyze and blend them perfectly.',
+    description: 'Select "Mash Up Project" to create a seamless mash up between two songs. Our AI will analyze and mash them up perfectly.',
     target: '[data-tutorial="transition-project"]',
     position: 'bottom',
     icon: Music,
@@ -48,7 +48,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'song-selection',
     title: 'Select Your Songs',
-    description: 'This is the song selection interface. We\'ve pre-selected two compatible demo tracks: "Summer Beats" (Song A) and "Midnight Groove" (Song B). Notice the Match Quality indicator showing how well these tracks blend together based on BPM, key, and energy analysis. The AI has automatically calculated a compatibility score to help you create the perfect mash up.',
+    description: 'This is the song selection interface. We\'ve pre-selected two compatible demo tracks: "Summer Beats" (Song A) and "Midnight Groove" (Song B). Notice the Match Quality indicator showing how well these tracks work together based on BPM, key, and energy analysis. The AI has automatically calculated a compatibility score to help you create the perfect mash up.',
     target: '[data-tutorial="song-selection-interface"]',
     position: 'bottom',
     icon: Music,
@@ -66,7 +66,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'timeline-editor',
     title: 'Professional Timeline Editor',
-    description: 'This is where the magic happens! The Professional Timeline Editor lets you fine-tune your mash up with precision. Adjust fade curves, select mash up templates, and preview your blend in real-time. Each track shows its waveform with visual fade automation.',
+    description: 'This is where the magic happens! The Professional Timeline Editor lets you fine-tune your mash up with precision. Adjust fade curves, select mash up templates, and preview your mash up in real-time. Each track shows its waveform with visual fade automation.',
     target: '[data-tutorial="timeline-editor"]',
     position: 'bottom',
     icon: Settings,

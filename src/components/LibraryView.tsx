@@ -78,7 +78,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong, o
   const handleDeleteBlend = async (blendId: string) => {
     if (!user) return;
 
-    const confirmed = window.confirm('Are you sure you want to delete this blend? This action cannot be undone.');
+    const confirmed = window.confirm('Are you sure you want to delete this mash up? This action cannot be undone.');
     if (!confirmed) return;
 
     try {
@@ -86,7 +86,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong, o
       setBlends(prevBlends => prevBlends.filter(b => b.id !== blendId));
     } catch (error) {
       console.error('Failed to delete blend:', error);
-      alert(error instanceof Error ? error.message : 'Failed to delete blend. Please try again.');
+      alert(error instanceof Error ? error.message : 'Failed to delete mash up. Please try again.');
     }
   };
 
@@ -180,7 +180,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong, o
             }`}
           >
             <Sparkles size={13} />
-            <span>Blends</span>
+            <span>Mash Ups</span>
             <span className="px-1.5 py-0.5 bg-white/20 rounded-full text-[10px]">{blends.length}</span>
           </button>
         </div>
@@ -240,7 +240,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong, o
           <div className="flex items-center justify-center h-64">
             <div className="text-center space-y-4">
               <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-              <p className="text-gray-400">Loading {currentTab === 'songs' ? 'your music library' : 'your blends'}...</p>
+              <p className="text-gray-400">Loading {currentTab === 'songs' ? 'your music library' : 'your mash ups'}...</p>
             </div>
           </div>
         ) : currentTab === 'songs' && filteredAndSortedSongs.length === 0 ? (
@@ -271,9 +271,9 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong, o
                 <Sparkles size={32} className="text-purple-400" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-lg font-bold text-white">No Blends Yet</h2>
+                <h2 className="text-lg font-bold text-white">No Mash Ups Yet</h2>
                 <p className="text-sm text-gray-400 leading-relaxed">
-                  Create your first transition blend by selecting songs from your library and using the Transitions section.
+                  Create your first mash up by selecting songs from your library and using the Transitions section.
                 </p>
               </div>
             </div>

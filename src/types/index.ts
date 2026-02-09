@@ -692,7 +692,7 @@ export const SAMPLE_TEMPLATES: Template[] = [
       },
       atmosphericBlend: {
         type: 'boolean',
-        label: 'Atmospheric Blend',
+        label: 'Atmospheric Mash Up',
         description: 'Add atmospheric reverb during transition',
         default: true
       },

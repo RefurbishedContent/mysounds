@@ -39,7 +39,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onTryMixer }) => {
     {
       icon: Shuffle,
       title: "Instant Fusion",
-      description: "AI predicts optimal mash up points and seamlessly blends your songs into one cohesive track."
+      description: "AI predicts optimal mash up points and seamlessly mashes up your songs into one cohesive track."
     }
   ];
 
@@ -120,7 +120,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onTryMixer }) => {
                 </span>
               </h1>
               <p className="text-xl sm:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-                Blend songs from your playlist using your favorite templates. Take full control of how your music flows together.
+                Mash up songs from your playlist using your favorite templates. Take full control of how your music flows together.
                 Create the perfect soundtrack for any moment.
               </p>
             </div>

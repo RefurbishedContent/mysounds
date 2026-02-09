@@ -139,7 +139,7 @@ const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition, onE
               <div className="space-y-1.5">
                 <h2 className="text-lg font-bold text-white">No Mash Ups Yet</h2>
                 <p className="text-sm text-gray-400">
-                  Create your first mash up by blending two songs together
+                  Create your first mash up by mixing two songs together
                 </p>
               </div>
               <button
@@ -177,7 +177,7 @@ const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition, onE
                         ? 'bg-yellow-900/30 text-yellow-400'
                         : 'bg-gray-700 text-gray-400'
                     }`}
-                    title={transition.status === 'ready' ? 'Click to blend this mash up' : ''}
+                    title={transition.status === 'ready' ? 'Click to create this mash up' : ''}
                   >
                     {transition.status}
                   </span>
@@ -239,7 +239,7 @@ const TransitionsList: React.FC<TransitionsListProps> = ({ onPlayTransition, onE
                     className="flex-1 px-3 py-1.5 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-white rounded-lg transition-all duration-200 flex items-center justify-center space-x-1.5 text-xs"
                   >
                     <Layers size={14} />
-                    <span>Blend This</span>
+                    <span>Mash Up</span>
                   </button>
                   <button
                     onClick={() => handleDelete(transition.id)}

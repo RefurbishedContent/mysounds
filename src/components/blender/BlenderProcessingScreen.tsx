@@ -16,8 +16,8 @@ const processingStages = [
   { key: 'loading-template', label: 'Loading transition template', icon: Layers },
   { key: 'processing-transition', label: 'Processing transition effects', icon: Zap },
   { key: 'loading-b', label: 'Loading Song B segment', icon: Music },
-  { key: 'blending', label: 'Blending audio streams', icon: Zap },
-  { key: 'finalizing', label: 'Finalizing blend', icon: CheckCircle },
+  { key: 'blending', label: 'Mashing up audio streams', icon: Zap },
+  { key: 'finalizing', label: 'Finalizing mash up', icon: CheckCircle },
   { key: 'saving', label: 'Saving to library', icon: CheckCircle }
 ];
 
@@ -95,7 +95,7 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
       subscribeToBlendUpdates(blend.id);
     } catch (err) {
       console.error('Blending failed:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create blend');
+      setError(err instanceof Error ? err.message : 'Failed to create mash up');
     }
   };
 
@@ -124,7 +124,7 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
 
       setProgress(100);
       setCurrentStageIndex(7);
-      setMessage('Blend created successfully!');
+      setMessage('Mash up created successfully!');
 
       setTimeout(() => {
         onComplete(updatedBlend);
@@ -146,7 +146,7 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
       subscription.unsubscribe();
       cleanupFnRef.current = null;
 
-      const errorMsg = updatedBlend.exportSettings?.error || 'Blend processing failed on the server';
+      const errorMsg = updatedBlend.exportSettings?.error || 'Mash up processing failed on the server';
       setError(errorMsg);
     };
 
@@ -180,10 +180,10 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
           setMessage('Loading Song B segment...');
         } else if (simulatedProgress >= 65 && simulatedProgress < 80) {
           setCurrentStageIndex(5);
-          setMessage('Blending audio streams...');
+          setMessage('Mashing up audio streams...');
         } else if (simulatedProgress >= 80) {
           setCurrentStageIndex(6);
-          setMessage('Finalizing blend...');
+          setMessage('Finalizing mash up...');
         }
       }
     }, 800);
@@ -256,7 +256,7 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="max-w-2xl w-full">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-white mb-2">Creating Your Blend</h2>
+            <h2 className="text-2xl font-bold text-white mb-2">Creating Your Mash Up</h2>
             <p className="text-gray-400">Please wait while we process your audio...</p>
           </div>
 
@@ -347,7 +347,7 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
       {showCancelConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 max-w-sm w-full">
-            <h3 className="text-lg font-bold text-white mb-2">Cancel Blending?</h3>
+            <h3 className="text-lg font-bold text-white mb-2">Cancel Mash Up?</h3>
             <p className="text-gray-400 text-sm mb-6">
               Are you sure you want to cancel? Your progress will be lost.
             </p>
@@ -362,7 +362,7 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
                 onClick={confirmCancel}
                 className="flex-1 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
               >
-                Cancel Blend
+                Cancel Mash Up
               </button>
             </div>
           </div>

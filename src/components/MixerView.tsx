@@ -74,7 +74,7 @@ const MixerView: React.FC<MixerViewProps> = ({ onCreateNew, onOpenSession }) => 
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white mb-1">DJ Mixer</h1>
-          <p className="text-sm text-gray-400">Create seamless mix playlists from your transition blends</p>
+          <p className="text-sm text-gray-400">Create seamless mix playlists from your mash ups</p>
         </div>
 
         <button
@@ -96,7 +96,7 @@ const MixerView: React.FC<MixerViewProps> = ({ onCreateNew, onOpenSession }) => 
             <div className="space-y-2">
               <h2 className="text-lg font-bold text-white">No Mix Sessions Yet</h2>
               <p className="text-sm text-gray-400 leading-relaxed">
-                Create your first DJ mix by combining your transition blends into a seamless playlist.
+                Create your first DJ mix by combining your mash ups into a seamless playlist.
                 Control crossfades, volumes, and create professional continuous mixes.
               </p>
             </div>
@@ -117,7 +117,7 @@ const MixerView: React.FC<MixerViewProps> = ({ onCreateNew, onOpenSession }) => 
                 <div className="space-y-1.5">
                   <Volume2 size={20} className="text-gray-500 mx-auto" />
                   <h4 className="text-white font-medium text-xs">Auto Crossfade</h4>
-                  <p className="text-gray-500 text-xs">Smooth transitions between blends</p>
+                  <p className="text-gray-500 text-xs">Smooth transitions between mash ups</p>
                 </div>
                 <div className="space-y-1.5">
                   <Equalizer size={20} className="text-gray-500 mx-auto" />
@@ -177,7 +177,7 @@ const MixerView: React.FC<MixerViewProps> = ({ onCreateNew, onOpenSession }) => 
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-400">Blends:</span>
+                    <span className="text-gray-400">Mash Ups:</span>
                     <span className="text-white font-medium">{session.totalBlendsCount}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">

@@ -282,7 +282,7 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
             }>
               {isMobile && (
                 <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700 flex-shrink-0">
-                  <h2 className="text-lg font-bold text-white">Blend Library</h2>
+                  <h2 className="text-lg font-bold text-white">Mash Up Library</h2>
                   <button
                     onClick={() => setShowLibraryPanel(false)}
                     className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
