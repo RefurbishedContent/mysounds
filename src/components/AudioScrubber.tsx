@@ -213,9 +213,10 @@ export function AudioScrubber({
     if (!draggingMarkerId || !waveformContainerRef.current) return;
 
     const rect = waveformContainerRef.current.getBoundingClientRect();
-    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-    const progress = x / rect.width;
-    const newTime = progress * durationRef.current;
+    const x = e.clientX - rect.left;
+    const clampedX = Math.max(0, Math.min(x, rect.width));
+    const progress = clampedX / rect.width;
+    const newTime = Math.max(0, Math.min(progress * durationRef.current, durationRef.current));
 
     const marker = markersRef.current.find(m => m.id === draggingMarkerId);
     if (marker?.onDrag) {
@@ -230,9 +231,10 @@ export function AudioScrubber({
     if (!touch) return;
 
     const rect = waveformContainerRef.current.getBoundingClientRect();
-    const x = Math.max(0, Math.min(touch.clientX - rect.left, rect.width));
-    const progress = x / rect.width;
-    const newTime = progress * durationRef.current;
+    const x = touch.clientX - rect.left;
+    const clampedX = Math.max(0, Math.min(x, rect.width));
+    const progress = clampedX / rect.width;
+    const newTime = Math.max(0, Math.min(progress * durationRef.current, durationRef.current));
 
     const marker = markersRef.current.find(m => m.id === draggingMarkerId);
     if (marker?.onDrag) {
@@ -304,7 +306,7 @@ export function AudioScrubber({
         </div>
       </div>
 
-      <div className="relative pt-8" ref={waveformContainerRef}>
+      <div className="relative pt-8 overflow-x-hidden" ref={waveformContainerRef}>
         <WaveformDisplay
           audioUrl={audioUrl}
           progress={progress}
@@ -337,28 +339,31 @@ export function AudioScrubber({
             </div>
           </div>
         )}
-        {markers.map((marker) => (
-          <div
-            key={marker.id}
-            className="absolute top-0 bottom-0 cursor-ew-resize group touch-none"
-            style={{
-              left: `${(marker.time / duration) * 100}%`,
-              width: '44px',
-              marginLeft: '-22px'
-            }}
-            onMouseDown={(e) => handleMarkerMouseDown(marker.id, e)}
-            onTouchStart={(e) => handleMarkerTouchStart(marker.id, e)}
-          >
+        {markers.map((marker) => {
+          const markerProgress = Math.max(0, Math.min(marker.time / duration, 1));
+          return (
             <div
-              className="absolute -top-3 -bottom-3 transition-all group-hover:scale-110 left-1/2 -translate-x-1/2"
+              key={marker.id}
+              className="absolute top-0 bottom-0 cursor-ew-resize group touch-none"
               style={{
-                width: '3px',
-                boxShadow: `0 0 20px ${marker.color}, 0 0 40px ${marker.color}80`,
-                background: `linear-gradient(to bottom, ${marker.color}cc, ${marker.color}, ${marker.color}cc)`
+                left: `${markerProgress * 100}%`,
+                width: '44px',
+                marginLeft: '-22px'
               }}
-            />
-          </div>
-        ))}
+              onMouseDown={(e) => handleMarkerMouseDown(marker.id, e)}
+              onTouchStart={(e) => handleMarkerTouchStart(marker.id, e)}
+            >
+              <div
+                className="absolute -top-3 -bottom-3 transition-all group-hover:scale-110 left-1/2 -translate-x-1/2"
+                style={{
+                  width: '3px',
+                  boxShadow: `0 0 20px ${marker.color}, 0 0 40px ${marker.color}80`,
+                  background: `linear-gradient(to bottom, ${marker.color}cc, ${marker.color}, ${marker.color}cc)`
+                }}
+              />
+            </div>
+          );
+        })}
       </div>
 
       <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
