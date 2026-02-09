@@ -61,10 +61,10 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
     setMessage('Initializing...');
 
     const introStages = [
-      { index: 0, label: 'Preparing audio files...', targetProgress: 10, duration: 2500 },
-      { index: 1, label: 'Loading Song A segment...', targetProgress: 20, duration: 2500 },
-      { index: 2, label: 'Loading transition template...', targetProgress: 30, duration: 2500 },
-      { index: 3, label: 'Processing transition effects...', targetProgress: 40, duration: 2500 },
+      { index: 0, label: 'Preparing audio files...', targetProgress: 10, duration: 1750 },
+      { index: 1, label: 'Loading Song A segment...', targetProgress: 20, duration: 1750 },
+      { index: 2, label: 'Loading transition template...', targetProgress: 30, duration: 1750 },
+      { index: 3, label: 'Processing transition effects...', targetProgress: 40, duration: 1750 },
     ];
 
     for (const stage of introStages) {
