@@ -210,6 +210,62 @@ class TransitionsService {
     };
   }
 
+  async updateDraftStage(transitionId: string, stage: string): Promise<void> {
+    const transition = await this.getTransition(transitionId);
+    const metadata = { ...transition.metadata, draftStage: stage };
+
+    const { error } = await supabase
+      .from('transitions')
+      .update({ metadata })
+      .eq('id', transitionId);
+
+    if (error) throw error;
+  }
+
+  async resetLaterStages(transitionId: string, fromStage: number): Promise<void> {
+    const transition = await this.getTransition(transitionId);
+    const metadata = { ...transition.metadata };
+
+    if (fromStage <= 1) {
+      metadata.draftStage = 'songs';
+      delete metadata.templateName;
+      delete metadata.templateAudioUrl;
+
+      const { error } = await supabase
+        .from('transitions')
+        .update({
+          template_id: null,
+          song_a_clip_start: null,
+          song_b_clip_end: null,
+          metadata
+        })
+        .eq('id', transitionId);
+
+      if (error) throw error;
+    } else if (fromStage <= 2) {
+      metadata.draftStage = 'clips';
+      delete metadata.templateName;
+      delete metadata.templateAudioUrl;
+
+      const { error } = await supabase
+        .from('transitions')
+        .update({
+          template_id: null,
+          metadata
+        })
+        .eq('id', transitionId);
+
+      if (error) throw error;
+    }
+  }
+
+  async resetGroupLaterStages(userId: string, mashUpGroup: string, fromStage: number): Promise<void> {
+    const transitions = await this.getTransitionsByMashUpGroup(userId, mashUpGroup);
+    for (const transition of transitions) {
+      await this.resetLaterStages(transition.id, fromStage);
+    }
+  }
+
   private mapRowToTransition(row: any): TransitionData {
     return {
       id: row.id,

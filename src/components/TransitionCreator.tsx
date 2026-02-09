@@ -30,6 +30,7 @@ interface TransitionCreatorProps {
   editingTransitionId?: string;
   initialPairConfigs?: TransitionPairConfig[];
   initialMashUpName?: string;
+  initialStep?: string;
 }
 
 interface ClipMarker {
@@ -59,6 +60,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
   initialSongB,
   initialPairConfigs,
   initialMashUpName,
+  initialStep,
 }) => {
   const { user } = useAuth();
 
@@ -77,6 +79,12 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
   };
 
   const getInitialStep = (): CreatorStep => {
+    if (initialStep) {
+      const validSteps: CreatorStep[] = ['select-songs', 'set-transition-points', 'set-templates', 'confirm', 'processing', 'complete'];
+      if (validSteps.includes(initialStep as CreatorStep)) {
+        return initialStep as CreatorStep;
+      }
+    }
     if (initialPairConfigs && initialPairConfigs.length > 0) {
       return 'set-templates';
     }

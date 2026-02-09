@@ -28,6 +28,7 @@ import { UploadResult, storageService } from '../lib/storage';
 import { transitionsService } from '../lib/transitionsService';
 import { TransitionPairConfig } from './mashup/types';
 import { DEFAULT_TRANSITION_DURATION } from './mashup/constants';
+import { mapStageToCreatorStep } from './mashup/draftStageUtils';
 
 type AppView = 'home' | 'create-with-ai' | 'ai-design' | 'ai-video' | 'ai-voice' | 'all-tools' | 'templates' | 'recent-projects' | 'share-schedule' | 'create-transition' | 'editor' | 'template-manager' | 'library' | 'mixer' | 'mixer-editor' | 'preview' | 'files' | 'transition-editor' | 'transitions' | 'playlists' | 'profile' | 'project-wizard';
 
@@ -66,6 +67,7 @@ const AppShell: React.FC = () => {
   const [libraryInitialTab, setLibraryInitialTab] = useState<'songs' | 'blends' | undefined>();
   const [editingPairConfigs, setEditingPairConfigs] = useState<TransitionPairConfig[] | undefined>();
   const [editingMashUpName, setEditingMashUpName] = useState<string | undefined>();
+  const [editingInitialStep, setEditingInitialStep] = useState<string | undefined>();
 
   const navigateTo = (view: AppView) => {
     if (view !== 'library' && view !== 'files') {
@@ -169,6 +171,7 @@ const AppShell: React.FC = () => {
     setEditingTransitionId(undefined);
     setEditingPairConfigs(undefined);
     setEditingMashUpName(undefined);
+    setEditingInitialStep(undefined);
     setLibraryInitialTab('blends');
     setCurrentView('library');
   };
@@ -179,6 +182,7 @@ const AppShell: React.FC = () => {
     setEditingTransitionId(undefined);
     setEditingPairConfigs(undefined);
     setEditingMashUpName(undefined);
+    setEditingInitialStep(undefined);
     setCurrentView('recent-projects');
   };
 
@@ -187,7 +191,7 @@ const AppShell: React.FC = () => {
     setCurrentView('create-transition');
   };
 
-  const handleEditTransition = async (transitionId: string) => {
+  const handleEditTransition = async (transitionId: string, startingStage?: number) => {
     if (!user) return;
 
     try {
@@ -198,6 +202,10 @@ const AppShell: React.FC = () => {
         const groupTransitions = await transitionsService.getTransitionsByMashUpGroup(user.id, mashUpGroup);
 
         if (groupTransitions.length > 0) {
+          if (startingStage && startingStage < 3) {
+            await transitionsService.resetGroupLaterStages(user.id, mashUpGroup, startingStage);
+          }
+
           const songIds = new Set<string>();
           groupTransitions.forEach(t => {
             songIds.add(t.songAId);
@@ -225,6 +233,7 @@ const AppShell: React.FC = () => {
           setEditingPairConfigs(pairConfigs);
           setEditingMashUpName(mashUpGroup);
           setEditingTransitionId(undefined);
+          setEditingInitialStep(startingStage ? mapStageToCreatorStep(startingStage) : undefined);
           setCurrentView('create-transition');
           return;
         }
@@ -232,6 +241,7 @@ const AppShell: React.FC = () => {
 
       setEditingPairConfigs(undefined);
       setEditingMashUpName(undefined);
+      setEditingInitialStep(undefined);
       setEditingTransitionId(transitionId);
       setCurrentView('transition-editor');
     } catch (error) {
@@ -408,6 +418,7 @@ const AppShell: React.FC = () => {
             editingTransitionId={editingTransitionId}
             initialPairConfigs={editingPairConfigs}
             initialMashUpName={editingMashUpName}
+            initialStep={editingInitialStep}
           />
         );
       case 'transition-editor':
