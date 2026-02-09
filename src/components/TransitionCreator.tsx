@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import * as Tone from 'tone';
 import { useAuth } from '../contexts/AuthContext';
@@ -76,7 +76,15 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
   const [pairConfigs, setPairConfigs] = useState<TransitionPairConfig[]>([]);
   const [completedBlends, setCompletedBlends] = useState<BlendData[]>([]);
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   const mashUpName = customName.trim() || (selectedSongs.length > 0 ? generateMashUpName(selectedSongs) : '');
+
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [currentStep]);
 
   useEffect(() => {
     loadData();
@@ -339,7 +347,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
         {currentStep === 'select-songs' && (
           <MashUpSongSelector
             allSongs={songs}
