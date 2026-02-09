@@ -58,7 +58,7 @@ const BlenderConfirmationScreen: React.FC<BlenderConfirmationScreenProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-28">
+      <div className={`flex-1 overflow-y-auto ${isMobile ? 'pb-48' : 'pb-28'}`}>
         <div className={`${isMobile ? 'p-4' : 'p-6'}`}>
           <div className="max-w-3xl mx-auto space-y-5">
             <div className="text-center mb-2">
@@ -110,12 +110,6 @@ const BlenderConfirmationScreen: React.FC<BlenderConfirmationScreenProps> = ({
                     <div className="flex justify-between">
                       <span className="text-gray-400">BPM</span>
                       <span className="text-cyan-400 font-medium">{Math.round(songA.analysis.bpm)}</span>
-                    </div>
-                  )}
-                  {songA.analysis?.key && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Key</span>
-                      <span className="text-white font-medium">{songA.analysis.key}</span>
                     </div>
                   )}
                 </div>
@@ -185,12 +179,6 @@ const BlenderConfirmationScreen: React.FC<BlenderConfirmationScreenProps> = ({
                       <span className="text-green-400 font-medium">{Math.round(songB.analysis.bpm)}</span>
                     </div>
                   )}
-                  {songB.analysis?.key && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Key</span>
-                      <span className="text-white font-medium">{songB.analysis.key}</span>
-                    </div>
-                  )}
                 </div>
                 <div className="mt-3 pt-2 border-t border-gray-700/50">
                   <div className="flex items-center space-x-1 text-xs text-green-400">
@@ -223,9 +211,9 @@ const BlenderConfirmationScreen: React.FC<BlenderConfirmationScreenProps> = ({
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-gray-900/95 backdrop-blur-lg border-t border-cyan-500/20"
+      <div className={`fixed left-0 right-0 z-40 bg-gray-900/95 backdrop-blur-lg border-t border-cyan-500/20 ${isMobile ? 'bottom-16' : 'bottom-0'}`}
         style={{
-          paddingBottom: isMobile ? 'max(0.75rem, env(safe-area-inset-bottom))' : '0.75rem',
+          paddingBottom: isMobile ? 'max(0.25rem, env(safe-area-inset-bottom))' : '0.75rem',
           boxShadow: '0 -4px 30px rgba(6,182,212,0.1)',
         }}
       >
