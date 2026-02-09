@@ -30,7 +30,7 @@ const MashUpProcessingStep: React.FC<MashUpProcessingStepProps> = ({
   const cancelledRef = useRef(false);
 
   const totalProgress = pairs.length > 0
-    ? ((completedBlends.length * 100) + currentPairProgress) / pairs.length
+    ? Math.min(100, ((completedBlends.length * 100) + currentPairProgress) / pairs.length)
     : 0;
 
   useEffect(() => {
