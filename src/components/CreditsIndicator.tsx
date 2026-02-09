@@ -76,7 +76,7 @@ const CreditsIndicator: React.FC<CreditsIndicatorProps> = ({
 
       {/* Tooltip */}
       {showTooltip && (
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 bg-gray-800 border border-gray-600 rounded-lg p-3 shadow-xl z-50">
+        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-64 bg-gray-800 border border-gray-600 rounded-lg p-3 shadow-xl z-50">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-white font-medium">Export Credits</span>
