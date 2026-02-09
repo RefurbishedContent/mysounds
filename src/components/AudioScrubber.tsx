@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import * as Tone from 'tone';
 import { WaveformDisplay } from './WaveformDisplay';
-import { Play, Pause, MapPin, Square } from 'lucide-react';
+import { Play, Pause, MapPin } from 'lucide-react';
 
 export interface AudioMarker {
   id: string;
@@ -44,7 +44,6 @@ export function AudioScrubber({
 }: AudioScrubberProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(currentTime);
-  const [draggingMarkerId, setDraggingMarkerId] = useState<string | null>(null);
   const [flashInMarker, setFlashInMarker] = useState(false);
   const [flashEndMarker, setFlashEndMarker] = useState(false);
   const playerRef = useRef<Tone.Player | null>(null);
@@ -54,6 +53,7 @@ export function AudioScrubber({
   const waveformContainerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<AudioMarker[]>(markers);
   const durationRef = useRef<number>(duration);
+  const draggingMarkerIdRef = useRef<string | null>(null);
 
   markersRef.current = markers;
   durationRef.current = duration;
@@ -168,102 +168,66 @@ export function AudioScrubber({
   );
 
   const handleSetInMarker = () => {
-    console.log('[AudioScrubber] Set IN marker at:', playbackTime);
     if (playerRef.current && isPlaying) {
       playerRef.current.stop();
       setIsPlaying(false);
     }
     if (onSetInMarker) {
       onSetInMarker(playbackTime);
-      console.log('[AudioScrubber] IN marker callback executed');
       setFlashInMarker(true);
       setTimeout(() => setFlashInMarker(false), 500);
-    } else {
-      console.warn('[AudioScrubber] No onSetInMarker callback provided');
     }
   };
 
   const handleSetEndMarker = () => {
-    console.log('[AudioScrubber] Set END marker at:', playbackTime);
     if (playerRef.current && isPlaying) {
       playerRef.current.stop();
       setIsPlaying(false);
     }
     if (onSetEndMarker) {
       onSetEndMarker(playbackTime);
-      console.log('[AudioScrubber] END marker callback executed');
       setFlashEndMarker(true);
       setTimeout(() => setFlashEndMarker(false), 500);
-    } else {
-      console.warn('[AudioScrubber] No onSetEndMarker callback provided');
     }
   };
 
-  const handleMarkerMouseDown = useCallback((markerId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setDraggingMarkerId(markerId);
-  }, []);
-
-  const handleMarkerTouchStart = useCallback((markerId: string, e: React.TouchEvent) => {
-    e.stopPropagation();
-    setDraggingMarkerId(markerId);
-  }, []);
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!draggingMarkerId || !waveformContainerRef.current) return;
-
+  const calcTimeFromPointer = useCallback((clientX: number): number => {
+    if (!waveformContainerRef.current) return 0;
     const rect = waveformContainerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
+    const x = clientX - rect.left;
     const clampedX = Math.max(0, Math.min(x, rect.width));
-    const progress = clampedX / rect.width;
-    const newTime = Math.max(0, Math.min(progress * durationRef.current, durationRef.current));
+    const progress = rect.width > 0 ? clampedX / rect.width : 0;
+    return Math.max(0, Math.min(progress * durationRef.current, durationRef.current));
+  }, []);
 
-    const marker = markersRef.current.find(m => m.id === draggingMarkerId);
+  const handlePointerDown = useCallback((markerId: string, e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    draggingMarkerIdRef.current = markerId;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, []);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    const markerId = draggingMarkerIdRef.current;
+    if (!markerId) return;
+
+    e.preventDefault();
+    const newTime = calcTimeFromPointer(e.clientX);
+    const marker = markersRef.current.find(m => m.id === markerId);
     if (marker?.onDrag) {
       marker.onDrag(newTime);
     }
-  }, [draggingMarkerId]);
+  }, [calcTimeFromPointer]);
 
-  const handleTouchMove = useCallback((e: TouchEvent) => {
-    if (!draggingMarkerId || !waveformContainerRef.current) return;
-
-    const touch = e.touches[0];
-    if (!touch) return;
-
-    const rect = waveformContainerRef.current.getBoundingClientRect();
-    const x = touch.clientX - rect.left;
-    const clampedX = Math.max(0, Math.min(x, rect.width));
-    const progress = clampedX / rect.width;
-    const newTime = Math.max(0, Math.min(progress * durationRef.current, durationRef.current));
-
-    const marker = markersRef.current.find(m => m.id === draggingMarkerId);
-    if (marker?.onDrag) {
-      marker.onDrag(newTime);
-    }
-  }, [draggingMarkerId]);
-
-  const handleMouseUp = useCallback(() => {
-    setDraggingMarkerId(null);
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    if (!draggingMarkerIdRef.current) return;
+    draggingMarkerIdRef.current = null;
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
   }, []);
 
-  const handleTouchEnd = useCallback(() => {
-    setDraggingMarkerId(null);
+  const handleLostPointerCapture = useCallback(() => {
+    draggingMarkerIdRef.current = null;
   }, []);
-
-  useEffect(() => {
-    if (draggingMarkerId) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.addEventListener('touchmove', handleTouchMove);
-      document.addEventListener('touchend', handleTouchEnd);
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-        document.removeEventListener('touchmove', handleTouchMove);
-        document.removeEventListener('touchend', handleTouchEnd);
-      };
-    }
-  }, [draggingMarkerId, handleMouseMove, handleMouseUp, handleTouchMove, handleTouchEnd]);
 
   const progress = playbackTime / duration;
 
@@ -306,7 +270,7 @@ export function AudioScrubber({
         </div>
       </div>
 
-      <div className="relative pt-8 overflow-x-hidden" ref={waveformContainerRef}>
+      <div className="relative pt-8" ref={waveformContainerRef}>
         <WaveformDisplay
           audioUrl={audioUrl}
           progress={progress}
@@ -344,21 +308,26 @@ export function AudioScrubber({
           return (
             <div
               key={marker.id}
-              className="absolute top-0 bottom-0 cursor-ew-resize group touch-none"
+              className="absolute top-0 bottom-0 cursor-ew-resize group select-none"
               style={{
                 left: `${markerProgress * 100}%`,
                 width: '44px',
-                marginLeft: '-22px'
+                marginLeft: '-22px',
+                zIndex: 10,
+                touchAction: 'none',
               }}
-              onMouseDown={(e) => handleMarkerMouseDown(marker.id, e)}
-              onTouchStart={(e) => handleMarkerTouchStart(marker.id, e)}
+              onPointerDown={(e) => handlePointerDown(marker.id, e)}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onLostPointerCapture={handleLostPointerCapture}
             >
               <div
                 className="absolute -top-3 -bottom-3 transition-all group-hover:scale-110 left-1/2 -translate-x-1/2"
                 style={{
                   width: '3px',
                   boxShadow: `0 0 20px ${marker.color}, 0 0 40px ${marker.color}80`,
-                  background: `linear-gradient(to bottom, ${marker.color}cc, ${marker.color}, ${marker.color}cc)`
+                  background: `linear-gradient(to bottom, ${marker.color}cc, ${marker.color}, ${marker.color}cc)`,
+                  pointerEvents: 'none',
                 }}
               />
             </div>
