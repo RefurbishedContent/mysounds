@@ -9,6 +9,7 @@ interface TransitionEditorWrapperProps {
   onBack: () => void;
   onSave: () => void;
   onResetPoints?: () => void;
+  onNavigateToLibrary?: () => void;
 }
 
 const TransitionEditorWrapper: React.FC<TransitionEditorWrapperProps> = ({
@@ -16,6 +17,7 @@ const TransitionEditorWrapper: React.FC<TransitionEditorWrapperProps> = ({
   onBack,
   onSave,
   onResetPoints,
+  onNavigateToLibrary,
 }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,6 +107,7 @@ const TransitionEditorWrapper: React.FC<TransitionEditorWrapperProps> = ({
       onBack={onBack}
       onSave={onSave}
       onResetPoints={onResetPoints}
+      onNavigateToLibrary={onNavigateToLibrary}
     />
   );
 };

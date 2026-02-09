@@ -21,14 +21,13 @@ import ProfileView from './ProfileView';
 import AIFusionView from './AIFusionView';
 import LabsView from './LabsView';
 import HomeView from './HomeView';
-import BlenderView from './BlenderView';
 import MobileBottomNav, { MobileNavView } from './MobileBottomNav';
 import ProjectCreationWizard from './ProjectCreationWizard';
 import NewProjectTutorialOverlay from './NewProjectTutorialOverlay';
 import { UploadResult, storageService } from '../lib/storage';
 import { transitionsService } from '../lib/transitionsService';
 
-type AppView = 'home' | 'create-with-ai' | 'ai-design' | 'ai-video' | 'ai-voice' | 'all-tools' | 'templates' | 'recent-projects' | 'share-schedule' | 'create-transition' | 'editor' | 'template-manager' | 'library' | 'mixer' | 'mixer-editor' | 'preview' | 'files' | 'transition-editor' | 'transitions' | 'blender' | 'playlists' | 'profile' | 'project-wizard';
+type AppView = 'home' | 'create-with-ai' | 'ai-design' | 'ai-video' | 'ai-voice' | 'all-tools' | 'templates' | 'recent-projects' | 'share-schedule' | 'create-transition' | 'editor' | 'template-manager' | 'library' | 'mixer' | 'mixer-editor' | 'preview' | 'files' | 'transition-editor' | 'transitions' | 'playlists' | 'profile' | 'project-wizard';
 
 interface MenuItem {
   id: string;
@@ -77,7 +76,6 @@ const AppShell: React.FC = () => {
       title: 'Labs',
       items: [
         { id: 'transitions', icon: Waveform, label: 'Mash Ups', view: 'transitions' },
-        { id: 'blender', icon: Layers, label: 'Blender', view: 'blender' },
         { id: 'mixer', icon: Sliders, label: 'Mixer', view: 'mixer' },
       ]
     },
@@ -177,10 +175,6 @@ const AppShell: React.FC = () => {
     setCurrentView('transition-editor');
   };
 
-  const handleBlendTransition = () => {
-    setCurrentView('blender');
-  };
-
   const handleMobileNavigation = (view: MobileNavView) => {
     setMobileNavView(view);
 
@@ -269,7 +263,7 @@ const AppShell: React.FC = () => {
 
     if (currentView === 'create-with-ai' || currentView === 'ai-design' || currentView === 'ai-video' || currentView === 'ai-voice') {
       setMobileNavView('ai-fusion');
-    } else if (currentView === 'transitions' || currentView === 'mixer' || currentView === 'blender' || currentView === 'transition-editor' || currentView === 'create-transition') {
+    } else if (currentView === 'transitions' || currentView === 'mixer' || currentView === 'transition-editor' || currentView === 'create-transition') {
       setMobileNavView('labs');
     } else if (currentView === 'library' || currentView === 'files' || currentView === 'playlists') {
       setMobileNavView('library');
@@ -322,10 +316,10 @@ const AppShell: React.FC = () => {
         return isMobile ? (
           <LabsView onSelectTool={handleLabToolSelect} />
         ) : (
-          <TransitionsList onCreateNew={handleCreateNewTransition} onEditTransition={handleEditTransition} onBlendTransition={handleBlendTransition} />
+          <TransitionsList onCreateNew={handleCreateNewTransition} onEditTransition={handleEditTransition} />
         );
       case 'recent-projects':
-        return <TransitionsList onCreateNew={handleCreateNewTransition} onEditTransition={handleEditTransition} onBlendTransition={handleBlendTransition} />;
+        return <TransitionsList onCreateNew={handleCreateNewTransition} onEditTransition={handleEditTransition} />;
       case 'share-schedule':
         return (
           <div className="flex items-center justify-center h-full">
@@ -355,6 +349,7 @@ const AppShell: React.FC = () => {
             onBack={() => setCurrentView('transitions')}
             onSave={() => setCurrentView('transitions')}
             onResetPoints={handleResetTransitionPoints}
+            onNavigateToLibrary={() => setCurrentView('library')}
           />
         ) : null;
       case 'templates':
@@ -409,22 +404,6 @@ const AppShell: React.FC = () => {
           <MixerEditorView
             sessionId={activeMixSessionId}
             onBack={() => setCurrentView('mixer')}
-          />
-        );
-      case 'blender':
-        return (
-          <BlenderView
-            onBack={() => setCurrentView('transitions')}
-            onNavigate={(view, params) => {
-              if (view === 'transition-editor' && params?.transitionId) {
-                setEditingTransitionId(params.transitionId);
-                setCurrentView('transition-editor');
-              } else if (view === 'mixer' && params?.blendId) {
-                setCurrentView('mixer');
-              } else if (view === 'library') {
-                setCurrentView('library');
-              }
-            }}
           />
         );
       case 'preview':

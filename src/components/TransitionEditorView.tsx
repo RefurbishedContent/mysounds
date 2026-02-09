@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  ArrowLeft, Play, Pause, RotateCcw, Save, Sparkles, Zap, Clock, Timer,
-  Download, ZoomIn, ZoomOut, ChevronRight, ChevronLeft, ChevronDown, ChevronUp,
-  Volume2, X, Navigation, SlidersHorizontal
+  ArrowLeft, Sparkles, Zap, Clock, Timer,
+  ChevronRight, ChevronDown, ChevronUp,
+  Music, Play, Pause, Check
 } from 'lucide-react';
 import * as Tone from 'tone';
 import { UploadResult } from '../lib/storage';
@@ -13,13 +13,10 @@ import TemplateGallery from './TemplateGallery';
 import AIPowerButton from './AIPowerButton';
 import AIRecommendationsPanel from './AIRecommendationsPanel';
 import { TemplateRecommendation } from '../lib/ai/aiService';
-import { WaveformDisplay } from './WaveformDisplay';
-import { ClippedWaveformDisplay } from './ClippedWaveformDisplay';
-import { KeyframeFadeEditor, FadeKeyframe } from './KeyframeFadeEditor';
-import BlendExportDialog from './BlendExportDialog';
-import ResetTransitionPointsModal from './ResetTransitionPointsModal';
-import { TransitionWaveformDisplay } from './TransitionWaveformDisplay';
-import RenderProgressModal from './RenderProgressModal';
+import BlenderConfirmationScreen from './blender/BlenderConfirmationScreen';
+import BlenderProcessingScreen from './blender/BlenderProcessingScreen';
+import BlenderCompletionScreen from './blender/BlenderCompletionScreen';
+import { BlendData } from '../lib/blendExportService';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 interface TransitionEditorViewProps {
@@ -29,10 +26,11 @@ interface TransitionEditorViewProps {
   onBack: () => void;
   onSave: () => void;
   onResetPoints?: () => void;
+  onNavigateToLibrary?: () => void;
 }
 
 type DurationSize = 'short' | 'medium' | 'long';
-type FadeCurveType = 'linear' | 'smooth' | 'fast';
+type EditorScreen = 'template-selection' | 'blender-confirmation' | 'blender-processing' | 'blender-completion';
 
 const DURATION_RANGES = {
   short: { min: 4, max: 8, default: 6 },
@@ -46,170 +44,31 @@ const getDurationSizeFromValue = (duration: number): DurationSize => {
   return 'long';
 };
 
-const getDurationForSize = (size: DurationSize): number => {
-  return DURATION_RANGES[size].default;
-};
-
-const combineTransitionKeyframes = (
-  fadeInKeyframes: FadeKeyframe[],
-  fadeOutKeyframes: FadeKeyframe[]
-): FadeKeyframe[] => {
-  const samplePoints = 50;
-  const combinedKeyframes: FadeKeyframe[] = [];
-
-  for (let i = 0; i <= samplePoints; i++) {
-    const position = i / samplePoints;
-
-    let fadeInValue = 1;
-    const sortedIn = [...fadeInKeyframes].sort((a, b) => a.position - b.position);
-    for (let j = 0; j < sortedIn.length - 1; j++) {
-      if (position >= sortedIn[j].position && position <= sortedIn[j + 1].position) {
-        const segmentProgress = (position - sortedIn[j].position) / (sortedIn[j + 1].position - sortedIn[j].position);
-        fadeInValue = sortedIn[j].value + segmentProgress * (sortedIn[j + 1].value - sortedIn[j].value);
-        break;
-      }
-    }
-    if (position < sortedIn[0].position) fadeInValue = sortedIn[0].value;
-    if (position > sortedIn[sortedIn.length - 1].position) fadeInValue = sortedIn[sortedIn.length - 1].value;
-
-    let fadeOutValue = 1;
-    const sortedOut = [...fadeOutKeyframes].sort((a, b) => a.position - b.position);
-    for (let j = 0; j < sortedOut.length - 1; j++) {
-      if (position >= sortedOut[j].position && position <= sortedOut[j + 1].position) {
-        const segmentProgress = (position - sortedOut[j].position) / (sortedOut[j + 1].position - sortedOut[j].position);
-        fadeOutValue = sortedOut[j].value + segmentProgress * (sortedOut[j + 1].value - sortedOut[j].value);
-        break;
-      }
-    }
-    if (position < sortedOut[0].position) fadeOutValue = sortedOut[0].value;
-    if (position > sortedOut[sortedOut.length - 1].position) fadeOutValue = sortedOut[sortedOut.length - 1].value;
-
-    const combinedValue = fadeInValue * fadeOutValue;
-    combinedKeyframes.push({ position, value: combinedValue });
-  }
-
-  return combinedKeyframes;
-};
-
-const applyVolumeAutomation = (
-  volumeNode: Tone.Volume,
-  keyframes: FadeKeyframe[],
-  duration: number,
-  curveType: FadeCurveType
-) => {
-  if (keyframes.length === 0) return;
-
-  volumeNode.volume.cancelScheduledValues(0);
-
-  const sortedKeyframes = [...keyframes].sort((a, b) => a.position - b.position);
-
-  sortedKeyframes.forEach((keyframe, index) => {
-    const time = keyframe.position * duration;
-    const volumeDb = keyframe.value === 0 ? -60 : (keyframe.value - 1) * 60;
-
-    if (index === 0) {
-      volumeNode.volume.setValueAtTime(volumeDb, Tone.now() + time);
-    } else {
-      const prevKeyframe = sortedKeyframes[index - 1];
-      const prevTime = prevKeyframe.position * duration;
-      const timeDiff = time - prevTime;
-
-      if (curveType === 'linear') {
-        volumeNode.volume.linearRampToValueAtTime(volumeDb, Tone.now() + time);
-      } else if (curveType === 'fast') {
-        volumeNode.volume.exponentialRampToValueAtTime(Math.max(volumeDb, -60), Tone.now() + time);
-      } else {
-        volumeNode.volume.exponentialRampToValueAtTime(Math.max(volumeDb, -60), Tone.now() + time);
-      }
-    }
-  });
-};
-
 export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   songA,
   songB,
   transitionId,
   onBack,
   onSave: onSaveCallback,
-  onResetPoints,
+  onNavigateToLibrary,
 }) => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
-  const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
+  const [currentScreen, setCurrentScreen] = useState<EditorScreen>('template-selection');
   const [transition, setTransition] = useState<TransitionData | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateData | null>(null);
   const [templates, setTemplates] = useState<TemplateData[]>([]);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isPlayingSongA, setIsPlayingSongA] = useState(false);
-  const [isPlayingTransition, setIsPlayingTransition] = useState(false);
-  const [isPlayingSongB, setIsPlayingSongB] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [playbackProgressA, setPlaybackProgressA] = useState(0);
-  const [playbackProgressB, setPlaybackProgressB] = useState(0);
   const [durationSize, setDurationSize] = useState<DurationSize>('medium');
   const [transitionDuration, setTransitionDuration] = useState(12);
   const [aiRecommendations, setAiRecommendations] = useState<TemplateRecommendation[]>([]);
   const [showAIRecommendations, setShowAIRecommendations] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showExportDialog, setShowExportDialog] = useState(false);
-  const [showBackDialog, setShowBackDialog] = useState(false);
-  const [showLengthWarning, setShowLengthWarning] = useState(false);
-  const [lengthWarningMessage, setLengthWarningMessage] = useState('');
+  const [createdBlend, setCreatedBlend] = useState<BlendData | null>(null);
+  const [aiToastMessage, setAiToastMessage] = useState<string | null>(null);
 
-  const [songADuration, setSongADuration] = useState(songA.metadata?.duration || 300);
-  const [songBDuration, setSongBDuration] = useState(songB.metadata?.duration || 300);
   const [templateAudioUrl, setTemplateAudioUrl] = useState<string | null>(null);
-  const [transitionProgress, setTransitionProgress] = useState(0);
-
-  const [zoomLevel, setZoomLevel] = useState(50);
-  const [trackHeight, setTrackHeight] = useState(120);
-
-  const [leftPanelWidth] = useState(180);
-  const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState(false);
-  const [isTemplatesExpanded, setIsTemplatesExpanded] = useState(false);
-
-  const [songAKeyframes, setSongAKeyframes] = useState<FadeKeyframe[]>([
-    { position: 0, value: 1 },
-    { position: 0.7, value: 1 },
-    { position: 1, value: 0 }
-  ]);
-  const [songBKeyframes, setSongBKeyframes] = useState<FadeKeyframe[]>([
-    { position: 0, value: 0 },
-    { position: 0.3, value: 1 },
-    { position: 1, value: 1 }
-  ]);
-  const [songAFadeCurve, setSongAFadeCurve] = useState<FadeCurveType>('smooth');
-  const [songBFadeCurve, setSongBFadeCurve] = useState<FadeCurveType>('smooth');
-  const [transitionFadeInKeyframes, setTransitionFadeInKeyframes] = useState<FadeKeyframe[]>([
-    { position: 0, value: 0 },
-    { position: 0.3, value: 1 },
-    { position: 1, value: 1 }
-  ]);
-  const [transitionFadeOutKeyframes, setTransitionFadeOutKeyframes] = useState<FadeKeyframe[]>([
-    { position: 0, value: 1 },
-    { position: 0.7, value: 1 },
-    { position: 1, value: 0 }
-  ]);
-  const [transitionFadeCurve, setTransitionFadeCurve] = useState<FadeCurveType>('smooth');
-  const [showResetPointsModal, setShowResetPointsModal] = useState(false);
-  const [showRenderProgress, setShowRenderProgress] = useState(false);
-  const [renderStage, setRenderStage] = useState<'saving' | 'rendering' | 'success' | 'error'>('saving');
-  const [renderMessage, setRenderMessage] = useState('');
-  const [renderProgress, setRenderProgress] = useState(0);
-
-  const timelineRef = useRef<HTMLDivElement>(null);
-  const saveTimeoutRef = useRef<NodeJS.Timeout>();
-
-  const playerARef = useRef<Tone.Player | null>(null);
-  const playerBRef = useRef<Tone.Player | null>(null);
-  const playerTransitionRef = useRef<Tone.Player | null>(null);
-  const volumeNodeARef = useRef<Tone.Volume | null>(null);
-  const volumeNodeBRef = useRef<Tone.Volume | null>(null);
-  const animationFrameARef = useRef<number | null>(null);
-  const animationFrameBRef = useRef<number | null>(null);
-  const startTimeARef = useRef<number>(0);
-  const startTimeBRef = useRef<number>(0);
+  const [isPlayingTemplate, setIsPlayingTemplate] = useState(false);
+  const playerRef = React.useRef<Tone.Player | null>(null);
 
   useEffect(() => {
     loadData();
@@ -219,28 +78,6 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     if (transition) {
       setTransitionDuration(transition.transitionDuration);
       setDurationSize(getDurationSizeFromValue(transition.transitionDuration));
-
-      if (transition.metadata?.songAKeyframes) {
-        setSongAKeyframes(transition.metadata.songAKeyframes);
-      }
-      if (transition.metadata?.songBKeyframes) {
-        setSongBKeyframes(transition.metadata.songBKeyframes);
-      }
-      if (transition.metadata?.songAFadeCurve) {
-        setSongAFadeCurve(transition.metadata.songAFadeCurve);
-      }
-      if (transition.metadata?.songBFadeCurve) {
-        setSongBFadeCurve(transition.metadata.songBFadeCurve);
-      }
-      if (transition.metadata?.transitionFadeInKeyframes) {
-        setTransitionFadeInKeyframes(transition.metadata.transitionFadeInKeyframes);
-      }
-      if (transition.metadata?.transitionFadeOutKeyframes) {
-        setTransitionFadeOutKeyframes(transition.metadata.transitionFadeOutKeyframes);
-      }
-      if (transition.metadata?.transitionFadeCurve) {
-        setTransitionFadeCurve(transition.metadata.transitionFadeCurve);
-      }
       if (transition.metadata?.templateAudioUrl) {
         setTemplateAudioUrl(transition.metadata.templateAudioUrl);
       }
@@ -248,97 +85,10 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   }, [transition]);
 
   useEffect(() => {
-    const loadActualDurations = async () => {
-      try {
-        const [bufferA, bufferB] = await Promise.all([
-          new Promise<number>((resolve) => {
-            const player = new Tone.Player(songA.url, () => {
-              const duration = player.buffer.duration;
-              player.dispose();
-              resolve(duration);
-            });
-          }),
-          new Promise<number>((resolve) => {
-            const player = new Tone.Player(songB.url, () => {
-              const duration = player.buffer.duration;
-              player.dispose();
-              resolve(duration);
-            });
-          })
-        ]);
-
-        if (bufferA > 0) setSongADuration(bufferA);
-        if (bufferB > 0) setSongBDuration(bufferB);
-      } catch (error) {
-        console.error('Failed to load audio durations:', error);
-      }
-    };
-
-    loadActualDurations();
-  }, [songA.url, songB.url]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-      switch (e.key) {
-        case ' ':
-          e.preventDefault();
-          handlePlayPause();
-          break;
-        case '+':
-        case '=':
-          e.preventDefault();
-          setZoomLevel(prev => Math.min(200, prev + 10));
-          break;
-        case '-':
-          e.preventDefault();
-          setZoomLevel(prev => Math.max(20, prev - 10));
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  useEffect(() => {
     return () => {
-      if (animationFrameARef.current) {
-        cancelAnimationFrame(animationFrameARef.current);
-      }
-      if (animationFrameBRef.current) {
-        cancelAnimationFrame(animationFrameBRef.current);
-      }
-      playerARef.current?.dispose();
-      playerBRef.current?.dispose();
-      playerTransitionRef.current?.dispose();
-      volumeNodeARef.current?.dispose();
-      volumeNodeBRef.current?.dispose();
+      playerRef.current?.dispose();
     };
   }, []);
-
-
-  const validateSongLengths = (duration: number): boolean => {
-    if (!transition) return true;
-
-    const minRequiredLength = duration / 2;
-    const songAClipDuration = (transition.songAMarkerPoint || 0) - (transition.songAClipStart || 0);
-    const songBClipDuration = (transition.songBClipEnd || 0) - (transition.songBMarkerPoint || 0);
-
-    if (songAClipDuration < minRequiredLength || songBClipDuration < minRequiredLength) {
-      const durationName = duration === 6 ? 'Short (6s)' : duration === 12 ? 'Medium (12s)' : 'Long (20s)';
-      setLengthWarningMessage(
-        `${durationName} mash up requires at least ${minRequiredLength.toFixed(1)}s of each song. ` +
-        `Song A has ${songAClipDuration.toFixed(1)}s and Song B has ${songBClipDuration.toFixed(1)}s. ` +
-        `Please return to the previous step to adjust your mash up markers.`
-      );
-      setShowLengthWarning(true);
-      return false;
-    }
-
-    return true;
-  };
 
   const loadData = async () => {
     setLoading(true);
@@ -360,8 +110,6 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
           }
         }
       }
-
-      validateSongLengths(transitionData.transitionDuration);
     } catch (error) {
       console.error('Failed to load transition data:', error);
       alert('Failed to load transition data');
@@ -370,35 +118,11 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     }
   };
 
-  const debouncedSaveFade = useCallback((updates: any) => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-
-    saveTimeoutRef.current = setTimeout(async () => {
-      if (!transition) return;
-
-      try {
-        await transitionsService.updateTransition(transitionId, {
-          metadata: {
-            ...transition.metadata,
-            ...updates
-          }
-        });
-
-        const updatedTransition = await transitionsService.getTransition(transitionId);
-        setTransition(updatedTransition);
-      } catch (error) {
-        console.error('Failed to save fade settings:', error);
-      }
-    }, 500);
-  }, [transition, transitionId]);
-
   const handleTemplateSelect = async (template: TemplateData) => {
     if (!transition) return;
 
+    stopTemplatePlayback();
     setSelectedTemplate(template);
-    setIsTemplatesExpanded(false);
 
     if (template.templateData?.previewUrl) {
       setTemplateAudioUrl(template.templateData.previewUrl);
@@ -420,34 +144,21 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
 
       const updatedTransition = await transitionsService.getTransition(transitionId);
       setTransition(updatedTransition);
-
-      validateSongLengths(template.duration);
     } catch (error) {
       console.error('Failed to update template:', error);
-      alert('Failed to update template');
     }
   };
 
   const handleDurationChange = async (size: DurationSize) => {
     if (!transition) return;
 
-    const newDuration = getDurationForSize(size);
-
-    if (!validateSongLengths(newDuration)) {
-      return;
-    }
-
+    const newDuration = DURATION_RANGES[size].default;
     setDurationSize(size);
     setTransitionDuration(newDuration);
-
-    const songAClipStart = Math.max(0, (transition.songAMarkerPoint || 0) - newDuration);
-    const songBClipEnd = (transition.songBMarkerPoint || 0) + newDuration;
 
     try {
       await transitionsService.updateTransition(transitionId, {
         transitionDuration: newDuration,
-        songAClipStart,
-        songBClipEnd,
         metadata: {
           ...transition.metadata,
           durationSize: size
@@ -458,521 +169,190 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       setTransition(updatedTransition);
     } catch (error) {
       console.error('Failed to update duration:', error);
-      alert('Failed to update duration');
     }
   };
 
-  const handlePlayPause = () => {
-    setIsPlaying(!isPlaying);
-  };
-
-  const handleRestart = async () => {
-    const confirmed = window.confirm(
-      'Are you sure you want to start fresh? This will reset the transition timeline to default settings while keeping your marker points (START, OUT, IN, END).'
-    );
-    if (confirmed) {
-      if (!transition) return;
-
-      setCurrentTime(0);
-      setIsPlaying(false);
-      setIsPlayingSongA(false);
-      setIsPlayingTransition(false);
-      setIsPlayingSongB(false);
-      setPlaybackProgressA(0);
-      setPlaybackProgressB(0);
-
-      if (animationFrameARef.current) {
-        cancelAnimationFrame(animationFrameARef.current);
-        animationFrameARef.current = null;
-      }
-      if (animationFrameBRef.current) {
-        cancelAnimationFrame(animationFrameBRef.current);
-        animationFrameBRef.current = null;
-      }
-
-      playerARef.current?.stop();
-      playerBRef.current?.stop();
-      playerTransitionRef.current?.stop();
-      volumeNodeARef.current?.dispose();
-      volumeNodeBRef.current?.dispose();
-
-      const defaultKeyframesA = [
-        { position: 0, value: 1 },
-        { position: 0.7, value: 1 },
-        { position: 1, value: 0 }
-      ];
-      const defaultKeyframesB = [
-        { position: 0, value: 0 },
-        { position: 0.3, value: 1 },
-        { position: 1, value: 1 }
-      ];
-      const defaultTransitionFadeIn = [
-        { position: 0, value: 0 },
-        { position: 0.3, value: 1 },
-        { position: 1, value: 1 }
-      ];
-      const defaultTransitionFadeOut = [
-        { position: 0, value: 1 },
-        { position: 0.7, value: 1 },
-        { position: 1, value: 0 }
-      ];
-
-      setSongAKeyframes(defaultKeyframesA);
-      setSongBKeyframes(defaultKeyframesB);
-      setSongAFadeCurve('smooth');
-      setSongBFadeCurve('smooth');
-      setTransitionFadeInKeyframes(defaultTransitionFadeIn);
-      setTransitionFadeOutKeyframes(defaultTransitionFadeOut);
-      setTransitionFadeCurve('smooth');
-      setSelectedTemplate(null);
-      setTemplateAudioUrl(null);
-      setDurationSize('medium');
-      setTransitionDuration(12);
-
-      try {
-        await transitionsService.updateTransition(transitionId, {
-          templateId: null,
-          transitionDuration: 12,
-          metadata: {
-            songAKeyframes: defaultKeyframesA,
-            songBKeyframes: defaultKeyframesB,
-            songAFadeCurve: 'smooth',
-            songBFadeCurve: 'smooth',
-            transitionFadeInKeyframes: defaultTransitionFadeIn,
-            transitionFadeOutKeyframes: defaultTransitionFadeOut,
-            transitionFadeCurve: 'smooth',
-            durationSize: 'medium',
-            templateAudioUrl: null
-          }
-        });
-
-        const updatedTransition = await transitionsService.getTransition(transitionId);
-        setTransition(updatedTransition);
-      } catch (error) {
-        console.error('Failed to reset transition:', error);
-        alert('Failed to reset transition');
-      }
-    }
-  };
-
-  const handlePlaySongA = async () => {
-    if (!transition || transition.songAClipStart === undefined || transition.songAMarkerPoint === undefined) {
-      return;
-    }
+  const handlePlayTemplate = async () => {
+    if (!templateAudioUrl) return;
 
     await Tone.start();
 
-    if (isPlayingSongA) {
-      if (animationFrameARef.current) {
-        cancelAnimationFrame(animationFrameARef.current);
-        animationFrameARef.current = null;
-      }
-      if (playerARef.current) {
-        playerARef.current.stop();
-        playerARef.current.dispose();
-        playerARef.current = null;
-      }
-      if (volumeNodeARef.current) {
-        volumeNodeARef.current.dispose();
-        volumeNodeARef.current = null;
-      }
-      setIsPlayingSongA(false);
-      setPlaybackProgressA(0);
-      Tone.Transport.stop();
+    if (isPlayingTemplate) {
+      stopTemplatePlayback();
       return;
-    }
-
-    if (isPlayingSongB || isPlayingTransition) {
-      handleStopAll();
     }
 
     try {
-      const volumeNode = new Tone.Volume(0).toDestination();
-      volumeNodeARef.current = volumeNode;
-
-      const player = new Tone.Player(songA.url, () => {
-        const clipStart = transition.songAClipStart!;
-        const clipEnd = transition.songAMarkerPoint!;
-        const clipDuration = clipEnd - clipStart;
-
-        applyVolumeAutomation(volumeNode, songAKeyframes, clipDuration, songAFadeCurve);
-
-        player.connect(volumeNode);
-        player.sync().start(0, clipStart, clipDuration);
-        Tone.Transport.start();
-
-        startTimeARef.current = Tone.now();
-        setPlaybackProgressA(0);
-
-        const updateProgress = () => {
-          const elapsed = Tone.now() - startTimeARef.current;
-          const progress = Math.min(elapsed / clipDuration, 1);
-          setPlaybackProgressA(progress);
-
-          if (progress < 1) {
-            animationFrameARef.current = requestAnimationFrame(updateProgress);
-          } else {
-            if (animationFrameARef.current) {
-              cancelAnimationFrame(animationFrameARef.current);
-              animationFrameARef.current = null;
-            }
-            player.stop();
-            player.dispose();
-            volumeNode.dispose();
-            playerARef.current = null;
-            volumeNodeARef.current = null;
-            setIsPlayingSongA(false);
-            setPlaybackProgressA(0);
-            Tone.Transport.stop();
-          }
-        };
-
-        animationFrameARef.current = requestAnimationFrame(updateProgress);
-      });
-
-      playerARef.current = player;
-      setIsPlayingSongA(true);
-    } catch (error) {
-      console.error('Failed to play Song A:', error);
-      setIsPlayingSongA(false);
-      setPlaybackProgressA(0);
-    }
-  };
-
-  const handlePlayTransition = async () => {
-    if (!selectedTemplate || !templateAudioUrl) {
-      alert('Please select a mash up template first');
-      return;
-    }
-
-    await Tone.start();
-
-    if (isPlayingTransition) {
-      handleStopAll();
-      return;
-    }
-
-    if (isPlayingSongA || isPlayingSongB) {
-      handleStopAll();
-    }
-
-    try {
-      const volumeNode = new Tone.Volume(0).toDestination();
-      volumeNodeARef.current = volumeNode;
-
       const player = new Tone.Player(templateAudioUrl, () => {
-        const templateDur = selectedTemplate.duration;
+        player.toDestination();
+        player.start();
+        setIsPlayingTemplate(true);
 
-        const combinedKeyframes = combineTransitionKeyframes(
-          transitionFadeInKeyframes,
-          transitionFadeOutKeyframes
-        );
-
-        applyVolumeAutomation(volumeNode, combinedKeyframes, templateDur, transitionFadeCurve);
-
-        player.connect(volumeNode);
-        player.sync().start(0, 0, templateDur);
-        Tone.Transport.start();
-
-        playerTransitionRef.current = player;
-        setIsPlayingTransition(true);
-        setTransitionProgress(0);
-
-        const startTime = Date.now();
-        const updateProgress = () => {
-          const elapsed = (Date.now() - startTime) / 1000;
-          const progress = Math.min(elapsed / templateDur, 1);
-          setTransitionProgress(progress);
-
-          if (progress < 1 && isPlayingTransition) {
-            requestAnimationFrame(updateProgress);
-          }
-        };
-        requestAnimationFrame(updateProgress);
-
-        setTimeout(() => {
-          player.stop();
+        player.onstop = () => {
+          setIsPlayingTemplate(false);
           player.dispose();
-          volumeNode.dispose();
-          playerTransitionRef.current = null;
-          volumeNodeARef.current = null;
-          setIsPlayingTransition(false);
-          setTransitionProgress(0);
-          Tone.Transport.stop();
-        }, templateDur * 1000);
-      });
-    } catch (error) {
-      console.error('Failed to play transition:', error);
-      setIsPlayingTransition(false);
-      setTransitionProgress(0);
-    }
-  };
-
-  const handlePlaySongB = async () => {
-    if (!transition || transition.songBMarkerPoint === undefined || transition.songBClipEnd === undefined) {
-      return;
-    }
-
-    await Tone.start();
-
-    if (isPlayingSongB) {
-      if (animationFrameBRef.current) {
-        cancelAnimationFrame(animationFrameBRef.current);
-        animationFrameBRef.current = null;
-      }
-      if (playerBRef.current) {
-        playerBRef.current.stop();
-        playerBRef.current.dispose();
-        playerBRef.current = null;
-      }
-      if (volumeNodeBRef.current) {
-        volumeNodeBRef.current.dispose();
-        volumeNodeBRef.current = null;
-      }
-      setIsPlayingSongB(false);
-      setPlaybackProgressB(0);
-      Tone.Transport.stop();
-      return;
-    }
-
-    if (isPlayingSongA || isPlayingTransition) {
-      handleStopAll();
-    }
-
-    try {
-      const volumeNode = new Tone.Volume(0).toDestination();
-      volumeNodeBRef.current = volumeNode;
-
-      const player = new Tone.Player(songB.url, () => {
-        const clipStart = transition.songBMarkerPoint!;
-        const clipEnd = transition.songBClipEnd!;
-        const clipDuration = clipEnd - clipStart;
-
-        applyVolumeAutomation(volumeNode, songBKeyframes, clipDuration, songBFadeCurve);
-
-        player.connect(volumeNode);
-        player.sync().start(0, clipStart, clipDuration);
-        Tone.Transport.start();
-
-        startTimeBRef.current = Tone.now();
-        setPlaybackProgressB(0);
-
-        const updateProgress = () => {
-          const elapsed = Tone.now() - startTimeBRef.current;
-          const progress = Math.min(elapsed / clipDuration, 1);
-          setPlaybackProgressB(progress);
-
-          if (progress < 1) {
-            animationFrameBRef.current = requestAnimationFrame(updateProgress);
-          } else {
-            if (animationFrameBRef.current) {
-              cancelAnimationFrame(animationFrameBRef.current);
-              animationFrameBRef.current = null;
-            }
-            player.stop();
-            player.dispose();
-            volumeNode.dispose();
-            playerBRef.current = null;
-            volumeNodeBRef.current = null;
-            setIsPlayingSongB(false);
-            setPlaybackProgressB(0);
-            Tone.Transport.stop();
-          }
+          playerRef.current = null;
         };
-
-        animationFrameBRef.current = requestAnimationFrame(updateProgress);
       });
-
-      playerBRef.current = player;
-      setIsPlayingSongB(true);
+      playerRef.current = player;
     } catch (error) {
-      console.error('Failed to play Song B:', error);
-      setIsPlayingSongB(false);
-      setPlaybackProgressB(0);
+      console.error('Failed to play template:', error);
+      setIsPlayingTemplate(false);
     }
   };
 
-  const handleStopAll = () => {
-    if (animationFrameARef.current) {
-      cancelAnimationFrame(animationFrameARef.current);
-      animationFrameARef.current = null;
+  const stopTemplatePlayback = () => {
+    if (playerRef.current) {
+      playerRef.current.stop();
+      playerRef.current.dispose();
+      playerRef.current = null;
     }
-    if (animationFrameBRef.current) {
-      cancelAnimationFrame(animationFrameBRef.current);
-      animationFrameBRef.current = null;
-    }
-    if (playerARef.current) {
-      playerARef.current.stop();
-      playerARef.current.dispose();
-      playerARef.current = null;
-    }
-    if (volumeNodeARef.current) {
-      volumeNodeARef.current.dispose();
-      volumeNodeARef.current = null;
-    }
-    if (playerBRef.current) {
-      playerBRef.current.stop();
-      playerBRef.current.dispose();
-      playerBRef.current = null;
-    }
-    if (volumeNodeBRef.current) {
-      volumeNodeBRef.current.dispose();
-      volumeNodeBRef.current = null;
-    }
-    if (playerTransitionRef.current) {
-      playerTransitionRef.current.stop();
-      playerTransitionRef.current.dispose();
-      playerTransitionRef.current = null;
-    }
-    setIsPlayingSongA(false);
-    setIsPlayingSongB(false);
-    setIsPlayingTransition(false);
-    setPlaybackProgressA(0);
-    setPlaybackProgressB(0);
-    Tone.Transport.stop();
+    setIsPlayingTemplate(false);
   };
 
-  const handleSave = async () => {
-    if (!selectedTemplate) {
-      alert('Please select a mash up template first');
-      return;
+  const handleAIAnalysisComplete = (recommendations: TemplateRecommendation[]) => {
+    setAiRecommendations(recommendations);
+    setShowAIRecommendations(true);
+
+    if (recommendations.length > 0 && recommendations[0].template) {
+      handleTemplateSelect(recommendations[0].template);
+      setAiToastMessage(`AI selected: ${recommendations[0].template.name} -- ${recommendations[0].compatibilityScore}% match`);
+      setTimeout(() => setAiToastMessage(null), 4000);
     }
+  };
 
-    if (!transition || !user) return;
+  const handleNext = async () => {
+    if (!selectedTemplate || !transition || !user) return;
 
-    setSaving(true);
-    setShowRenderProgress(true);
-    setRenderStage('saving');
-    setRenderMessage('Saving configuration...');
-    setRenderProgress(0);
+    stopTemplatePlayback();
+
+    const defaultSongAKeyframes = [
+      { position: 0, value: 1 },
+      { position: 0.7, value: 1 },
+      { position: 1, value: 0 }
+    ];
+    const defaultSongBKeyframes = [
+      { position: 0, value: 0 },
+      { position: 0.3, value: 1 },
+      { position: 1, value: 1 }
+    ];
+    const defaultTransitionFadeIn = [
+      { position: 0, value: 0 },
+      { position: 0.3, value: 1 },
+      { position: 1, value: 1 }
+    ];
+    const defaultTransitionFadeOut = [
+      { position: 0, value: 1 },
+      { position: 0.7, value: 1 },
+      { position: 1, value: 0 }
+    ];
 
     try {
-      const blenderOutput = {
-        songASegment: {
-          clipStart: transition.songAClipStart,
-          clipEnd: transition.songAMarkerPoint,
-          fadeOutKeyframes: songAKeyframes,
-          fadeCurve: songAFadeCurve
-        },
-        templateSegment: {
-          audioUrl: templateAudioUrl,
-          duration: transitionDuration,
-          fadeInKeyframes: transitionFadeInKeyframes,
-          fadeOutKeyframes: transitionFadeOutKeyframes,
-          fadeCurve: transitionFadeCurve,
-          templateName: selectedTemplate.name,
-          templateId: selectedTemplate.id
-        },
-        songBSegment: {
-          clipStart: transition.songBMarkerPoint,
-          clipEnd: transition.songBClipEnd,
-          fadeInKeyframes: songBKeyframes,
-          fadeCurve: songBFadeCurve
-        },
-        version: '1.0',
-        createdAt: new Date().toISOString()
-      };
-
-      setRenderProgress(50);
-
       await transitionsService.updateTransition(transitionId, {
         status: 'ready',
-        outputUrl: null,
-        renderDuration: songADuration + songBDuration,
-        fileSize: null,
         metadata: {
           ...transition.metadata,
-          songAKeyframes,
-          songBKeyframes,
-          songAFadeCurve,
-          songBFadeCurve,
-          transitionFadeInKeyframes,
-          transitionFadeOutKeyframes,
-          transitionFadeCurve,
+          songAKeyframes: defaultSongAKeyframes,
+          songBKeyframes: defaultSongBKeyframes,
+          songAFadeCurve: 'smooth',
+          songBFadeCurve: 'smooth',
+          transitionFadeInKeyframes: defaultTransitionFadeIn,
+          transitionFadeOutKeyframes: defaultTransitionFadeOut,
+          transitionFadeCurve: 'smooth',
           templateAudioUrl,
-          fadeOutKeyframes: songAKeyframes,
-          fadeInKeyframes: songBKeyframes,
-          blenderOutput
+          templateName: selectedTemplate.name,
+          blenderOutput: {
+            songASegment: {
+              clipStart: transition.songAClipStart,
+              clipEnd: transition.songAMarkerPoint,
+              fadeOutKeyframes: defaultSongAKeyframes,
+              fadeCurve: 'smooth'
+            },
+            templateSegment: {
+              audioUrl: templateAudioUrl,
+              duration: transitionDuration,
+              fadeInKeyframes: defaultTransitionFadeIn,
+              fadeOutKeyframes: defaultTransitionFadeOut,
+              fadeCurve: 'smooth',
+              templateName: selectedTemplate.name,
+              templateId: selectedTemplate.id
+            },
+            songBSegment: {
+              clipStart: transition.songBMarkerPoint,
+              clipEnd: transition.songBClipEnd,
+              fadeInKeyframes: defaultSongBKeyframes,
+              fadeCurve: 'smooth'
+            },
+            version: '1.0',
+            createdAt: new Date().toISOString()
+          }
         }
       });
 
-      setRenderStage('success');
-      setRenderMessage('Mash up saved successfully!');
-      setRenderProgress(100);
-
       const updatedTransition = await transitionsService.getTransition(transitionId);
-      if (updatedTransition) {
-        setTransition(updatedTransition);
-      }
+      setTransition(updatedTransition);
+      setCurrentScreen('blender-confirmation');
     } catch (error) {
       console.error('Failed to save transition:', error);
-      setRenderStage('error');
-      setRenderMessage(error instanceof Error ? error.message : 'Failed to save transition');
-    } finally {
-      setSaving(false);
+      alert('Failed to save. Please try again.');
     }
   };
 
-  const handleBackClick = () => {
-    if (selectedTemplate) {
-      setShowBackDialog(true);
-    } else {
-      onBack();
-    }
-  };
-
-  const handleSongAKeyframesChange = (newKeyframes: FadeKeyframe[]) => {
-    setSongAKeyframes(newKeyframes);
-    debouncedSaveFade({ songAKeyframes: newKeyframes });
-  };
-
-  const handleSongBKeyframesChange = (newKeyframes: FadeKeyframe[]) => {
-    setSongBKeyframes(newKeyframes);
-    debouncedSaveFade({ songBKeyframes: newKeyframes });
-  };
-
-  const handleFadeCurveChange = (track: 'songA' | 'songB', curve: FadeCurveType) => {
-    if (track === 'songA') {
-      setSongAFadeCurve(curve);
-      debouncedSaveFade({ songAFadeCurve: curve });
-    } else {
-      setSongBFadeCurve(curve);
-      debouncedSaveFade({ songBFadeCurve: curve });
-    }
-  };
-
-  const handleTransitionFadeInKeyframesChange = (newKeyframes: FadeKeyframe[]) => {
-    setTransitionFadeInKeyframes(newKeyframes);
-    debouncedSaveFade({ transitionFadeInKeyframes: newKeyframes });
-  };
-
-  const handleTransitionFadeOutKeyframesChange = (newKeyframes: FadeKeyframe[]) => {
-    setTransitionFadeOutKeyframes(newKeyframes);
-    debouncedSaveFade({ transitionFadeOutKeyframes: newKeyframes });
-  };
-
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    const frames = Math.floor((seconds % 1) * 30);
-    return `${mins}:${secs.toString().padStart(2, '0')}:${frames.toString().padStart(2, '0')}`;
+  const handleBlendComplete = (blend: BlendData) => {
+    setCreatedBlend(blend);
+    setCurrentScreen('blender-completion');
   };
 
   if (loading || !transition) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gray-900">
+      <div className="h-full flex items-center justify-center bg-gray-900">
         <div className="text-center space-y-4">
           <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-gray-400">Loading editor...</p>
+          <p className="text-gray-400">Loading...</p>
         </div>
       </div>
     );
   }
 
-  const songAMarkerPoint = transition.songAMarkerPoint || 0;
-  const songBMarkerPoint = transition.songBMarkerPoint || 0;
-  const songAClipStart = transition.songAClipStart || 0;
-  const songBClipEnd = transition.songBClipEnd || 0;
+  if (currentScreen === 'blender-confirmation') {
+    return (
+      <BlenderConfirmationScreen
+        transition={transition}
+        songA={songA}
+        songB={songB}
+        selectedTemplate={selectedTemplate}
+        transitionDuration={transitionDuration}
+        onConfirm={() => setCurrentScreen('blender-processing')}
+        onBack={() => setCurrentScreen('template-selection')}
+      />
+    );
+  }
+
+  if (currentScreen === 'blender-processing') {
+    return (
+      <BlenderProcessingScreen
+        transition={transition}
+        onComplete={handleBlendComplete}
+        onBack={() => setCurrentScreen('blender-confirmation')}
+      />
+    );
+  }
+
+  if (currentScreen === 'blender-completion' && createdBlend) {
+    return (
+      <BlenderCompletionScreen
+        blend={createdBlend}
+        onCreateAnother={() => onSaveCallback()}
+        onGoToLibrary={() => {
+          if (onNavigateToLibrary) {
+            onNavigateToLibrary();
+          } else {
+            onSaveCallback();
+          }
+        }}
+      />
+    );
+  }
 
   const filteredTemplates = templates.filter(t => {
     const templateDuration = t.duration || 12;
@@ -981,728 +361,306 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   });
 
   return (
-    <div className="h-screen bg-gray-900 flex flex-col" data-tutorial="timeline-editor">
-      <div className="bg-gray-800 border-b border-gray-700 px-3 py-2 flex-shrink-0">
-        <div className="flex flex-col space-y-2">
-          <div className="flex items-center space-x-2">
+    <div className="h-full flex flex-col bg-gray-900 relative">
+      <div className="bg-gray-800/90 backdrop-blur-sm border-b border-cyan-500/20 px-4 py-3 flex-shrink-0"
+        style={{ boxShadow: '0 1px 20px rgba(6,182,212,0.1)' }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
             <button
-              onClick={handleBackClick}
-              className="p-1 hover:bg-gray-700 rounded transition-colors"
+              onClick={onBack}
+              className="p-1.5 hover:bg-gray-700 rounded-lg transition-colors"
             >
-              <ArrowLeft className="w-4 h-4 text-gray-400" />
+              <ArrowLeft className="w-5 h-5 text-gray-400" />
             </button>
-            <div className="flex-1">
-              <h1 className="text-sm font-bold text-white">{transition.name}</h1>
-              <p className="text-[10px] text-gray-400">Professional Timeline Editor</p>
+            <div>
+              <h1 className="text-base font-bold text-white">{transition.name}</h1>
+              <p className="text-xs text-cyan-400/80">Choose Your Transition</p>
             </div>
           </div>
 
-          <div className="flex items-center justify-end space-x-2">
-            <AIPowerButton
-              uploadIdA={songA.id}
-              uploadIdB={songB.id}
-              onAnalysisComplete={(recommendations) => {
-                setAiRecommendations(recommendations);
-                setShowAIRecommendations(true);
-              }}
-              onError={(errorMsg) => {
-                alert(errorMsg);
+          <AIPowerButton
+            uploadIdA={songA.id}
+            uploadIdB={songB.id}
+            onAnalysisComplete={handleAIAnalysisComplete}
+            onError={(errorMsg) => alert(errorMsg)}
+          />
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto pb-24">
+        <SongInfoBar songA={songA} songB={songB} transitionDuration={transitionDuration} />
+
+        <div className={`px-4 ${isMobile ? 'py-3' : 'py-5'}`}>
+          <div className="max-w-5xl mx-auto space-y-5">
+            <div className="text-center">
+              <h2 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-white mb-1`}>
+                Select a Transition Template
+              </h2>
+              <p className="text-sm text-gray-400">
+                Browse and preview templates to find the perfect transition for your mash up
+              </p>
+            </div>
+
+            <DurationTabs
+              activeSize={durationSize}
+              onChange={handleDurationChange}
+              counts={{
+                short: templates.filter(t => getDurationSizeFromValue(t.duration || 12) === 'short').length,
+                medium: templates.filter(t => getDurationSizeFromValue(t.duration || 12) === 'medium').length,
+                long: templates.filter(t => getDurationSizeFromValue(t.duration || 12) === 'long').length,
               }}
             />
-            <button
-              onClick={handleSave}
-              disabled={!selectedTemplate || saving}
-              className={`
-                px-3 py-1.5 rounded text-xs font-semibold transition-all duration-200 flex items-center space-x-1
-                ${selectedTemplate && !saving
-                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white'
-                  : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                }
-              `}
-            >
-              <Save className="w-3 h-3" />
-              <span>{saving ? 'Saving...' : 'Save'}</span>
-            </button>
-          </div>
-        </div>
-      </div>
 
-      {isMobile && (
-        <div className="bg-gray-800 border-b border-gray-700 flex-shrink-0">
-          <button
-            onClick={() => setIsMobileSettingsOpen(!isMobileSettingsOpen)}
-            className="w-full px-3 py-2.5 flex items-center justify-between"
-          >
-            <div className="flex items-center space-x-2">
-              <SlidersHorizontal className="w-4 h-4 text-cyan-400" />
-              <span className="text-xs font-semibold text-white">Settings</span>
-              <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                durationSize === 'short' ? 'bg-cyan-500/20 text-cyan-400' :
-                durationSize === 'medium' ? 'bg-blue-500/20 text-blue-400' :
-                'bg-teal-500/20 text-teal-400'
-              }`}>
-                {durationSize === 'short' ? `Short (${DURATION_RANGES.short.default}s)` :
-                 durationSize === 'medium' ? `Medium (${DURATION_RANGES.medium.default}s)` :
-                 `Long (${DURATION_RANGES.long.default}s)`}
-              </div>
-            </div>
-            {isMobileSettingsOpen ? (
-              <ChevronUp className="w-4 h-4 text-gray-400" />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-gray-400" />
+            {selectedTemplate && (
+              <SelectedTemplateCard
+                template={selectedTemplate}
+                isPlaying={isPlayingTemplate}
+                onPlayToggle={handlePlayTemplate}
+                onClear={() => {
+                  stopTemplatePlayback();
+                  setSelectedTemplate(null);
+                }}
+              />
             )}
-          </button>
 
-          {isMobileSettingsOpen && (
-            <div className="px-3 pb-3 space-y-3 border-t border-gray-700">
-              <div className="pt-3">
-                <h3 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Duration</h3>
-                <div className="grid grid-cols-3 gap-1.5">
-                  <button
-                    onClick={() => handleDurationChange('short')}
-                    className={`p-2 rounded border-2 transition-all duration-200 ${
-                      durationSize === 'short'
-                        ? 'border-cyan-500 bg-cyan-500/10'
-                        : 'border-gray-700 bg-gray-900'
-                    }`}
-                  >
-                    <div className="flex items-center justify-center space-x-1">
-                      <Zap className={`w-3 h-3 ${durationSize === 'short' ? 'text-cyan-400' : 'text-gray-400'}`} />
-                      <span className={`text-[10px] font-semibold ${durationSize === 'short' ? 'text-cyan-400' : 'text-white'}`}>
-                        Short
-                      </span>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => handleDurationChange('medium')}
-                    className={`p-2 rounded border-2 transition-all duration-200 ${
-                      durationSize === 'medium'
-                        ? 'border-blue-500 bg-blue-500/10'
-                        : 'border-gray-700 bg-gray-900'
-                    }`}
-                  >
-                    <div className="flex items-center justify-center space-x-1">
-                      <Clock className={`w-3 h-3 ${durationSize === 'medium' ? 'text-blue-400' : 'text-gray-400'}`} />
-                      <span className={`text-[10px] font-semibold ${durationSize === 'medium' ? 'text-blue-400' : 'text-white'}`}>
-                        Medium
-                      </span>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => handleDurationChange('long')}
-                    className={`p-2 rounded border-2 transition-all duration-200 ${
-                      durationSize === 'long'
-                        ? 'border-teal-500 bg-teal-500/10'
-                        : 'border-gray-700 bg-gray-900'
-                    }`}
-                  >
-                    <div className="flex items-center justify-center space-x-1">
-                      <Timer className={`w-3 h-3 ${durationSize === 'long' ? 'text-teal-400' : 'text-gray-400'}`} />
-                      <span className={`text-[10px] font-semibold ${durationSize === 'long' ? 'text-teal-400' : 'text-white'}`}>
-                        Long
-                      </span>
-                    </div>
-                  </button>
-                </div>
-              </div>
+            {showAIRecommendations && aiRecommendations.length > 0 && (
+              <AIRecommendationsPanel
+                recommendations={aiRecommendations}
+                onSelectTemplate={(templateId) => {
+                  const rec = aiRecommendations.find(r => r.templateId === templateId);
+                  if (rec?.template) handleTemplateSelect(rec.template);
+                }}
+                onClose={() => setShowAIRecommendations(false)}
+                isVisible={showAIRecommendations}
+              />
+            )}
 
-              <div>
-                <h3 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Zoom</h3>
-                <div className="flex items-center space-x-2">
-                  <ZoomOut className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                  <input
-                    type="range"
-                    min="20"
-                    max="200"
-                    value={zoomLevel}
-                    onChange={(e) => setZoomLevel(Number(e.target.value))}
-                    className="flex-1"
-                  />
-                  <ZoomIn className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                  <span className="text-[10px] text-gray-400 w-8 text-right">{zoomLevel}%</span>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Track Height</h3>
-                <div className="grid grid-cols-3 gap-1.5">
-                  <button
-                    onClick={() => setTrackHeight(80)}
-                    className={`px-2 py-1.5 rounded text-[10px] ${trackHeight === 80 ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-300'}`}
-                  >
-                    Small
-                  </button>
-                  <button
-                    onClick={() => setTrackHeight(120)}
-                    className={`px-2 py-1.5 rounded text-[10px] ${trackHeight === 120 ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-300'}`}
-                  >
-                    Medium
-                  </button>
-                  <button
-                    onClick={() => setTrackHeight(180)}
-                    className={`px-2 py-1.5 rounded text-[10px] ${trackHeight === 180 ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-300'}`}
-                  >
-                    Large
-                  </button>
-                </div>
-              </div>
-
-              {showAIRecommendations && aiRecommendations.length > 0 && (
-                <AIRecommendationsPanel
-                  recommendations={aiRecommendations}
-                  onSelectTemplate={(templateId) => {
-                    const template = aiRecommendations.find(r => r.templateId === templateId)?.template;
-                    if (template) {
-                      handleTemplateSelect(template);
-                    }
-                  }}
-                  onClose={() => setShowAIRecommendations(false)}
-                  isVisible={showAIRecommendations}
-                />
-              )}
-
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <button
-                  onClick={handleRestart}
-                  className="px-2 py-2 bg-gray-700 border border-yellow-600/40 rounded transition-all flex items-center justify-center space-x-1.5 text-yellow-400 font-semibold text-[10px]"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>Start Fresh</span>
-                </button>
-                <button
-                  onClick={() => setShowResetPointsModal(true)}
-                  className="px-2 py-2 bg-gray-700 border border-red-600/40 rounded transition-all flex items-center justify-center space-x-1.5 text-red-400 font-semibold text-[10px]"
-                >
-                  <Navigation className="w-3 h-3" />
-                  <span>Reset Points</span>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="flex-1 flex overflow-hidden">
-        {!isMobile && !isLeftPanelCollapsed && (
-          <div
-            className="bg-gray-800 border-r border-gray-700 flex-shrink-0 overflow-y-auto relative"
-            style={{ width: `${leftPanelWidth}px` }}
-          >
-            <button
-              onClick={() => setIsLeftPanelCollapsed(!isLeftPanelCollapsed)}
-              className="absolute right-2 top-4 z-20 bg-cyan-600 hover:bg-cyan-500 rounded p-1.5 transition-all shadow-lg"
+            <div className="relative rounded-xl overflow-hidden"
+              style={{
+                boxShadow: '0 0 30px rgba(6,182,212,0.15), 0 0 60px rgba(59,130,246,0.08)',
+                border: '1px solid rgba(6,182,212,0.25)',
+              }}
             >
-              <ChevronLeft className="w-3 h-3 text-white" />
-            </button>
-            <div className="p-3 space-y-2">
-              <div>
-                <h3 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Transition Duration</h3>
-                <div className="space-y-1.5">
-                  <button
-                    onClick={() => handleDurationChange('short')}
-                    className={`
-                      w-full p-2 rounded border-2 transition-all duration-200
-                      ${durationSize === 'short'
-                        ? 'border-cyan-500 bg-cyan-500/10'
-                        : 'border-gray-700 bg-gray-900 hover:border-gray-600'
-                      }
-                    `}
-                  >
-                    <div className="flex items-center space-x-1.5">
-                      <Zap className={`w-4 h-4 ${durationSize === 'short' ? 'text-cyan-400' : 'text-gray-400'}`} />
-                      <span className={`text-xs font-semibold ${durationSize === 'short' ? 'text-cyan-400' : 'text-white'}`}>
-                        Short ({DURATION_RANGES.short.default}s)
-                      </span>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => handleDurationChange('medium')}
-                    className={`
-                      w-full p-2 rounded border-2 transition-all duration-200
-                      ${durationSize === 'medium'
-                        ? 'border-blue-500 bg-blue-500/10'
-                        : 'border-gray-700 bg-gray-900 hover:border-gray-600'
-                      }
-                    `}
-                  >
-                    <div className="flex items-center space-x-1.5">
-                      <Clock className={`w-4 h-4 ${durationSize === 'medium' ? 'text-blue-400' : 'text-gray-400'}`} />
-                      <span className={`text-xs font-semibold ${durationSize === 'medium' ? 'text-blue-400' : 'text-white'}`}>
-                        Medium ({DURATION_RANGES.medium.default}s)
-                      </span>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => handleDurationChange('long')}
-                    className={`
-                      w-full p-2 rounded border-2 transition-all duration-200
-                      ${durationSize === 'long'
-                        ? 'border-purple-500 bg-purple-500/10'
-                        : 'border-gray-700 bg-gray-900 hover:border-gray-600'
-                      }
-                    `}
-                  >
-                    <div className="flex items-center space-x-1.5">
-                      <Timer className={`w-4 h-4 ${durationSize === 'long' ? 'text-purple-400' : 'text-gray-400'}`} />
-                      <span className={`text-xs font-semibold ${durationSize === 'long' ? 'text-purple-400' : 'text-white'}`}>
-                        Long ({DURATION_RANGES.long.default}s)
-                      </span>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Zoom</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-1.5">
-                    <ZoomOut className="w-3 h-3 text-gray-400" />
-                    <input
-                      type="range"
-                      min="20"
-                      max="200"
-                      value={zoomLevel}
-                      onChange={(e) => setZoomLevel(Number(e.target.value))}
-                      className="flex-1"
-                    />
-                    <ZoomIn className="w-3 h-3 text-gray-400" />
+              <div className="absolute inset-0 rounded-xl pointer-events-none"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(6,182,212,0.08) 0%, rgba(59,130,246,0.05) 50%, rgba(6,182,212,0.08) 100%)',
+                }}
+              />
+              <div className="relative bg-gray-800/80 backdrop-blur-sm p-4 rounded-xl">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-2">
+                    <Sparkles className="w-4 h-4 text-cyan-400" />
+                    <h3 className="text-sm font-semibold text-white">
+                      Templates ({filteredTemplates.length})
+                    </h3>
                   </div>
-                  <div className="text-center text-[10px] text-gray-400">
-                    {zoomLevel}%
-                  </div>
+                  <span className="text-xs text-gray-500">
+                    {durationSize === 'short' ? `${DURATION_RANGES.short.min}-${DURATION_RANGES.short.max}s` :
+                     durationSize === 'medium' ? `${DURATION_RANGES.medium.min}-${DURATION_RANGES.medium.max}s` :
+                     `${DURATION_RANGES.long.min}-${DURATION_RANGES.long.max}s`}
+                  </span>
                 </div>
-              </div>
-
-              <div>
-                <h3 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Track Height</h3>
-                <div className="flex space-x-1.5">
-                  <button
-                    onClick={() => setTrackHeight(80)}
-                    className={`flex-1 px-2 py-1 rounded text-[10px] ${trackHeight === 80 ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                  >
-                    Small
-                  </button>
-                  <button
-                    onClick={() => setTrackHeight(120)}
-                    className={`flex-1 px-2 py-1 rounded text-[10px] ${trackHeight === 120 ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                  >
-                    Medium
-                  </button>
-                  <button
-                    onClick={() => setTrackHeight(180)}
-                    className={`flex-1 px-2 py-1 rounded text-[10px] ${trackHeight === 180 ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                  >
-                    Large
-                  </button>
-                </div>
-              </div>
-
-              {showAIRecommendations && aiRecommendations.length > 0 && (
-                <div>
-                  <AIRecommendationsPanel
-                    recommendations={aiRecommendations}
-                    onSelectTemplate={(templateId) => {
-                      const template = aiRecommendations.find(r => r.templateId === templateId)?.template;
-                      if (template) {
-                        handleTemplateSelect(template);
-                      }
-                    }}
-                    onClose={() => setShowAIRecommendations(false)}
-                    isVisible={showAIRecommendations}
+                <div className={`${isMobile ? 'max-h-[50vh]' : 'max-h-[55vh]'} overflow-y-auto`}>
+                  <TemplateGallery
+                    onSelectTemplate={handleTemplateSelect}
+                    compact={true}
+                    trackA={songA}
+                    trackB={songB}
+                    durationFilter={durationSize}
+                    selectedTemplateId={selectedTemplate?.id}
                   />
                 </div>
-              )}
-
-              <div className="mt-4 pt-4 border-t border-gray-700 space-y-2">
-                <button
-                  onClick={handleRestart}
-                  className="w-full px-3 py-2.5 bg-gray-700 hover:bg-gray-600 border-2 border-yellow-600/40 hover:border-yellow-500/60 rounded transition-all flex items-center justify-center space-x-2 text-yellow-400 hover:text-yellow-300 font-semibold text-xs"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  <span>Start Fresh</span>
-                </button>
-                <button
-                  onClick={() => setShowResetPointsModal(true)}
-                  className="w-full px-3 py-2.5 bg-gray-700 hover:bg-gray-600 border-2 border-red-600/40 hover:border-red-500/60 rounded transition-all flex items-center justify-center space-x-2 text-red-400 hover:text-red-300 font-semibold text-xs"
-                >
-                  <Navigation className="w-4 h-4" />
-                  <span>Reset Transition Points</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden relative">
-          {!isMobile && isLeftPanelCollapsed && (
-            <button
-              onClick={() => setIsLeftPanelCollapsed(!isLeftPanelCollapsed)}
-              className="absolute left-2 top-4 z-10 bg-cyan-600 hover:bg-cyan-500 rounded p-1.5 transition-all shadow-lg"
-            >
-              <ChevronRight className="w-3 h-3 text-white" />
-            </button>
-          )}
-
-          <div className={`flex-1 flex flex-col ${isMobile ? 'p-2' : 'p-4'} overflow-auto`}>
-            <div className={`flex-1 bg-gray-800 rounded-lg border border-gray-700 ${isMobile ? 'p-3' : 'p-6'}`}>
-              <div className={isMobile ? 'space-y-4' : 'space-y-8'}>
-                <div style={{ height: `${trackHeight}px` }} className="relative">
-                  <div className="flex items-center mb-2 space-x-2">
-                    <div className="text-xs font-semibold text-cyan-400">Song A (Ending - Fade Out)</div>
-                    <button
-                      onClick={handlePlaySongA}
-                      className="p-1 bg-cyan-600/20 hover:bg-cyan-600/30 rounded transition-colors"
-                    >
-                      {isPlayingSongA ? <Pause className="w-3 h-3 text-cyan-400" /> : <Play className="w-3 h-3 text-cyan-400" />}
-                    </button>
-                  </div>
-                  <div className="relative h-full bg-gray-900 rounded overflow-hidden timeline-container">
-                    {transition && transition.songAClipStart !== undefined && transition.songAMarkerPoint !== undefined ? (
-                      <ClippedWaveformDisplay
-                        audioUrl={songA.url}
-                        clipStart={transition.songAClipStart}
-                        clipEnd={transition.songAMarkerPoint}
-                        height={trackHeight - 32}
-                        color="#3b82f6"
-                        progressColor="#60a5fa"
-                        zoom={zoomLevel / 100}
-                        progress={playbackProgressA}
-                        showScrubber={true}
-                      />
-                    ) : (
-                      <WaveformDisplay
-                        audioUrl={songA.url}
-                        height={trackHeight - 32}
-                        color="#3b82f6"
-                        progressColor="#60a5fa"
-                      />
-                    )}
-
-                    <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-cyan-400 pointer-events-none z-20 shadow-[0_0_10px_rgba(6,182,212,0.8)]">
-                      <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-cyan-400 text-gray-900 text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap">
-                        OUT
-                      </div>
-                    </div>
-
-                    <div className="absolute inset-0 pointer-events-auto">
-                      <KeyframeFadeEditor
-                        keyframes={songAKeyframes}
-                        onChange={handleSongAKeyframesChange}
-                        color="#06b6d4"
-                        direction="fadeOut"
-                        height={trackHeight - 32}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ height: `${Math.max(80, trackHeight * 0.6)}px` }} className="relative">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="text-xs font-semibold text-purple-400 flex items-center space-x-1">
-                      <Sparkles className="w-4 h-4" />
-                      <span>Transition</span>
-                    </div>
-                    {selectedTemplate && (
-                      <button
-                        onClick={handlePlayTransition}
-                        className="p-1 bg-purple-600/20 hover:bg-purple-600/30 rounded transition-colors"
-                      >
-                        {isPlayingTransition ? <Pause className="w-3 h-3 text-purple-400" /> : <Play className="w-3 h-3 text-purple-400" />}
-                      </button>
-                    )}
-                  </div>
-                  <div className="relative h-full bg-gray-900 rounded overflow-hidden timeline-container border border-purple-500/40"
-                    style={{
-                      boxShadow: '0 0 20px rgba(168,85,247,0.3), inset 0 0 20px rgba(168,85,247,0.1)'
-                    }}
-                  >
-                    {transition ? (
-                      <>
-                        <TransitionWaveformDisplay
-                          templateAudioUrl={templateAudioUrl}
-                          templateDuration={transitionDuration}
-                          height={Math.max(80, trackHeight * 0.6) - 32}
-                          fadeInKeyframes={transitionFadeInKeyframes}
-                          fadeOutKeyframes={transitionFadeOutKeyframes}
-                          zoom={zoomLevel / 100}
-                          progress={transitionProgress}
-                        />
-
-                        <div className="absolute inset-0 pointer-events-auto">
-                          <div className="relative w-full h-full">
-                            <div className="absolute left-0 top-0 bottom-0 w-[45%] pointer-events-auto">
-                              <KeyframeFadeEditor
-                                keyframes={transitionFadeInKeyframes}
-                                onChange={handleTransitionFadeInKeyframesChange}
-                                color="#ec4899"
-                                direction="fadeIn"
-                                height={Math.max(80, trackHeight * 0.6) - 32}
-                              />
-                            </div>
-                            <div className="absolute right-0 top-0 bottom-0 w-[45%] pointer-events-auto">
-                              <KeyframeFadeEditor
-                                keyframes={transitionFadeOutKeyframes}
-                                onChange={handleTransitionFadeOutKeyframesChange}
-                                color="#06b6d4"
-                                direction="fadeOut"
-                                height={Math.max(80, trackHeight * 0.6) - 32}
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        {selectedTemplate && (
-                          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-                            <div className="flex items-center space-x-2 bg-purple-900/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-purple-400/50">
-                              <Sparkles className="w-3 h-3 text-purple-300" />
-                              <span className="text-xs font-bold text-purple-200">{selectedTemplate.name}</span>
-                              <span className="text-[10px] text-purple-300">({transitionDuration}s)</span>
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-pink-400 pointer-events-none z-20 shadow-[0_0_10px_rgba(236,72,153,0.8)]">
-                          <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-pink-400 text-gray-900 text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap">
-                            FADE IN
-                          </div>
-                        </div>
-
-                        <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-cyan-400 pointer-events-none z-20 shadow-[0_0_10px_rgba(6,182,212,0.8)]">
-                          <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-cyan-400 text-gray-900 text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap">
-                            FADE OUT
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-center">
-                          <div className="text-xs text-gray-500">{transitionDuration}s transition</div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div style={{ height: `${trackHeight}px` }} className="relative">
-                  <div className="flex items-center mb-2 space-x-2">
-                    <div className="text-xs font-semibold text-green-400">Song B (Beginning - Fade In)</div>
-                    <button
-                      onClick={handlePlaySongB}
-                      className="p-1 bg-green-600/20 hover:bg-green-600/30 rounded transition-colors"
-                    >
-                      {isPlayingSongB ? <Pause className="w-3 h-3 text-green-400" /> : <Play className="w-3 h-3 text-green-400" />}
-                    </button>
-                  </div>
-                  <div className="relative h-full bg-gray-900 rounded overflow-hidden timeline-container">
-                    {transition && transition.songBMarkerPoint !== undefined && transition.songBClipEnd !== undefined ? (
-                      <ClippedWaveformDisplay
-                        audioUrl={songB.url}
-                        clipStart={transition.songBMarkerPoint}
-                        clipEnd={transition.songBClipEnd}
-                        height={trackHeight - 32}
-                        color="#10b981"
-                        progressColor="#34d399"
-                        zoom={zoomLevel / 100}
-                        progress={playbackProgressB}
-                        showScrubber={true}
-                      />
-                    ) : (
-                      <WaveformDisplay
-                        audioUrl={songB.url}
-                        height={trackHeight - 32}
-                        color="#10b981"
-                        progressColor="#34d399"
-                      />
-                    )}
-
-                    <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-green-400 pointer-events-none z-20 shadow-[0_0_10px_rgba(16,185,129,0.8)]">
-                      <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-green-400 text-gray-900 text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap">
-                        IN
-                      </div>
-                    </div>
-
-                    <div className="absolute inset-0 pointer-events-auto">
-                      <KeyframeFadeEditor
-                        keyframes={songBKeyframes}
-                        onChange={handleSongBKeyframesChange}
-                        color="#10b981"
-                        direction="fadeIn"
-                        height={trackHeight - 32}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <div
-                className={`bg-gray-800 border border-gray-700 rounded-lg transition-all duration-300 ${
-                  isTemplatesExpanded ? 'p-4' : 'p-2'
-                }`}
-              >
-                {!isTemplatesExpanded ? (
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Sparkles className="w-4 h-4 text-purple-400" />
-                      {selectedTemplate ? (
-                        <div className="flex items-center space-x-2">
-                          <div className="px-3 py-1.5 bg-purple-500/20 border border-purple-500/40 rounded-full">
-                            <span className="text-xs font-semibold text-purple-300">{selectedTemplate.name}</span>
-                          </div>
-                          <span className="text-xs text-gray-400">Selected</span>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-gray-400">No template selected</span>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => setIsTemplatesExpanded(true)}
-                      className="flex items-center space-x-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 rounded transition-colors"
-                    >
-                      <span className="text-xs font-semibold text-white">Browse Templates</span>
-                      <ChevronDown className="w-3 h-3 text-white" />
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-2">
-                        <Sparkles className="w-5 h-5 text-purple-400" />
-                        <h3 className="text-sm font-semibold text-white">Select Template ({filteredTemplates.length})</h3>
-                      </div>
-                      <button
-                        onClick={() => setIsTemplatesExpanded(false)}
-                        className="p-1 hover:bg-gray-700 rounded transition-colors"
-                      >
-                        <ChevronUp className="w-4 h-4 text-gray-400" />
-                      </button>
-                    </div>
-                    <div className={`${isMobile ? 'max-h-60' : 'max-h-80'} overflow-y-auto`}>
-                      <TemplateGallery
-                        onSelectTemplate={handleTemplateSelect}
-                        compact={true}
-                        trackA={songA}
-                        trackB={songB}
-                        durationFilter={durationSize}
-                        selectedTemplateId={selectedTemplate?.id}
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {showBackDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-bold text-white mb-2">Save Changes?</h3>
-            <p className="text-sm text-gray-400 mb-4">
-              Changes will be saved automatically. Return to song selection?
-            </p>
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setShowBackDialog(false)}
-                className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-white font-semibold transition-colors"
-              >
-                Continue Editing
-              </button>
-              <button
-                onClick={() => {
-                  setShowBackDialog(false);
-                  onBack();
-                }}
-                className="flex-1 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded text-white font-semibold transition-colors"
-              >
-                Back to Selection
-              </button>
-            </div>
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-gray-900/95 backdrop-blur-lg border-t border-cyan-500/20"
+        style={{
+          paddingBottom: isMobile ? 'max(0.75rem, env(safe-area-inset-bottom))' : '0.75rem',
+          boxShadow: '0 -4px 30px rgba(6,182,212,0.1)',
+        }}
+      >
+        <div className="max-w-5xl mx-auto px-4 py-3">
+          <button
+            onClick={handleNext}
+            disabled={!selectedTemplate}
+            className={`
+              w-full py-3.5 rounded-xl font-bold text-base transition-all duration-300 flex items-center justify-center space-x-2
+              ${selectedTemplate
+                ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:from-cyan-400 hover:to-blue-400 hover:scale-[1.01]'
+                : 'bg-gray-700/80 text-gray-500 cursor-not-allowed'
+              }
+            `}
+            style={selectedTemplate ? {
+              boxShadow: '0 0 20px rgba(6,182,212,0.3), 0 4px 15px rgba(6,182,212,0.2)',
+            } : undefined}
+          >
+            <span>NEXT</span>
+            <ChevronRight className="w-5 h-5" />
+          </button>
+          {!selectedTemplate && (
+            <p className="text-center text-xs text-gray-500 mt-1.5">Select a template to continue</p>
+          )}
+        </div>
+      </div>
+
+      {aiToastMessage && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
+          <div className="bg-gray-800 border border-cyan-500/40 rounded-lg px-4 py-2.5 shadow-lg shadow-cyan-500/20 flex items-center space-x-2">
+            <Sparkles className="w-4 h-4 text-cyan-400" />
+            <span className="text-sm text-white font-medium">{aiToastMessage}</span>
           </div>
         </div>
       )}
+    </div>
+  );
+};
 
-      {showExportDialog && transition && (
-        <BlendExportDialog
-          transition={transition}
-          songA={songA}
-          songB={songB}
-          onClose={() => setShowExportDialog(false)}
-          onExportComplete={() => {
-            setShowExportDialog(false);
-            alert('Export started! Check the Blends section in your Library to view your exported blend.');
-          }}
-        />
-      )}
+const SongInfoBar: React.FC<{
+  songA: UploadResult;
+  songB: UploadResult;
+  transitionDuration: number;
+}> = ({ songA, songB, transitionDuration }) => {
+  return (
+    <div className="bg-gray-800/50 border-b border-gray-700/50 px-4 py-2.5">
+      <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
+        <div className="flex items-center space-x-2 min-w-0 flex-1">
+          <div className="w-7 h-7 rounded-lg bg-cyan-500/20 flex items-center justify-center flex-shrink-0">
+            <span className="text-xs font-bold text-cyan-400">A</span>
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs text-white font-medium truncate">{songA.originalName}</p>
+            <div className="flex items-center space-x-1.5">
+              {songA.analysis?.bpm && (
+                <span className="text-[10px] text-cyan-400">{Math.round(songA.analysis.bpm)} BPM</span>
+              )}
+              {songA.analysis?.key && (
+                <span className="text-[10px] text-gray-500">{songA.analysis.key}</span>
+              )}
+            </div>
+          </div>
+        </div>
 
-      {showResetPointsModal && (
-        <ResetTransitionPointsModal
-          onConfirm={() => {
-            setShowResetPointsModal(false);
-            if (onResetPoints) {
-              onResetPoints();
-            }
-          }}
-          onCancel={() => setShowResetPointsModal(false)}
-        />
-      )}
+        <div className="flex items-center space-x-1.5 flex-shrink-0 px-2">
+          <div className="w-6 h-px bg-gray-600" />
+          <div className="text-[10px] text-gray-400 font-medium whitespace-nowrap">{transitionDuration}s</div>
+          <div className="w-6 h-px bg-gray-600" />
+        </div>
 
-      <RenderProgressModal
-        isOpen={showRenderProgress}
-        stage={renderStage}
-        message={renderMessage}
-        progress={renderProgress}
-        onClose={() => {
-          setShowRenderProgress(false);
+        <div className="flex items-center space-x-2 min-w-0 flex-1 justify-end">
+          <div className="min-w-0 text-right">
+            <p className="text-xs text-white font-medium truncate">{songB.originalName}</p>
+            <div className="flex items-center space-x-1.5 justify-end">
+              {songB.analysis?.bpm && (
+                <span className="text-[10px] text-green-400">{Math.round(songB.analysis.bpm)} BPM</span>
+              )}
+              {songB.analysis?.key && (
+                <span className="text-[10px] text-gray-500">{songB.analysis.key}</span>
+              )}
+            </div>
+          </div>
+          <div className="w-7 h-7 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0">
+            <span className="text-xs font-bold text-green-400">B</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DurationTabs: React.FC<{
+  activeSize: DurationSize;
+  onChange: (size: DurationSize) => void;
+  counts: Record<DurationSize, number>;
+}> = ({ activeSize, onChange, counts }) => {
+  const tabs: { id: DurationSize; label: string; icon: React.ElementType; range: string }[] = [
+    { id: 'short', label: 'Short', icon: Zap, range: '4-8s' },
+    { id: 'medium', label: 'Medium', icon: Clock, range: '8-15s' },
+    { id: 'long', label: 'Long', icon: Timer, range: '16-25s' },
+  ];
+
+  return (
+    <div className="flex space-x-2">
+      {tabs.map(tab => {
+        const Icon = tab.icon;
+        const isActive = activeSize === tab.id;
+        return (
+          <button
+            key={tab.id}
+            onClick={() => onChange(tab.id)}
+            className={`
+              flex-1 py-2.5 px-3 rounded-lg border-2 transition-all duration-200 flex flex-col items-center space-y-0.5
+              ${isActive
+                ? 'border-cyan-500 bg-cyan-500/10 shadow-lg shadow-cyan-500/10'
+                : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
+              }
+            `}
+            style={isActive ? { boxShadow: '0 0 15px rgba(6,182,212,0.15)' } : undefined}
+          >
+            <div className="flex items-center space-x-1.5">
+              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-cyan-400' : 'text-gray-400'}`} />
+              <span className={`text-xs font-semibold ${isActive ? 'text-cyan-400' : 'text-white'}`}>
+                {tab.label}
+              </span>
+            </div>
+            <span className={`text-[10px] ${isActive ? 'text-cyan-400/70' : 'text-gray-500'}`}>
+              {tab.range} ({counts[tab.id]})
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+const SelectedTemplateCard: React.FC<{
+  template: TemplateData;
+  isPlaying: boolean;
+  onPlayToggle: () => void;
+  onClear: () => void;
+}> = ({ template, isPlaying, onPlayToggle, onClear }) => {
+  return (
+    <div className="relative rounded-xl overflow-hidden"
+      style={{
+        boxShadow: '0 0 25px rgba(6,182,212,0.2), 0 0 50px rgba(59,130,246,0.1)',
+        border: '1px solid rgba(6,182,212,0.4)',
+      }}
+    >
+      <div className="absolute inset-0 pointer-events-none animate-pulse"
+        style={{
+          background: 'linear-gradient(135deg, rgba(6,182,212,0.06) 0%, transparent 50%, rgba(59,130,246,0.06) 100%)',
         }}
-        onReturnHome={() => {
-          setShowRenderProgress(false);
-          onSaveCallback();
-        }}
-        onContinueEditing={() => {
-          setShowRenderProgress(false);
-        }}
-        canClose={renderStage === 'success' || renderStage === 'error'}
       />
-
-      {showLengthWarning && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm">
-          <div className="bg-gray-800 border-2 border-yellow-500/50 rounded-lg p-6 max-w-lg w-full mx-4 shadow-2xl">
-            <div className="flex items-start space-x-3 mb-4">
-              <div className="flex-shrink-0 w-10 h-10 bg-yellow-500/20 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-bold text-white mb-2">Insufficient Song Length</h3>
-                <p className="text-sm text-gray-300 leading-relaxed">{lengthWarningMessage}</p>
-              </div>
-            </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={() => {
-                  setShowLengthWarning(false);
-                  onBack();
-                }}
-                className="flex-1 px-4 py-2.5 bg-cyan-600 hover:bg-cyan-500 rounded text-white font-semibold transition-colors"
-              >
-                Adjust Markers
-              </button>
-              <button
-                onClick={() => setShowLengthWarning(false)}
-                className="flex-1 px-4 py-2.5 bg-gray-700 hover:bg-gray-600 rounded text-white font-semibold transition-colors"
-              >
-                Continue Anyway
-              </button>
-            </div>
+      <div className="relative bg-gray-800/90 p-4 flex items-center justify-between">
+        <div className="flex items-center space-x-3 min-w-0">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-cyan-500/30">
+            <Check className="w-5 h-5 text-white" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-white truncate">{template.name}</p>
+            <p className="text-xs text-cyan-400/80">{template.duration}s -- Selected Template</p>
           </div>
         </div>
-      )}
+        <div className="flex items-center space-x-2 flex-shrink-0">
+          {template.templateData?.previewUrl && (
+            <button
+              onClick={onPlayToggle}
+              className="w-8 h-8 rounded-full bg-cyan-500/20 hover:bg-cyan-500/30 flex items-center justify-center transition-colors"
+            >
+              {isPlaying ? <Pause className="w-4 h-4 text-cyan-400" /> : <Play className="w-4 h-4 text-cyan-400" />}
+            </button>
+          )}
+          <button
+            onClick={onClear}
+            className="text-xs text-gray-400 hover:text-white transition-colors px-2 py-1"
+          >
+            Change
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
