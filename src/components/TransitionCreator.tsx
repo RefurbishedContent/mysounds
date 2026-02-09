@@ -4,9 +4,14 @@ import * as Tone from 'tone';
 import { useAuth } from '../contexts/AuthContext';
 import { storageService, UploadResult } from '../lib/storage';
 import { transitionsService } from '../lib/transitionsService';
+import { BlendData } from '../lib/blendExportService';
 import { AudioScrubber } from './AudioScrubber';
-import { TransitionEditorView } from './TransitionEditorView';
 import MashUpSongSelector from './mashup/MashUpSongSelector';
+import TransitionTemplatesStep from './mashup/TransitionTemplatesStep';
+import MashUpConfirmationStep from './mashup/MashUpConfirmationStep';
+import MashUpProcessingStep from './mashup/MashUpProcessingStep';
+import MashUpCompletionStep from './mashup/MashUpCompletionStep';
+import { TransitionPairConfig } from './mashup/types';
 import {
   SONG_LETTERS,
   SONG_COLORS,
@@ -30,14 +35,26 @@ interface ClipMarker {
   end: number;
 }
 
-type CreatorStep = 'select-songs' | 'set-transition-points';
+type CreatorStep =
+  | 'select-songs'
+  | 'set-transition-points'
+  | 'set-templates'
+  | 'confirm'
+  | 'processing'
+  | 'complete';
+
+const STEP_LABELS: { step: CreatorStep; label: string }[] = [
+  { step: 'select-songs', label: 'Songs' },
+  { step: 'set-transition-points', label: 'Clip Points' },
+  { step: 'set-templates', label: 'Templates' },
+  { step: 'confirm', label: 'Confirm' },
+];
 
 const TransitionCreator: React.FC<TransitionCreatorProps> = ({
   onBack,
   onSave,
   initialSongA,
   initialSongB,
-  editingTransitionId,
 }) => {
   const { user } = useAuth();
 
@@ -53,10 +70,13 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
   const [clipMarkers, setClipMarkers] = useState<ClipMarker[]>([]);
   const [songDurations, setSongDurations] = useState<number[]>([]);
 
-  const [transitionId, setTransitionId] = useState<string | null>(editingTransitionId || null);
-  const [showEditor, setShowEditor] = useState(false);
   const [saving, setSaving] = useState(false);
   const [customName, setCustomName] = useState('');
+
+  const [pairConfigs, setPairConfigs] = useState<TransitionPairConfig[]>([]);
+  const [completedBlends, setCompletedBlends] = useState<BlendData[]>([]);
+
+  const mashUpName = customName.trim() || generateMashUpName(selectedSongs);
 
   useEffect(() => {
     loadData();
@@ -151,9 +171,8 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
 
     setSaving(true);
     try {
-      const mashUpName = customName.trim() || generateMashUpName(selectedSongs);
-
-      let firstTransitionId: string | null = null;
+      const name = mashUpName;
+      const newPairConfigs: TransitionPairConfig[] = [];
 
       for (let i = 0; i < selectedSongs.length - 1; i++) {
         const songA = selectedSongs[i];
@@ -162,8 +181,8 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
         const markersB = clipMarkers[i + 1] || { start: 0, end: 300 };
 
         const pairName = selectedSongs.length === 2
-          ? mashUpName
-          : `${mashUpName} (${SONG_LETTERS[i]}→${SONG_LETTERS[i + 1]})`;
+          ? name
+          : `${name} (${SONG_LETTERS[i]}→${SONG_LETTERS[i + 1]})`;
 
         const transition = await transitionsService.createTransition(user.id, {
           name: pairName,
@@ -181,20 +200,25 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
           metadata: {
             songAName: songA.originalName,
             songBName: songB.originalName,
-            mashUpGroup: mashUpName,
+            mashUpGroup: name,
             pairIndex: i,
           },
         });
 
-        if (i === 0) firstTransitionId = transition.id;
+        newPairConfigs.push({
+          transitionId: transition.id,
+          songA,
+          songB,
+          songAIndex: i,
+          songBIndex: i + 1,
+          selectedTemplate: null,
+          directCut: false,
+          transitionDuration: DEFAULT_TRANSITION_DURATION,
+        });
       }
 
-      if (firstTransitionId && selectedSongs.length === 2) {
-        setTransitionId(firstTransitionId);
-        setShowEditor(true);
-      } else {
-        onSave();
-      }
+      setPairConfigs(newPairConfigs);
+      setCurrentStep('set-templates');
     } catch (error) {
       console.error('Failed to create transitions:', error);
       alert('Failed to create mash up');
@@ -203,17 +227,48 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
     }
   };
 
-  if (showEditor && transitionId && selectedSongs.length >= 2) {
+  const handleBackForStep = () => {
+    switch (currentStep) {
+      case 'set-transition-points':
+        setCurrentStep('select-songs');
+        break;
+      case 'set-templates':
+        setCurrentStep('set-transition-points');
+        break;
+      case 'confirm':
+        setCurrentStep('set-templates');
+        break;
+      default:
+        onBack();
+    }
+  };
+
+  if (currentStep === 'processing') {
     return (
-      <TransitionEditorView
-        songA={selectedSongs[0]}
-        songB={selectedSongs[1]}
-        transitionId={transitionId}
-        onBack={onBack}
-        onSave={onSave}
-        onResetPoints={() => {
-          setShowEditor(false);
-          setCurrentStep('set-transition-points');
+      <MashUpProcessingStep
+        pairs={pairConfigs}
+        mashUpName={mashUpName}
+        onComplete={(blends) => {
+          setCompletedBlends(blends);
+          setCurrentStep('complete');
+        }}
+        onBack={() => setCurrentStep('confirm')}
+      />
+    );
+  }
+
+  if (currentStep === 'complete') {
+    return (
+      <MashUpCompletionStep
+        blends={completedBlends}
+        pairs={pairConfigs}
+        onGoToLibrary={onSave}
+        onStartAnother={() => {
+          setPairConfigs([]);
+          setCompletedBlends([]);
+          setSelectedSongs([]);
+          setCustomName('');
+          setCurrentStep('select-songs');
         }}
       />
     );
@@ -233,27 +288,36 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
   const validationWarnings = buildValidationWarnings(selectedSongs, clipMarkers);
   const hasErrors = validationWarnings.some(w => w.type === 'error');
 
+  const currentStepIndex = STEP_LABELS.findIndex(s => s.step === currentStep);
+
   return (
     <div className="h-full flex flex-col bg-gray-900">
       <div className="bg-gray-800 border-b border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button
-              onClick={currentStep === 'set-transition-points' ? () => setCurrentStep('select-songs') : onBack}
+              onClick={handleBackForStep}
               className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
             >
               <ArrowLeft size={20} className="text-gray-400" />
             </button>
             <div>
               <h1 className="text-xl font-bold text-white">Create New Mash Up</h1>
-              <div className="flex items-center space-x-2 mt-1">
-                <span className={`text-xs ${currentStep === 'select-songs' ? 'text-cyan-400' : 'text-gray-500'}`}>
-                  Select Songs
-                </span>
-                <ChevronRight size={12} className="text-gray-600" />
-                <span className={`text-xs ${currentStep === 'set-transition-points' ? 'text-cyan-400' : 'text-gray-500'}`}>
-                  Set Clip Points
-                </span>
+              <div className="flex items-center space-x-1.5 mt-1">
+                {STEP_LABELS.map((s, i) => (
+                  <React.Fragment key={s.step}>
+                    {i > 0 && <ChevronRight size={10} className="text-gray-600" />}
+                    <span className={`text-[11px] ${
+                      i === currentStepIndex
+                        ? 'text-cyan-400 font-medium'
+                        : i < currentStepIndex
+                        ? 'text-teal-500/70'
+                        : 'text-gray-600'
+                    }`}>
+                      {s.label}
+                    </span>
+                  </React.Fragment>
+                ))}
               </div>
             </div>
           </div>
@@ -297,6 +361,24 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
             hasErrors={hasErrors}
             saving={saving}
             onSave={handleBeginEditing}
+          />
+        )}
+
+        {currentStep === 'set-templates' && (
+          <TransitionTemplatesStep
+            pairs={pairConfigs}
+            onPairsChange={setPairConfigs}
+            onContinue={() => setCurrentStep('confirm')}
+            onBack={() => setCurrentStep('set-transition-points')}
+          />
+        )}
+
+        {currentStep === 'confirm' && (
+          <MashUpConfirmationStep
+            pairs={pairConfigs}
+            mashUpName={mashUpName}
+            onConfirm={() => setCurrentStep('processing')}
+            onBack={() => setCurrentStep('set-templates')}
           />
         )}
       </div>
@@ -365,7 +447,6 @@ const TransitionPointsStep: React.FC<TransitionPointsStepProps> = ({
   onSave,
 }) => {
   const defaultName = generateMashUpName(selectedSongs);
-  const transitionCount = selectedSongs.length - 1;
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-6" data-tutorial="transition-points-interface">
@@ -536,11 +617,7 @@ const TransitionPointsStep: React.FC<TransitionPointsStepProps> = ({
           className="w-full max-w-md px-8 py-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-3 shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40"
         >
           <span className="text-lg">
-            {saving
-              ? 'Creating...'
-              : transitionCount === 1
-              ? 'Create Mash Up'
-              : `Create ${transitionCount} Mash Ups`}
+            {saving ? 'Creating...' : 'Set Templates'}
           </span>
           <ChevronRight size={24} />
         </button>
