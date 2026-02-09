@@ -69,11 +69,13 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   const [templateAudioUrl, setTemplateAudioUrl] = useState<string | null>(null);
   const [isPlayingTemplate, setIsPlayingTemplate] = useState(false);
   const [playbackProgress, setPlaybackProgress] = useState(0);
-  const playerRef = React.useRef<Tone.Player | null>(null);
-  const analyserRef = useRef<Tone.Analyser | null>(null);
+  const [waveformPeaks, setWaveformPeaks] = useState<number[]>([]);
+  const [waveformLoading, setWaveformLoading] = useState(false);
+  const playerRef = useRef<Tone.Player | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const progressIntervalRef = useRef<number | null>(null);
+  const playbackProgressRef = useRef(0);
 
   useEffect(() => {
     loadData();
@@ -92,7 +94,6 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   useEffect(() => {
     return () => {
       playerRef.current?.dispose();
-      analyserRef.current?.dispose();
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
@@ -184,52 +185,139 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     }
   };
 
-  const drawWaveform = () => {
-    if (!canvasRef.current || !analyserRef.current) return;
+  const loadWaveformPeaks = async (url: string) => {
+    setWaveformLoading(true);
+    setWaveformPeaks([]);
+    try {
+      const response = await fetch(url);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+      const rawData = audioBuffer.getChannelData(0);
+      const barCount = 200;
+      const blockSize = Math.floor(rawData.length / barCount);
+      const peaks: number[] = [];
+
+      for (let i = 0; i < barCount; i++) {
+        let sum = 0;
+        const start = i * blockSize;
+        for (let j = start; j < start + blockSize && j < rawData.length; j++) {
+          sum += Math.abs(rawData[j]);
+        }
+        peaks.push(sum / blockSize);
+      }
+
+      const maxPeak = Math.max(...peaks, 0.01);
+      const normalized = peaks.map(p => p / maxPeak);
+      setWaveformPeaks(normalized);
+      audioContext.close();
+    } catch (error) {
+      console.error('Failed to load waveform:', error);
+    } finally {
+      setWaveformLoading(false);
+    }
+  };
+
+  const drawStaticWaveform = useCallback((peaks: number[], progress: number) => {
+    if (!canvasRef.current || peaks.length === 0) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const width = canvas.width;
-    const height = canvas.height;
-    const values = analyserRef.current.getValue();
-    const normalizedValues = Array.isArray(values) ? values : [values];
+    const dpr = window.devicePixelRatio || 1;
+    const displayWidth = canvas.clientWidth;
+    const displayHeight = canvas.clientHeight;
+
+    if (canvas.width !== displayWidth * dpr || canvas.height !== displayHeight * dpr) {
+      canvas.width = displayWidth * dpr;
+      canvas.height = displayHeight * dpr;
+      ctx.scale(dpr, dpr);
+    }
+
+    const width = displayWidth;
+    const height = displayHeight;
 
     ctx.clearRect(0, 0, width, height);
 
-    const gradient = ctx.createLinearGradient(0, 0, width, 0);
-    gradient.addColorStop(0, 'rgba(6, 182, 212, 0.8)');
-    gradient.addColorStop(0.5, 'rgba(59, 130, 246, 0.8)');
-    gradient.addColorStop(1, 'rgba(6, 182, 212, 0.8)');
-    ctx.fillStyle = gradient;
+    const barWidth = width / peaks.length;
+    const gap = Math.max(1, barWidth * 0.15);
+    const barDrawWidth = barWidth - gap;
+    const playheadX = progress * width;
+    const minBarHeight = 2;
 
-    const barWidth = width / normalizedValues.length;
-    normalizedValues.forEach((value, i) => {
-      const normalizedValue = typeof value === 'number' ? value : 0;
-      const barHeight = ((normalizedValue + 140) / 140) * height;
+    peaks.forEach((peak, i) => {
+      const barHeight = Math.max(peak * (height * 0.85), minBarHeight);
       const x = i * barWidth;
-      const y = height - barHeight;
+      const y = (height - barHeight) / 2;
+      const barMidX = x + barDrawWidth / 2;
 
-      ctx.fillRect(x, y, barWidth - 1, barHeight);
+      if (barMidX < playheadX) {
+        const gradient = ctx.createLinearGradient(0, y, 0, y + barHeight);
+        gradient.addColorStop(0, 'rgba(6, 182, 212, 0.95)');
+        gradient.addColorStop(1, 'rgba(59, 130, 246, 0.95)');
+        ctx.fillStyle = gradient;
+      } else {
+        const gradient = ctx.createLinearGradient(0, y, 0, y + barHeight);
+        gradient.addColorStop(0, 'rgba(6, 182, 212, 0.35)');
+        gradient.addColorStop(1, 'rgba(59, 130, 246, 0.35)');
+        ctx.fillStyle = gradient;
+      }
+
+      ctx.beginPath();
+      const radius = Math.min(barDrawWidth / 2, 2);
+      ctx.roundRect(x, y, barDrawWidth, barHeight, radius);
+      ctx.fill();
     });
 
-    // Draw playhead
-    const playheadX = playbackProgress * width;
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(playheadX, 0);
-    ctx.lineTo(playheadX, height);
-    ctx.stroke();
+    if (progress > 0) {
+      ctx.save();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.shadowColor = 'rgba(6, 182, 212, 0.8)';
+      ctx.shadowBlur = 6;
+      ctx.beginPath();
+      ctx.moveTo(playheadX, 0);
+      ctx.lineTo(playheadX, height);
+      ctx.stroke();
 
-    // Draw playhead circle at top
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-    ctx.beginPath();
-    ctx.arc(playheadX, 8, 6, 0, Math.PI * 2);
-    ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(playheadX, 0, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }, []);
 
-    animationFrameRef.current = requestAnimationFrame(drawWaveform);
+  useEffect(() => {
+    if (waveformPeaks.length > 0) {
+      drawStaticWaveform(waveformPeaks, playbackProgress);
+    }
+  }, [waveformPeaks, playbackProgress, drawStaticWaveform]);
+
+  useEffect(() => {
+    if (templateAudioUrl && selectedTemplate) {
+      loadWaveformPeaks(templateAudioUrl);
+    }
+  }, [templateAudioUrl, selectedTemplate?.id]);
+
+  const startPlayheadAnimation = (duration: number) => {
+    const startTime = Tone.now();
+    const animate = () => {
+      const elapsed = Tone.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      playbackProgressRef.current = progress;
+      setPlaybackProgress(progress);
+
+      if (progress >= 1) {
+        stopTemplatePlayback();
+        return;
+      }
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+    animationFrameRef.current = requestAnimationFrame(animate);
   };
 
   const handlePlayTemplate = async () => {
@@ -243,44 +331,23 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     }
 
     try {
-      const analyser = new Tone.Analyser('waveform', 512);
-      analyserRef.current = analyser;
-
       const player = new Tone.Player(templateAudioUrl, () => {
-        player.connect(analyser);
-        analyser.toDestination();
+        player.toDestination();
         player.start();
         setIsPlayingTemplate(true);
         setPlaybackProgress(0);
-        drawWaveform();
-
-        // Track playback progress
-        const duration = selectedTemplate.duration;
-        const startTime = Tone.now();
-        progressIntervalRef.current = window.setInterval(() => {
-          const elapsed = Tone.now() - startTime;
-          const progress = Math.min(elapsed / duration, 1);
-          setPlaybackProgress(progress);
-
-          if (progress >= 1) {
-            stopTemplatePlayback();
-          }
-        }, 50);
+        playbackProgressRef.current = 0;
+        startPlayheadAnimation(selectedTemplate.duration);
 
         player.onstop = () => {
           setIsPlayingTemplate(false);
           setPlaybackProgress(0);
+          playbackProgressRef.current = 0;
           player.dispose();
-          analyser.dispose();
           playerRef.current = null;
-          analyserRef.current = null;
           if (animationFrameRef.current) {
             cancelAnimationFrame(animationFrameRef.current);
             animationFrameRef.current = null;
-          }
-          if (progressIntervalRef.current) {
-            clearInterval(progressIntervalRef.current);
-            progressIntervalRef.current = null;
           }
         };
       });
@@ -298,10 +365,6 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       playerRef.current.dispose();
       playerRef.current = null;
     }
-    if (analyserRef.current) {
-      analyserRef.current.dispose();
-      analyserRef.current = null;
-    }
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
@@ -312,6 +375,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     }
     setIsPlayingTemplate(false);
     setPlaybackProgress(0);
+    playbackProgressRef.current = 0;
   };
 
   const handleAIAnalysisComplete = (recommendations: TemplateRecommendation[]) => {
@@ -524,9 +588,12 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                 onClear={() => {
                   stopTemplatePlayback();
                   setSelectedTemplate(null);
+                  setWaveformPeaks([]);
                 }}
                 canvasRef={canvasRef}
                 playbackProgress={playbackProgress}
+                waveformLoading={waveformLoading}
+                hasWaveform={waveformPeaks.length > 0}
               />
             )}
 
@@ -731,7 +798,9 @@ const SelectedTemplateCard: React.FC<{
   onClear: () => void;
   canvasRef: React.RefObject<HTMLCanvasElement>;
   playbackProgress: number;
-}> = ({ template, isPlaying, onPlayToggle, onClear, canvasRef, playbackProgress }) => {
+  waveformLoading: boolean;
+  hasWaveform: boolean;
+}> = ({ template, isPlaying, onPlayToggle, onClear, canvasRef, waveformLoading, hasWaveform }) => {
   return (
     <div className="relative rounded-lg overflow-hidden"
       style={{
@@ -759,9 +828,18 @@ const SelectedTemplateCard: React.FC<{
             {template.templateData?.previewUrl && (
               <button
                 onClick={onPlayToggle}
-                className="w-7 h-7 rounded-full bg-cyan-500/20 hover:bg-cyan-500/30 flex items-center justify-center transition-colors"
+                className={`
+                  w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200
+                  ${isPlaying
+                    ? 'bg-cyan-500 shadow-lg shadow-cyan-500/40'
+                    : 'bg-cyan-500/20 hover:bg-cyan-500/30'
+                  }
+                `}
               >
-                {isPlaying ? <Pause className="w-3.5 h-3.5 text-cyan-400" /> : <Play className="w-3.5 h-3.5 text-cyan-400" />}
+                {isPlaying
+                  ? <Pause className="w-4 h-4 text-white" />
+                  : <Play className="w-4 h-4 text-cyan-400 ml-0.5" />
+                }
               </button>
             )}
             <button
@@ -773,29 +851,25 @@ const SelectedTemplateCard: React.FC<{
           </div>
         </div>
 
-        {template.templateData?.previewUrl && (
-          <div className="p-3 bg-gray-900/30">
-            <div className="relative">
-              <canvas
-                ref={canvasRef}
-                width={800}
-                height={80}
-                className="w-full h-20 rounded-lg"
-                style={{
-                  background: 'linear-gradient(to bottom, rgba(6,182,212,0.05), rgba(59,130,246,0.05))',
-                  border: '1px solid rgba(6,182,212,0.2)',
-                }}
-              />
-              {!isPlaying && playbackProgress === 0 && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-xs text-gray-500 bg-gray-800/80 px-3 py-1.5 rounded-lg border border-gray-700/50">
-                    Click play to preview
-                  </div>
+        <div className="p-3 bg-gray-900/30">
+          <div className="relative">
+            <canvas
+              ref={canvasRef}
+              className="w-full h-16 rounded-md"
+              style={{
+                background: 'linear-gradient(to bottom, rgba(6,182,212,0.03), rgba(59,130,246,0.03))',
+              }}
+            />
+            {waveformLoading && !hasWaveform && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-[10px] text-gray-500">Loading waveform...</span>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
