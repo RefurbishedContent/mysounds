@@ -76,7 +76,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
   const [pairConfigs, setPairConfigs] = useState<TransitionPairConfig[]>([]);
   const [completedBlends, setCompletedBlends] = useState<BlendData[]>([]);
 
-  const mashUpName = customName.trim() || generateMashUpName(selectedSongs);
+  const mashUpName = customName.trim() || (selectedSongs.length > 0 ? generateMashUpName(selectedSongs) : '');
 
   useEffect(() => {
     loadData();
