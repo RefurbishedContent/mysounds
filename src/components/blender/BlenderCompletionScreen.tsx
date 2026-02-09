@@ -38,7 +38,7 @@ const BlenderCompletionScreen: React.FC<BlenderCompletionScreenProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-start justify-center z-50 p-4 pt-20 overflow-y-auto">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-start justify-center z-50 p-3 pt-6 md:p-4 md:pt-20 overflow-y-auto">
       {showCelebration && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="relative">
@@ -48,18 +48,18 @@ const BlenderCompletionScreen: React.FC<BlenderCompletionScreenProps> = ({
         </div>
       )}
 
-      <div className="max-w-xl w-full bg-gray-800 border-2 border-teal-500/30 rounded-xl shadow-2xl shadow-teal-500/20 relative my-4">
-        <div className="p-5">
-          <div className="text-center mb-4">
-            <div className="w-14 h-14 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg shadow-teal-500/50">
-              <CheckCircle className="w-7 h-7 text-white" />
+      <div className="max-w-xl w-full bg-gray-800 border-2 border-teal-500/30 rounded-xl shadow-2xl shadow-teal-500/20 relative my-2 md:my-4">
+        <div className="p-4 md:p-5">
+          <div className="text-center mb-3 md:mb-4">
+            <div className="w-11 h-11 md:w-14 md:h-14 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-2 md:mb-3 shadow-lg shadow-teal-500/50">
+              <CheckCircle className="w-5 h-5 md:w-7 md:h-7 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-1">Blend Complete!</h2>
-            <p className="text-sm text-gray-400">Your audio blend has been saved to your library</p>
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-0.5 md:mb-1">Blend Complete!</h2>
+            <p className="text-xs md:text-sm text-gray-400">Your audio blend has been saved to your library</p>
           </div>
 
-          <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4 mb-4">
-            <div className="flex items-start space-x-3 mb-4">
+          <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-3 md:p-4 mb-3 md:mb-4">
+            <div className="flex items-start space-x-3 mb-3 md:mb-4">
               <div className="w-12 h-12 bg-gradient-to-br from-teal-500/20 to-cyan-500/20 rounded-lg flex items-center justify-center border border-teal-500/30 flex-shrink-0">
                 <FileAudio className="w-6 h-6 text-teal-400" />
               </div>
@@ -73,36 +73,36 @@ const BlenderCompletionScreen: React.FC<BlenderCompletionScreenProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <div className="bg-gray-900/70 rounded-lg p-2.5">
+            <div className="grid grid-cols-2 gap-2 md:gap-3 mb-3">
+              <div className="bg-gray-900/70 rounded-lg p-2">
                 <div className="flex items-center space-x-1.5 mb-0.5">
-                  <Clock className="w-3.5 h-3.5 text-gray-400" />
-                  <span className="text-xs text-gray-400">Duration</span>
+                  <Clock className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-400" />
+                  <span className="text-[10px] md:text-xs text-gray-400">Duration</span>
                 </div>
-                <p className="text-base font-bold text-white">{formatTime(blend.duration)}</p>
+                <p className="text-sm md:text-base font-bold text-white">{formatTime(blend.duration)}</p>
               </div>
-              <div className="bg-gray-900/70 rounded-lg p-2.5">
+              <div className="bg-gray-900/70 rounded-lg p-2">
                 <div className="flex items-center space-x-1.5 mb-0.5">
-                  <Database className="w-3.5 h-3.5 text-gray-400" />
-                  <span className="text-xs text-gray-400">File Size</span>
+                  <Database className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-400" />
+                  <span className="text-[10px] md:text-xs text-gray-400">File Size</span>
                 </div>
-                <p className="text-base font-bold text-white">
+                <p className="text-sm md:text-base font-bold text-white">
                   {blend.fileSize ? formatFileSize(blend.fileSize) : 'N/A'}
                 </p>
               </div>
-              <div className="bg-gray-900/70 rounded-lg p-2.5">
+              <div className="bg-gray-900/70 rounded-lg p-2">
                 <div className="flex items-center space-x-1.5 mb-0.5">
-                  <FileAudio className="w-3.5 h-3.5 text-gray-400" />
-                  <span className="text-xs text-gray-400">Format</span>
+                  <FileAudio className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-400" />
+                  <span className="text-[10px] md:text-xs text-gray-400">Format</span>
                 </div>
-                <p className="text-base font-bold text-white">{blend.format.toUpperCase()}</p>
+                <p className="text-sm md:text-base font-bold text-white">{blend.format.toUpperCase()}</p>
               </div>
-              <div className="bg-gray-900/70 rounded-lg p-2.5">
+              <div className="bg-gray-900/70 rounded-lg p-2">
                 <div className="flex items-center space-x-1.5 mb-0.5">
-                  <Database className="w-3.5 h-3.5 text-gray-400" />
-                  <span className="text-xs text-gray-400">Quality</span>
+                  <Database className="w-3 h-3 md:w-3.5 md:h-3.5 text-gray-400" />
+                  <span className="text-[10px] md:text-xs text-gray-400">Quality</span>
                 </div>
-                <p className="text-base font-bold text-white capitalize">{blend.quality}</p>
+                <p className="text-sm md:text-base font-bold text-white capitalize">{blend.quality}</p>
               </div>
             </div>
 
@@ -128,25 +128,25 @@ const BlenderCompletionScreen: React.FC<BlenderCompletionScreenProps> = ({
             </div>
           </div>
 
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             <button
               onClick={onGoToLibrary}
-              className="w-full group relative overflow-hidden bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg py-3 px-4 hover:from-teal-600 hover:to-cyan-600 transition-all transform hover:scale-[1.02] shadow-lg shadow-teal-500/30"
+              className="w-full group relative overflow-hidden bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg py-2.5 md:py-3 px-4 hover:from-teal-600 hover:to-cyan-600 transition-all transform hover:scale-[1.02] shadow-lg shadow-teal-500/30"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-teal-400 to-cyan-400 opacity-0 group-hover:opacity-20 blur-xl transition-opacity" />
               <div className="relative flex items-center justify-center space-x-2.5">
                 <Library className="w-4 h-4" />
-                <span className="font-bold text-base">View Blend in Library</span>
+                <span className="font-bold text-sm md:text-base">View Blend in Library</span>
               </div>
             </button>
 
             <button
               onClick={onCreateAnother}
-              className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg py-3 px-4 hover:bg-gray-600 hover:border-gray-500 transition-all"
+              className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg py-2.5 md:py-3 px-4 hover:bg-gray-600 hover:border-gray-500 transition-all"
             >
               <div className="flex items-center justify-center space-x-2.5">
                 <RefreshCw className="w-4 h-4 text-gray-300" />
-                <span className="font-bold text-base">Start Another Blend</span>
+                <span className="font-bold text-sm md:text-base">Start Another Blend</span>
               </div>
             </button>
           </div>
