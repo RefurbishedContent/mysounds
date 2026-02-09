@@ -211,15 +211,6 @@ export const AIRecommendationsPanel: React.FC<AIRecommendationsPanelProps> = ({
         })}
       </div>
 
-      <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-4 flex items-start space-x-3">
-        <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-        <div className="text-sm text-blue-200 leading-relaxed">
-          <p className="font-medium mb-1">About AI Matching</p>
-          <p className="text-blue-300/80">
-            Templates are ranked by analyzing BPM compatibility, harmonic key matching, genre similarity, and energy levels. Higher scores indicate better compatibility for smooth transitions.
-          </p>
-        </div>
-      </div>
     </div>
   );
 };
