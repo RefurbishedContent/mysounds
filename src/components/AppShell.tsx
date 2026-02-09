@@ -26,6 +26,8 @@ import ProjectCreationWizard from './ProjectCreationWizard';
 import NewProjectTutorialOverlay from './NewProjectTutorialOverlay';
 import { UploadResult, storageService } from '../lib/storage';
 import { transitionsService } from '../lib/transitionsService';
+import { TransitionPairConfig } from './mashup/types';
+import { DEFAULT_TRANSITION_DURATION } from './mashup/constants';
 
 type AppView = 'home' | 'create-with-ai' | 'ai-design' | 'ai-video' | 'ai-voice' | 'all-tools' | 'templates' | 'recent-projects' | 'share-schedule' | 'create-transition' | 'editor' | 'template-manager' | 'library' | 'mixer' | 'mixer-editor' | 'preview' | 'files' | 'transition-editor' | 'transitions' | 'playlists' | 'profile' | 'project-wizard';
 
@@ -62,6 +64,8 @@ const AppShell: React.FC = () => {
   const [editingTransitionId, setEditingTransitionId] = useState<string | undefined>();
   const [activeMixSessionId, setActiveMixSessionId] = useState<string | undefined>();
   const [libraryInitialTab, setLibraryInitialTab] = useState<'songs' | 'blends' | undefined>();
+  const [editingPairConfigs, setEditingPairConfigs] = useState<TransitionPairConfig[] | undefined>();
+  const [editingMashUpName, setEditingMashUpName] = useState<string | undefined>();
 
   const navigateTo = (view: AppView) => {
     if (view !== 'library' && view !== 'files') {
@@ -163,6 +167,8 @@ const AppShell: React.FC = () => {
     setTransitionSongA(undefined);
     setTransitionSongB(undefined);
     setEditingTransitionId(undefined);
+    setEditingPairConfigs(undefined);
+    setEditingMashUpName(undefined);
     setCurrentView('recent-projects');
   };
 
@@ -170,6 +176,8 @@ const AppShell: React.FC = () => {
     setTransitionSongA(undefined);
     setTransitionSongB(undefined);
     setEditingTransitionId(undefined);
+    setEditingPairConfigs(undefined);
+    setEditingMashUpName(undefined);
     setCurrentView('recent-projects');
   };
 
@@ -178,9 +186,58 @@ const AppShell: React.FC = () => {
     setCurrentView('create-transition');
   };
 
-  const handleEditTransition = (transitionId: string) => {
-    setEditingTransitionId(transitionId);
-    setCurrentView('transition-editor');
+  const handleEditTransition = async (transitionId: string) => {
+    if (!user) return;
+
+    try {
+      const transition = await transitionsService.getTransition(transitionId);
+      const mashUpGroup = transition.metadata?.mashUpGroup;
+
+      if (mashUpGroup) {
+        const groupTransitions = await transitionsService.getTransitionsByMashUpGroup(user.id, mashUpGroup);
+
+        if (groupTransitions.length > 0) {
+          const songIds = new Set<string>();
+          groupTransitions.forEach(t => {
+            songIds.add(t.songAId);
+            songIds.add(t.songBId);
+          });
+
+          const songPromises = Array.from(songIds).map(id => storageService.getUpload(id));
+          const songsResults = await Promise.all(songPromises);
+          const songsMap = new Map<string, UploadResult>();
+          songsResults.forEach(song => {
+            if (song) songsMap.set(song.id, song);
+          });
+
+          const pairConfigs: TransitionPairConfig[] = groupTransitions.map((t, index) => ({
+            transitionId: t.id,
+            songA: songsMap.get(t.songAId)!,
+            songB: songsMap.get(t.songBId)!,
+            songAIndex: t.metadata?.pairIndex ?? index,
+            songBIndex: (t.metadata?.pairIndex ?? index) + 1,
+            selectedTemplate: null,
+            directCut: false,
+            transitionDuration: t.transitionDuration || DEFAULT_TRANSITION_DURATION,
+          }));
+
+          setEditingPairConfigs(pairConfigs);
+          setEditingMashUpName(mashUpGroup);
+          setEditingTransitionId(undefined);
+          setCurrentView('create-transition');
+          return;
+        }
+      }
+
+      setEditingPairConfigs(undefined);
+      setEditingMashUpName(undefined);
+      setEditingTransitionId(transitionId);
+      setCurrentView('transition-editor');
+    } catch (error) {
+      console.error('Failed to load transition for editing:', error);
+      setEditingTransitionId(transitionId);
+      setCurrentView('transition-editor');
+    }
   };
 
   const handleMobileNavigation = (view: MobileNavView) => {
@@ -348,6 +405,8 @@ const AppShell: React.FC = () => {
             initialSongA={transitionSongA}
             initialSongB={transitionSongB}
             editingTransitionId={editingTransitionId}
+            initialPairConfigs={editingPairConfigs}
+            initialMashUpName={editingMashUpName}
           />
         );
       case 'transition-editor':

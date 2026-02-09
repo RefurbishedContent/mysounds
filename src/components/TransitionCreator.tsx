@@ -28,6 +28,8 @@ interface TransitionCreatorProps {
   initialSongA?: UploadResult;
   initialSongB?: UploadResult;
   editingTransitionId?: string;
+  initialPairConfigs?: TransitionPairConfig[];
+  initialMashUpName?: string;
 }
 
 interface ClipMarker {
@@ -55,25 +57,48 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
   onSave,
   initialSongA,
   initialSongB,
+  initialPairConfigs,
+  initialMashUpName,
 }) => {
   const { user } = useAuth();
 
   const initialSongs = [initialSongA, initialSongB].filter(Boolean) as UploadResult[];
-  const [currentStep, setCurrentStep] = useState<CreatorStep>(
-    initialSongs.length >= 2 ? 'set-transition-points' : 'select-songs'
-  );
+
+  const getSongsFromPairConfigs = (configs: TransitionPairConfig[]): UploadResult[] => {
+    if (!configs || configs.length === 0) return [];
+    const songMap = new Map<number, UploadResult>();
+    configs.forEach(config => {
+      songMap.set(config.songAIndex, config.songA);
+      songMap.set(config.songBIndex, config.songB);
+    });
+    return Array.from(songMap.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([, song]) => song);
+  };
+
+  const getInitialStep = (): CreatorStep => {
+    if (initialPairConfigs && initialPairConfigs.length > 0) {
+      return 'set-templates';
+    }
+    return initialSongs.length >= 2 ? 'set-transition-points' : 'select-songs';
+  };
+
+  const [currentStep, setCurrentStep] = useState<CreatorStep>(getInitialStep());
 
   const [songs, setSongs] = useState<UploadResult[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedSongs, setSelectedSongs] = useState<UploadResult[]>(initialSongs);
+  const initialSelectedSongs = initialPairConfigs && initialPairConfigs.length > 0
+    ? getSongsFromPairConfigs(initialPairConfigs)
+    : initialSongs;
+  const [selectedSongs, setSelectedSongs] = useState<UploadResult[]>(initialSelectedSongs);
 
   const [clipMarkers, setClipMarkers] = useState<ClipMarker[]>([]);
   const [songDurations, setSongDurations] = useState<number[]>([]);
 
   const [saving, setSaving] = useState(false);
-  const [customName, setCustomName] = useState('');
+  const [customName, setCustomName] = useState(initialMashUpName || '');
 
-  const [pairConfigs, setPairConfigs] = useState<TransitionPairConfig[]>([]);
+  const [pairConfigs, setPairConfigs] = useState<TransitionPairConfig[]>(initialPairConfigs || []);
   const [completedBlends, setCompletedBlends] = useState<BlendData[]>([]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -235,13 +260,19 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
     }
   };
 
+  const isEditMode = initialPairConfigs && initialPairConfigs.length > 0;
+
   const handleBackForStep = () => {
     switch (currentStep) {
       case 'set-transition-points':
         setCurrentStep('select-songs');
         break;
       case 'set-templates':
-        setCurrentStep('set-transition-points');
+        if (isEditMode) {
+          onBack();
+        } else {
+          setCurrentStep('set-transition-points');
+        }
         break;
       case 'confirm':
         setCurrentStep('set-templates');

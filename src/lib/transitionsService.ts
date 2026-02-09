@@ -168,6 +168,21 @@ class TransitionsService {
     if (error) throw error;
   }
 
+  async getTransitionsByMashUpGroup(userId: string, mashUpGroup: string): Promise<TransitionData[]> {
+    const { data, error } = await supabase
+      .from('transitions')
+      .select()
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    return data
+      .filter(row => row.metadata?.mashUpGroup === mashUpGroup)
+      .sort((a, b) => (a.metadata?.pairIndex ?? 0) - (b.metadata?.pairIndex ?? 0))
+      .map(row => this.mapRowToTransition(row));
+  }
+
   async getTransitionWithDetails(transitionId: string): Promise<TransitionData & {
     songA?: any;
     songB?: any;
