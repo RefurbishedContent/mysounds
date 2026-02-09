@@ -6,10 +6,12 @@ interface SongSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectSong: (song: UploadResult) => void;
-  currentSongA: UploadResult | null;
-  currentSongB: UploadResult | null;
-  selectingFor: 'A' | 'B';
+  currentSongA?: UploadResult | null;
+  currentSongB?: UploadResult | null;
+  selectingFor?: 'A' | 'B';
   songs: UploadResult[];
+  selectedSongIds?: string[];
+  modalTitle?: string;
 }
 
 export const SongSelectionModal: React.FC<SongSelectionModalProps> = ({
@@ -20,6 +22,8 @@ export const SongSelectionModal: React.FC<SongSelectionModalProps> = ({
   currentSongB,
   selectingFor,
   songs,
+  selectedSongIds,
+  modalTitle,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -94,7 +98,7 @@ export const SongSelectionModal: React.FC<SongSelectionModalProps> = ({
   if (!isOpen) return null;
 
   const filteredSongs = getFilteredAndSortedSongs();
-  const title = selectingFor === 'A' ? 'Select First Song' : 'Select Second Song';
+  const title = modalTitle || (selectingFor === 'A' ? 'Select First Song' : 'Select Second Song');
 
   return (
     <div
@@ -233,10 +237,13 @@ export const SongSelectionModal: React.FC<SongSelectionModalProps> = ({
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
               {filteredSongs.map((song) => {
+                const isAlreadySelected = selectedSongIds
+                  ? selectedSongIds.includes(song.id)
+                  : false;
                 const isSongA = currentSongA?.id === song.id;
                 const isSongB = currentSongB?.id === song.id;
-                const isSelected = isSongA || isSongB;
-                const isOtherSlot = (selectingFor === 'A' && isSongB) || (selectingFor === 'B' && isSongA);
+                const isSelected = isAlreadySelected || isSongA || isSongB;
+                const isOtherSlot = isAlreadySelected || (selectingFor === 'A' && isSongB) || (selectingFor === 'B' && isSongA);
 
                 return (
                   <button
