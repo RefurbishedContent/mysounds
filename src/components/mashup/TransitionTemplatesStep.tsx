@@ -116,7 +116,6 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
           await transitionsService.updateTransition(pair.transitionId, {
             status: 'ready',
             templateId: null,
-            transitionDuration: 0,
             metadata: {
               ...transition.metadata,
               directCut: true,
