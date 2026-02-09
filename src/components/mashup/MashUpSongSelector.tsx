@@ -185,7 +185,7 @@ const MashUpSongSelector: React.FC<MashUpSongSelectorProps> = ({
             {canAddMore && (
               <button
                 onClick={handleAddSong}
-                className="w-full bg-gray-900/30 rounded-xl p-3 border-2 border-dashed border-gray-700 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all duration-200 group flex items-center gap-3 mt-5"
+                className="w-full bg-gray-900/30 rounded-xl p-3 border-2 border-dashed border-gray-700 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all duration-200 group flex items-center gap-3 mt-8"
               >
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gray-700 group-hover:bg-cyan-500/20 transition-colors flex-shrink-0">
                   <Plus size={20} className="text-gray-400 group-hover:text-cyan-400 transition-colors" />
