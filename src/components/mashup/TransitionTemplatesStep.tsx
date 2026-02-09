@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Scissors, Check, ChevronRight, Zap, Clock, Timer,
-  Sparkles, ArrowRight
+  Sparkles, ArrowRight, Play, Pause, X
 } from 'lucide-react';
+import * as Tone from 'tone';
 import { TemplateData } from '../../lib/database';
 import { transitionsService } from '../../lib/transitionsService';
 import TemplateGallery from '../TemplateGallery';
+import { WaveformDisplay } from '../WaveformDisplay';
 import { SONG_LETTERS, SONG_COLORS } from './constants';
 import { TransitionPairConfig } from './types';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -98,6 +100,10 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
     newSizes[pairIndex] = size;
     setDurationSizes(newSizes);
     updatePair(pairIndex, { transitionDuration: DURATION_RANGES[size].default });
+  };
+
+  const handleClearTemplate = (pairIndex: number) => {
+    updatePair(pairIndex, { selectedTemplate: null });
   };
 
   const handleContinue = async () => {
@@ -217,6 +223,7 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
             pairIndex={index}
             durationSize={durationSizes[index]}
             onTemplateSelect={(t) => handleTemplateSelect(index, t)}
+            onClearTemplate={() => handleClearTemplate(index)}
             onDirectCutToggle={(enabled) => handleDirectCutToggle(index, enabled)}
             onDurationChange={(size) => handleDurationChange(index, size)}
             isMobile={isMobile}
@@ -245,10 +252,11 @@ const PairTemplateCard: React.FC<{
   pairIndex: number;
   durationSize: DurationSize;
   onTemplateSelect: (template: TemplateData) => void;
+  onClearTemplate: () => void;
   onDirectCutToggle: (enabled: boolean) => void;
   onDurationChange: (size: DurationSize) => void;
   isMobile: boolean;
-}> = ({ pair, pairIndex, durationSize, onTemplateSelect, onDirectCutToggle, onDurationChange, isMobile }) => {
+}> = ({ pair, pairIndex, durationSize, onTemplateSelect, onClearTemplate, onDirectCutToggle, onDurationChange, isMobile }) => {
   const colorsA = SONG_COLORS[pair.songAIndex % SONG_COLORS.length];
   const colorsB = SONG_COLORS[pair.songBIndex % SONG_COLORS.length];
   const letterA = SONG_LETTERS[pair.songAIndex];
@@ -342,29 +350,10 @@ const PairTemplateCard: React.FC<{
         )}
 
         {!pair.directCut && pair.selectedTemplate && (
-          <div className="bg-gray-900/50 rounded-lg p-3 border border-cyan-500/20 flex items-center justify-between">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-cyan-500/30">
-                <Check className="w-4 h-4 text-white" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{pair.selectedTemplate.name}</p>
-                <p className="text-[10px] text-cyan-400/80">{pair.selectedTemplate.duration}s</p>
-              </div>
-            </div>
-            <label className="flex items-center gap-2 cursor-pointer flex-shrink-0 ml-3">
-              <input
-                type="checkbox"
-                checked={false}
-                onChange={() => onDirectCutToggle(true)}
-                className="sr-only peer"
-              />
-              <div className="relative w-8 h-4.5 bg-gray-700 peer-checked:bg-teal-500 rounded-full transition-colors">
-                <div className="absolute top-0.5 left-0.5 w-3.5 h-3.5 bg-gray-400 rounded-full transition-transform peer-checked:translate-x-3.5 peer-checked:bg-white" />
-              </div>
-              <span className="text-[10px] text-gray-500">Cut</span>
-            </label>
-          </div>
+          <TemplatePreviewCard
+            template={pair.selectedTemplate}
+            onClear={onClearTemplate}
+          />
         )}
 
         {!pair.directCut && (
@@ -390,6 +379,210 @@ const PairTemplateCard: React.FC<{
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+};
+
+const TemplatePreviewCard: React.FC<{
+  template: TemplateData;
+  onClear: () => void;
+}> = ({ template, onClear }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackTime, setPlaybackTime] = useState(0);
+  const playerRef = useRef<Tone.Player | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number>(0);
+  const pauseTimeRef = useRef<number>(0);
+
+  const audioUrl = template.templateData?.previewUrl || '';
+  const duration = template.duration || 10;
+
+  useEffect(() => {
+    if (!audioUrl) return;
+
+    const initPlayer = async () => {
+      try {
+        await Tone.start();
+        playerRef.current = new Tone.Player(audioUrl).toDestination();
+      } catch (err) {
+        console.error('Failed to init template player:', err);
+      }
+    };
+
+    initPlayer();
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (playerRef.current) {
+        playerRef.current.stop();
+        playerRef.current.dispose();
+        playerRef.current = null;
+      }
+    };
+  }, [audioUrl]);
+
+  const updatePlaybackTime = useCallback(() => {
+    if (!playerRef.current || !isPlaying) return;
+
+    const elapsed = Tone.now() - startTimeRef.current;
+    const newTime = pauseTimeRef.current + elapsed;
+
+    if (newTime >= duration) {
+      setIsPlaying(false);
+      setPlaybackTime(0);
+      pauseTimeRef.current = 0;
+      playerRef.current.stop();
+      return;
+    }
+
+    setPlaybackTime(newTime);
+    animationFrameRef.current = requestAnimationFrame(updatePlaybackTime);
+  }, [isPlaying, duration]);
+
+  useEffect(() => {
+    if (isPlaying) {
+      animationFrameRef.current = requestAnimationFrame(updatePlaybackTime);
+    } else if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [isPlaying, updatePlaybackTime]);
+
+  const handlePlayPause = async () => {
+    if (!playerRef.current || !playerRef.current.loaded) return;
+
+    try {
+      if (isPlaying) {
+        playerRef.current.stop();
+        pauseTimeRef.current = playbackTime;
+        setIsPlaying(false);
+      } else {
+        await Tone.start();
+
+        if (playbackTime >= duration) {
+          pauseTimeRef.current = 0;
+          setPlaybackTime(0);
+        } else {
+          pauseTimeRef.current = playbackTime;
+        }
+
+        startTimeRef.current = Tone.now();
+        playerRef.current.start(Tone.now(), pauseTimeRef.current);
+        setIsPlaying(true);
+      }
+    } catch (error) {
+      console.error('Template playback error:', error);
+    }
+  };
+
+  const handleSeek = (progress: number) => {
+    const time = progress * duration;
+    if (playerRef.current && isPlaying) {
+      playerRef.current.stop();
+      setIsPlaying(false);
+    }
+    setPlaybackTime(time);
+    pauseTimeRef.current = time;
+  };
+
+  const progress = duration > 0 ? playbackTime / duration : 0;
+
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className="bg-gray-900/60 rounded-xl border border-cyan-500/30 overflow-hidden" style={{ boxShadow: '0 0 20px rgba(6,182,212,0.1)' }}>
+      <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-cyan-500/10 to-teal-500/10 border-b border-cyan-500/20">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-lg shadow-cyan-500/30">
+            <Check className="w-3.5 h-3.5 text-white" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-white">{template.name}</p>
+            <p className="text-[10px] text-cyan-400/80">{template.duration}s transition</p>
+          </div>
+        </div>
+        <button
+          onClick={onClear}
+          className="p-1.5 rounded-lg hover:bg-gray-700/50 text-gray-500 hover:text-gray-300 transition-colors"
+          title="Clear selection"
+        >
+          <X size={14} />
+        </button>
+      </div>
+
+      <div className="p-3">
+        <div className="flex items-center gap-3 mb-2">
+          <button
+            onClick={handlePlayPause}
+            disabled={!audioUrl}
+            className="p-2 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all shadow-lg shadow-cyan-500/20"
+            title={isPlaying ? 'Pause' : 'Play template'}
+          >
+            {isPlaying ? (
+              <Pause className="w-4 h-4 text-white" />
+            ) : (
+              <Play className="w-4 h-4 text-white" />
+            )}
+          </button>
+          <div className="flex-1 flex items-center justify-between">
+            <span className="text-xs font-mono text-gray-400">
+              {formatTime(playbackTime)} / {formatTime(duration)}
+            </span>
+            {isPlaying && (
+              <span className="flex items-center gap-1 text-[10px] text-cyan-400">
+                <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" />
+                Playing
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="relative rounded-lg overflow-hidden bg-gray-800/50 border border-gray-700/50">
+          {audioUrl ? (
+            <WaveformDisplay
+              audioUrl={audioUrl}
+              progress={progress}
+              height={60}
+              onSeek={handleSeek}
+              showScrubber={false}
+              progressColor="#ffffff"
+              gradientRegion={{
+                startTime: 0,
+                endTime: duration,
+                startColor: '#06b6d4',
+                endColor: '#14b8a6'
+              }}
+            />
+          ) : (
+            <div className="h-[60px] flex items-center justify-center">
+              <span className="text-xs text-gray-500">No preview available</span>
+            </div>
+          )}
+
+          <div
+            className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg pointer-events-none transition-all"
+            style={{
+              left: `${progress * 100}%`,
+              boxShadow: '0 0 8px rgba(255,255,255,0.8)'
+            }}
+          />
+        </div>
+
+        <p className="text-[10px] text-gray-500 mt-2 text-center">
+          Click waveform to seek
+        </p>
       </div>
     </div>
   );
