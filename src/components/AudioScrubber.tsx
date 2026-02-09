@@ -52,6 +52,11 @@ export function AudioScrubber({
   const startTimeRef = useRef<number>(0);
   const pauseTimeRef = useRef<number>(0);
   const waveformContainerRef = useRef<HTMLDivElement>(null);
+  const markersRef = useRef<AudioMarker[]>(markers);
+  const durationRef = useRef<number>(duration);
+
+  markersRef.current = markers;
+  durationRef.current = duration;
 
   useEffect(() => {
     const initializePlayer = async () => {
@@ -210,13 +215,13 @@ export function AudioScrubber({
     const rect = waveformContainerRef.current.getBoundingClientRect();
     const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
     const progress = x / rect.width;
-    const newTime = progress * duration;
+    const newTime = progress * durationRef.current;
 
-    const marker = markers.find(m => m.id === draggingMarkerId);
+    const marker = markersRef.current.find(m => m.id === draggingMarkerId);
     if (marker?.onDrag) {
       marker.onDrag(newTime);
     }
-  }, [draggingMarkerId, duration, markers]);
+  }, [draggingMarkerId]);
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
     if (!draggingMarkerId || !waveformContainerRef.current) return;
@@ -227,13 +232,13 @@ export function AudioScrubber({
     const rect = waveformContainerRef.current.getBoundingClientRect();
     const x = Math.max(0, Math.min(touch.clientX - rect.left, rect.width));
     const progress = x / rect.width;
-    const newTime = progress * duration;
+    const newTime = progress * durationRef.current;
 
-    const marker = markers.find(m => m.id === draggingMarkerId);
+    const marker = markersRef.current.find(m => m.id === draggingMarkerId);
     if (marker?.onDrag) {
       marker.onDrag(newTime);
     }
-  }, [draggingMarkerId, duration, markers]);
+  }, [draggingMarkerId]);
 
   const handleMouseUp = useCallback(() => {
     setDraggingMarkerId(null);
