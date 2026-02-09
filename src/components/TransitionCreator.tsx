@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Music, ArrowLeft, ChevronRight, Search, X, SlidersHorizontal, Sparkles, Play, Pause } from 'lucide-react';
+import { Music, ArrowLeft, ChevronRight, X, Sparkles, Play, Pause, Plus } from 'lucide-react';
 import * as Tone from 'tone';
 import { useAuth } from '../contexts/AuthContext';
 import { storageService, UploadResult } from '../lib/storage';
 import { transitionsService } from '../lib/transitionsService';
 import { AudioScrubber } from './AudioScrubber';
 import { TransitionEditorView } from './TransitionEditorView';
+import { SongSelectionModal } from './SongSelectionModal';
 
 interface TransitionCreatorProps {
   onBack: () => void;
@@ -28,10 +29,10 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
   const [loading, setLoading] = useState(true);
   const [songA, setSongA] = useState<UploadResult | null>(initialSongA || null);
   const [songB, setSongB] = useState<UploadResult | null>(initialSongB || null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [bpmFilter, setBpmFilter] = useState<'all' | 'slow' | 'medium' | 'fast'>('all');
-  const [sortBy, setSortBy] = useState<'name' | 'recent' | 'bpm'>('recent');
+
+  // Modal state
+  const [showSongModal, setShowSongModal] = useState(false);
+  const [selectingSlot, setSelectingSlot] = useState<'A' | 'B' | null>(null);
 
   const [songAStartMarker, setSongAStartMarker] = useState<number>(0);
   const [songAMarkerPoint, setSongAMarkerPoint] = useState<number>(0);
@@ -49,8 +50,6 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
   const [songADuration, setSongADuration] = useState<number>(300);
   const [songBDuration, setSongBDuration] = useState<number>(300);
 
-  const [showReplaceDialog, setShowReplaceDialog] = useState(false);
-  const [pendingSong, setPendingSong] = useState<UploadResult | null>(null);
   const selectionPanelRef = useRef<HTMLDivElement>(null);
 
   const [customName, setCustomName] = useState<string>('');
@@ -138,72 +137,20 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
     }
   };
 
-  const getFilteredAndSortedSongs = () => {
-    let filtered = [...songs];
-
-    if (searchQuery) {
-      filtered = filtered.filter(song =>
-        song.originalName.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    if (bpmFilter !== 'all') {
-      filtered = filtered.filter(song => {
-        const bpm = song.analysis?.bpm;
-        if (!bpm) return false;
-        if (bpmFilter === 'slow') return bpm < 100;
-        if (bpmFilter === 'medium') return bpm >= 100 && bpm < 140;
-        if (bpmFilter === 'fast') return bpm >= 140;
-        return true;
-      });
-    }
-
-    filtered.sort((a, b) => {
-      if (sortBy === 'name') {
-        return a.originalName.localeCompare(b.originalName);
-      } else if (sortBy === 'bpm') {
-        const bpmA = a.analysis?.bpm || 0;
-        const bpmB = b.analysis?.bpm || 0;
-        return bpmA - bpmB;
-      }
-      return 0;
-    });
-
-    return filtered;
+  // Modal handlers
+  const handleOpenSongModal = (slot: 'A' | 'B') => {
+    setSelectingSlot(slot);
+    setShowSongModal(true);
   };
 
-  const handleSongSelect = (song: UploadResult) => {
-    if (songA && song.id === songA.id) {
-      setSongA(null);
-    } else if (songB && song.id === songB.id) {
-      setSongB(null);
-    } else if (!songA) {
+  const handleSongSelection = (song: UploadResult) => {
+    if (selectingSlot === 'A') {
       setSongA(song);
-      setTimeout(() => {
-        selectionPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
-    } else if (!songB && song.id !== songA.id) {
+    } else if (selectingSlot === 'B') {
       setSongB(song);
-      setTimeout(() => {
-        selectionPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
-    } else if (songA && songB && song.id !== songA.id && song.id !== songB.id) {
-      setPendingSong(song);
-      setShowReplaceDialog(true);
     }
-  };
-
-  const handleReplaceSong = (slot: 'A' | 'B') => {
-    if (!pendingSong) return;
-
-    if (slot === 'A') {
-      setSongA(pendingSong);
-    } else {
-      setSongB(pendingSong);
-    }
-
-    setShowReplaceDialog(false);
-    setPendingSong(null);
+    setShowSongModal(false);
+    setSelectingSlot(null);
 
     setTimeout(() => {
       selectionPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -375,17 +322,26 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
               <div className="max-w-7xl mx-auto px-4 py-4">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                   {/* Song A Card */}
-                  <div className={`bg-gray-900/50 rounded-xl p-4 border-2 transition-all backdrop-blur-sm ${
-                    songA ? 'border-cyan-500 bg-cyan-500/5 shadow-lg shadow-cyan-500/20' : 'border-dashed border-gray-700'
-                  }`}>
+                  <button
+                    onClick={() => handleOpenSongModal('A')}
+                    className={`bg-gray-900/50 rounded-xl p-4 border-2 transition-all backdrop-blur-sm text-left ${
+                      songA
+                        ? 'border-cyan-500 bg-cyan-500/5 shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/30'
+                        : 'border-dashed border-gray-700 hover:border-cyan-500/50 hover:bg-cyan-500/5 cursor-pointer'
+                    }`}
+                  >
                     <div className="flex items-start gap-3 mb-3">
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
                         songA ? 'bg-gradient-to-br from-cyan-500 to-cyan-600 shadow-lg shadow-cyan-500/50' : 'bg-gray-700'
                       }`}>
-                        <span className="text-white font-bold text-lg">A</span>
+                        {songA ? (
+                          <span className="text-white font-bold text-lg">A</span>
+                        ) : (
+                          <Plus size={24} className="text-gray-400" />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-gray-400 mb-1 uppercase tracking-wide">Song A (Ending)</p>
+                        <p className="text-xs text-gray-400 mb-1 uppercase tracking-wide">First Song</p>
                         {songA ? (
                           <>
                             <p className="text-white font-semibold text-sm truncate mb-2">{songA.originalName}</p>
@@ -406,19 +362,22 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                             )}
                           </>
                         ) : (
-                          <p className="text-gray-500 text-sm italic">Select ending song...</p>
+                          <p className="text-gray-500 text-sm italic">Click to select first song</p>
                         )}
                       </div>
                       {songA && (
                         <button
-                          onClick={() => setSongA(null)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSongA(null);
+                          }}
                           className="p-1.5 hover:bg-gray-700/50 rounded-lg transition-colors flex-shrink-0"
                         >
                           <X size={16} className="text-gray-400 hover:text-white" />
                         </button>
                       )}
                     </div>
-                  </div>
+                  </button>
 
                   {/* Analytics/Compatibility Panel */}
                   <div className="bg-gradient-to-br from-gray-900/80 to-gray-900/50 rounded-xl p-4 border border-gray-700/50 backdrop-blur-sm">
@@ -494,17 +453,26 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                   </div>
 
                   {/* Song B Card */}
-                  <div className={`bg-gray-900/50 rounded-xl p-4 border-2 transition-all backdrop-blur-sm ${
-                    songB ? 'border-green-500 bg-green-500/5 shadow-lg shadow-green-500/20' : 'border-dashed border-gray-700'
-                  }`}>
+                  <button
+                    onClick={() => handleOpenSongModal('B')}
+                    className={`bg-gray-900/50 rounded-xl p-4 border-2 transition-all backdrop-blur-sm text-left ${
+                      songB
+                        ? 'border-green-500 bg-green-500/5 shadow-lg shadow-green-500/20 hover:shadow-green-500/30'
+                        : 'border-dashed border-gray-700 hover:border-green-500/50 hover:bg-green-500/5 cursor-pointer'
+                    }`}
+                  >
                     <div className="flex items-start gap-3 mb-3">
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
                         songB ? 'bg-gradient-to-br from-green-500 to-green-600 shadow-lg shadow-green-500/50' : 'bg-gray-700'
                       }`}>
-                        <span className="text-white font-bold text-lg">B</span>
+                        {songB ? (
+                          <span className="text-white font-bold text-lg">B</span>
+                        ) : (
+                          <Plus size={24} className="text-gray-400" />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-gray-400 mb-1 uppercase tracking-wide">Song B (Beginning)</p>
+                        <p className="text-xs text-gray-400 mb-1 uppercase tracking-wide">Second Song</p>
                         {songB ? (
                           <>
                             <p className="text-white font-semibold text-sm truncate mb-2">{songB.originalName}</p>
@@ -525,237 +493,39 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
                             )}
                           </>
                         ) : (
-                          <p className="text-gray-500 text-sm italic">Select starting song...</p>
+                          <p className="text-gray-500 text-sm italic">Click to select second song</p>
                         )}
                       </div>
                       {songB && (
                         <button
-                          onClick={() => setSongB(null)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSongB(null);
+                          }}
                           className="p-1.5 hover:bg-gray-700/50 rounded-lg transition-colors flex-shrink-0"
                         >
                           <X size={16} className="text-gray-400 hover:text-white" />
                         </button>
                       )}
                     </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="max-w-7xl mx-auto px-4 py-6 space-y-4">
-
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-base font-semibold text-white">Your Library ({songs.length} songs)</h3>
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg transition-all duration-200 text-sm ${
-                    showFilters
-                      ? 'bg-cyan-600 text-white'
-                      : 'bg-gray-800 text-gray-400 hover:bg-gray-750'
-                  }`}
-                >
-                  <SlidersHorizontal size={14} />
-                  <span>Filters</span>
-                </button>
-              </div>
-
-              <div className="space-y-3 mb-4">
-                <div className="relative">
-                  <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
-                  <input
-                    type="text"
-                    placeholder="Search songs..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-9 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-200"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-white"
-                    >
-                      <X size={16} />
-                    </button>
-                  )}
-                </div>
-
-                {showFilters && (
-                  <div className="bg-gray-800 rounded-lg p-3 border border-gray-700 space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-400 mb-1.5">BPM Range</label>
-                        <div className="grid grid-cols-4 gap-1.5">
-                          {['all', 'slow', 'medium', 'fast'].map((filter) => (
-                            <button
-                              key={filter}
-                              onClick={() => setBpmFilter(filter as any)}
-                              className={`px-2 py-1.5 rounded text-xs font-medium transition-all duration-200 ${
-                                bpmFilter === filter
-                                  ? 'bg-cyan-600 text-white'
-                                  : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-                              }`}
-                            >
-                              {filter === 'all' ? 'All' : filter === 'slow' ? '<100' : filter === 'medium' ? '100-140' : '140+'}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-medium text-gray-400 mb-1.5">Sort By</label>
-                        <select
-                          value={sortBy}
-                          onChange={(e) => setSortBy(e.target.value as any)}
-                          className="w-full px-3 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                        >
-                          <option value="recent">Most Recent</option>
-                          <option value="name">Name (A-Z)</option>
-                          <option value="bpm">BPM (Low to High)</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-gray-700">
-                      <p className="text-xs text-gray-500">
-                        {getFilteredAndSortedSongs().length} of {songs.length} songs shown
-                      </p>
-                      <button
-                        onClick={() => {
-                          setSearchQuery('');
-                          setBpmFilter('all');
-                          setSortBy('recent');
-                        }}
-                        className="text-xs text-cyan-400 hover:text-cyan-300 font-medium"
-                      >
-                        Clear Filters
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {songs.length === 0 ? (
-                <div className="text-center py-8 bg-gray-800 rounded-lg border border-gray-700">
-                  <Music size={36} className="text-gray-600 mx-auto mb-3" />
-                  <p className="text-gray-400 text-sm mb-1">No songs in your library</p>
-                  <p className="text-gray-500 text-xs">Upload some tracks in the Library section first!</p>
-                </div>
-              ) : getFilteredAndSortedSongs().length === 0 ? (
-                <div className="text-center py-8 bg-gray-800 rounded-lg border border-gray-700">
-                  <Search size={36} className="text-gray-600 mx-auto mb-3" />
-                  <p className="text-gray-400 text-sm mb-2">No songs match your filters</p>
-                  <button
-                    onClick={() => {
-                      setSearchQuery('');
-                      setBpmFilter('all');
-                    }}
-                    className="text-xs text-cyan-400 hover:text-cyan-300 font-medium"
-                  >
-                    Clear filters
                   </button>
                 </div>
-              ) : (
-                <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2">
-                  {getFilteredAndSortedSongs().map((song) => {
-                    const isSongA = songA?.id === song.id;
-                    const isSongB = songB?.id === song.id;
-                    const isSelected = isSongA || isSongB;
-
-                    return (
-                      <button
-                        key={song.id}
-                        onClick={() => handleSongSelect(song)}
-                        className={`
-                          bg-gray-800 rounded-lg p-2 text-left transition-all duration-200 group
-                          ${isSongA
-                            ? 'ring-2 ring-cyan-500 bg-cyan-500/5'
-                            : isSongB
-                            ? 'ring-2 ring-green-500 bg-green-500/5'
-                            : 'hover:bg-gray-750 hover:ring-1 hover:ring-gray-600'
-                          }
-                        `}
-                      >
-                        <div className="w-full aspect-square bg-gradient-to-br from-cyan-600/20 to-purple-600/20 rounded-md mb-1.5 flex items-center justify-center relative overflow-hidden">
-                          <Music className="w-6 h-6 text-cyan-400" />
-                          {isSelected && (
-                            <div className={`absolute top-1 right-1 w-5 h-5 rounded flex items-center justify-center font-bold text-xs text-white ${
-                              isSongA ? 'bg-cyan-500' : 'bg-green-500'
-                            }`}>
-                              {isSongA ? 'A' : 'B'}
-                            </div>
-                          )}
-                        </div>
-                        <h3 className="text-white font-medium text-xs truncate mb-0.5" title={song.originalName}>
-                          {song.originalName}
-                        </h3>
-                        <p className="text-gray-400 text-[10px]">
-                          {song.analysis?.bpm ? `${Math.round(song.analysis.bpm)} BPM` : 'No BPM'}
-                        </p>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              </div>
             </div>
 
-            {showReplaceDialog && pendingSong && (
-                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-                  <div className="bg-gray-800 rounded-xl border border-gray-700 max-w-md w-full p-6 shadow-2xl">
-                    <h3 className="text-xl font-bold text-white mb-2">Replace Song</h3>
-                    <p className="text-gray-400 text-sm mb-6">
-                      You already have 2 songs selected. Which one would you like to replace with <span className="text-white font-medium">{pendingSong.originalName}</span>?
-                    </p>
-
-                    <div className="space-y-3 mb-6">
-                      {songA && (
-                        <button
-                          onClick={() => handleReplaceSong('A')}
-                          className="w-full bg-gray-900 hover:bg-cyan-500/10 border-2 border-cyan-500 rounded-lg p-4 transition-all group"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-cyan-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                              <span className="text-white font-bold text-lg">A</span>
-                            </div>
-                            <div className="flex-1 text-left min-w-0">
-                              <p className="text-xs text-gray-400 mb-0.5">Replace Song A</p>
-                              <p className="text-white font-medium text-sm truncate">{songA.originalName}</p>
-                            </div>
-                            <ChevronRight className="text-cyan-400 group-hover:translate-x-1 transition-transform" size={20} />
-                          </div>
-                        </button>
-                      )}
-
-                      {songB && (
-                        <button
-                          onClick={() => handleReplaceSong('B')}
-                          className="w-full bg-gray-900 hover:bg-green-500/10 border-2 border-green-500 rounded-lg p-4 transition-all group"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                              <span className="text-white font-bold text-lg">B</span>
-                            </div>
-                            <div className="flex-1 text-left min-w-0">
-                              <p className="text-xs text-gray-400 mb-0.5">Replace Song B</p>
-                              <p className="text-white font-medium text-sm truncate">{songB.originalName}</p>
-                            </div>
-                            <ChevronRight className="text-green-400 group-hover:translate-x-1 transition-transform" size={20} />
-                          </div>
-                        </button>
-                      )}
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        setShowReplaceDialog(false);
-                        setPendingSong(null);
-                      }}
-                      className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
+            {/* Song Selection Modal */}
+            <SongSelectionModal
+              isOpen={showSongModal}
+              onClose={() => {
+                setShowSongModal(false);
+                setSelectingSlot(null);
+              }}
+              onSelectSong={handleSongSelection}
+              currentSongA={songA}
+              currentSongB={songB}
+              selectingFor={selectingSlot || 'A'}
+              songs={songs}
+            />
           </div>
         )}
 
