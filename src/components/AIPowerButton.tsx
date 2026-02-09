@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Sparkles, Zap, AlertCircle, Loader2, CheckCircle, Crown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { aiService, AI_CREDITS_COST } from '../lib/ai/aiService';
@@ -114,8 +115,8 @@ export const AIPowerButton: React.FC<AIPowerButtonProps> = ({
         )}
       </button>
 
-      {showConfirmDialog && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      {showConfirmDialog && createPortal(
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
           <div className="bg-gray-800 rounded-2xl border border-gray-600 shadow-2xl max-w-md w-full p-6 space-y-6">
             <div className="flex items-start space-x-4">
               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center flex-shrink-0">
@@ -182,7 +183,8 @@ export const AIPowerButton: React.FC<AIPowerButtonProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
