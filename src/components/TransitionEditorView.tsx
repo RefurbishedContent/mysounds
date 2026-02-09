@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ArrowLeft, Sparkles, Zap, Clock, Timer,
   ChevronRight, ChevronDown, ChevronUp,
-  Music, Play, Pause, Check
+  Music, Play, Pause, Check, X
 } from 'lucide-react';
 import * as Tone from 'tone';
 import { UploadResult } from '../lib/storage';
@@ -68,7 +68,11 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
 
   const [templateAudioUrl, setTemplateAudioUrl] = useState<string | null>(null);
   const [isPlayingTemplate, setIsPlayingTemplate] = useState(false);
+  const [showWaveformModal, setShowWaveformModal] = useState(false);
   const playerRef = React.useRef<Tone.Player | null>(null);
+  const analyserRef = useRef<Tone.Analyser | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     loadData();
@@ -87,6 +91,10 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
   useEffect(() => {
     return () => {
       playerRef.current?.dispose();
+      analyserRef.current?.dispose();
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
     };
   }, []);
 
@@ -172,6 +180,39 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
     }
   };
 
+  const drawWaveform = () => {
+    if (!canvasRef.current || !analyserRef.current) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+    const values = analyserRef.current.getValue();
+    const normalizedValues = Array.isArray(values) ? values : [values];
+
+    ctx.clearRect(0, 0, width, height);
+
+    const gradient = ctx.createLinearGradient(0, 0, width, 0);
+    gradient.addColorStop(0, 'rgba(6, 182, 212, 0.8)');
+    gradient.addColorStop(0.5, 'rgba(59, 130, 246, 0.8)');
+    gradient.addColorStop(1, 'rgba(6, 182, 212, 0.8)');
+    ctx.fillStyle = gradient;
+
+    const barWidth = width / normalizedValues.length;
+    normalizedValues.forEach((value, i) => {
+      const normalizedValue = typeof value === 'number' ? value : 0;
+      const barHeight = ((normalizedValue + 140) / 140) * height;
+      const x = i * barWidth;
+      const y = height - barHeight;
+
+      ctx.fillRect(x, y, barWidth - 1, barHeight);
+    });
+
+    animationFrameRef.current = requestAnimationFrame(drawWaveform);
+  };
+
   const handlePlayTemplate = async () => {
     if (!templateAudioUrl) return;
 
@@ -182,22 +223,37 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       return;
     }
 
+    setShowWaveformModal(true);
+
     try {
+      const analyser = new Tone.Analyser('waveform', 512);
+      analyserRef.current = analyser;
+
       const player = new Tone.Player(templateAudioUrl, () => {
-        player.toDestination();
+        player.connect(analyser);
+        analyser.toDestination();
         player.start();
         setIsPlayingTemplate(true);
+        drawWaveform();
 
         player.onstop = () => {
           setIsPlayingTemplate(false);
+          setShowWaveformModal(false);
           player.dispose();
+          analyser.dispose();
           playerRef.current = null;
+          analyserRef.current = null;
+          if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = null;
+          }
         };
       });
       playerRef.current = player;
     } catch (error) {
       console.error('Failed to play template:', error);
       setIsPlayingTemplate(false);
+      setShowWaveformModal(false);
     }
   };
 
@@ -207,7 +263,16 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
       playerRef.current.dispose();
       playerRef.current = null;
     }
+    if (analyserRef.current) {
+      analyserRef.current.dispose();
+      analyserRef.current = null;
+    }
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
     setIsPlayingTemplate(false);
+    setShowWaveformModal(false);
   };
 
   const handleAIAnalysisComplete = (recommendations: TemplateRecommendation[]) => {
@@ -362,7 +427,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
 
   return (
     <div className="h-full flex flex-col bg-gray-900 relative">
-      <div className="bg-gray-800/90 backdrop-blur-sm border-b border-cyan-500/20 px-4 py-3 flex-shrink-0"
+      <div className="bg-gray-800/90 backdrop-blur-sm border-b border-cyan-500/20 px-4 py-2.5 flex-shrink-0"
         style={{ boxShadow: '0 1px 20px rgba(6,182,212,0.1)' }}
       >
         <div className="flex items-center justify-between">
@@ -374,7 +439,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
               <ArrowLeft className="w-5 h-5 text-gray-400" />
             </button>
             <div>
-              <h1 className="text-base font-bold text-white">{transition.name}</h1>
+              <h1 className="text-sm font-bold text-white">{transition.name}</h1>
               <p className="text-xs text-cyan-400/80">Choose Your Transition</p>
             </div>
           </div>
@@ -388,16 +453,16 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-24">
+      <div className="flex-1 overflow-y-auto pb-16">
         <SongInfoBar songA={songA} songB={songB} transitionDuration={transitionDuration} />
 
-        <div className={`px-4 ${isMobile ? 'py-3' : 'py-5'}`}>
-          <div className="max-w-5xl mx-auto space-y-5">
+        <div className={`px-4 ${isMobile ? 'py-2' : 'py-3'}`}>
+          <div className="max-w-5xl mx-auto space-y-3">
             <div className="text-center">
-              <h2 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-white mb-1`}>
+              <h2 className={`${isMobile ? 'text-lg' : 'text-xl'} font-bold text-white mb-0.5`}>
                 Select a Transition Template
               </h2>
-              <p className="text-sm text-gray-400">
+              <p className="text-xs text-gray-400">
                 Browse and preview templates to find the perfect transition for your mash up
               </p>
             </div>
@@ -447,21 +512,21 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
                   background: 'linear-gradient(135deg, rgba(6,182,212,0.08) 0%, rgba(59,130,246,0.05) 50%, rgba(6,182,212,0.08) 100%)',
                 }}
               />
-              <div className="relative bg-gray-800/80 backdrop-blur-sm p-4 rounded-xl">
-                <div className="flex items-center justify-between mb-3">
+              <div className="relative bg-gray-800/80 backdrop-blur-sm p-3 rounded-xl">
+                <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-2">
-                    <Sparkles className="w-4 h-4 text-cyan-400" />
-                    <h3 className="text-sm font-semibold text-white">
+                    <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                    <h3 className="text-xs font-semibold text-white">
                       Templates ({filteredTemplates.length})
                     </h3>
                   </div>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-[10px] text-gray-500">
                     {durationSize === 'short' ? `${DURATION_RANGES.short.min}-${DURATION_RANGES.short.max}s` :
                      durationSize === 'medium' ? `${DURATION_RANGES.medium.min}-${DURATION_RANGES.medium.max}s` :
                      `${DURATION_RANGES.long.min}-${DURATION_RANGES.long.max}s`}
                   </span>
                 </div>
-                <div className={`${isMobile ? 'max-h-[50vh]' : 'max-h-[55vh]'} overflow-y-auto`}>
+                <div className={`${isMobile ? 'max-h-[60vh]' : 'max-h-[65vh]'} overflow-y-auto`}>
                   <TemplateGallery
                     onSelectTemplate={handleTemplateSelect}
                     compact={true}
@@ -479,33 +544,80 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
 
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-gray-900/95 backdrop-blur-lg border-t border-cyan-500/20"
         style={{
-          paddingBottom: isMobile ? 'max(0.75rem, env(safe-area-inset-bottom))' : '0.75rem',
+          paddingBottom: isMobile ? 'max(0.5rem, env(safe-area-inset-bottom))' : '0.5rem',
           boxShadow: '0 -4px 30px rgba(6,182,212,0.1)',
         }}
       >
-        <div className="max-w-5xl mx-auto px-4 py-3">
+        <div className="max-w-5xl mx-auto px-4 py-2 flex items-center justify-between">
+          <div className="flex-1">
+            {!selectedTemplate && (
+              <p className="text-xs text-gray-500">Select a template to continue</p>
+            )}
+          </div>
           <button
             onClick={handleNext}
             disabled={!selectedTemplate}
             className={`
-              w-full py-3.5 rounded-xl font-bold text-base transition-all duration-300 flex items-center justify-center space-x-2
+              px-8 py-2.5 rounded-lg font-bold text-sm transition-all duration-300 flex items-center space-x-2
               ${selectedTemplate
-                ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:from-cyan-400 hover:to-blue-400 hover:scale-[1.01]'
+                ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:from-cyan-400 hover:to-blue-400 hover:scale-[1.02]'
                 : 'bg-gray-700/80 text-gray-500 cursor-not-allowed'
               }
             `}
             style={selectedTemplate ? {
-              boxShadow: '0 0 20px rgba(6,182,212,0.3), 0 4px 15px rgba(6,182,212,0.2)',
+              boxShadow: '0 0 15px rgba(6,182,212,0.3), 0 4px 10px rgba(6,182,212,0.2)',
             } : undefined}
           >
             <span>NEXT</span>
-            <ChevronRight className="w-5 h-5" />
+            <ChevronRight className="w-4 h-4" />
           </button>
-          {!selectedTemplate && (
-            <p className="text-center text-xs text-gray-500 mt-1.5">Select a template to continue</p>
-          )}
         </div>
       </div>
+
+      {showWaveformModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="max-w-3xl w-full bg-gray-800 rounded-2xl border-2 border-cyan-500/40 shadow-2xl shadow-cyan-500/20 overflow-hidden">
+            <div className="p-4 bg-gray-900/50 border-b border-cyan-500/20 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center animate-pulse">
+                  <Music className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white">{selectedTemplate?.name}</p>
+                  <p className="text-xs text-cyan-400">Playing Preview</p>
+                </div>
+              </div>
+              <button
+                onClick={stopTemplatePlayback}
+                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+            <div className="p-6 bg-gradient-to-br from-gray-900 to-gray-800">
+              <canvas
+                ref={canvasRef}
+                width={800}
+                height={200}
+                className="w-full h-48 rounded-lg"
+                style={{
+                  background: 'linear-gradient(to bottom, rgba(6,182,212,0.05), rgba(59,130,246,0.05))',
+                  border: '1px solid rgba(6,182,212,0.2)',
+                }}
+              />
+              <div className="mt-4 flex items-center justify-center">
+                <button
+                  onClick={stopTemplatePlayback}
+                  className="px-6 py-2 bg-cyan-500 hover:bg-cyan-400 text-white rounded-lg font-semibold transition-colors flex items-center space-x-2"
+                >
+                  <Pause className="w-4 h-4" />
+                  <span>Stop</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {aiToastMessage && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
@@ -525,29 +637,29 @@ const SongInfoBar: React.FC<{
   transitionDuration: number;
 }> = ({ songA, songB, transitionDuration }) => {
   return (
-    <div className="bg-gray-800/50 border-b border-gray-700/50 px-4 py-2.5">
+    <div className="bg-gray-800/50 border-b border-gray-700/50 px-4 py-2">
       <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
         <div className="flex items-center space-x-2 min-w-0 flex-1">
-          <div className="w-7 h-7 rounded-lg bg-cyan-500/20 flex items-center justify-center flex-shrink-0">
-            <span className="text-xs font-bold text-cyan-400">A</span>
+          <div className="w-6 h-6 rounded-lg bg-cyan-500/20 flex items-center justify-center flex-shrink-0">
+            <span className="text-[10px] font-bold text-cyan-400">A</span>
           </div>
           <div className="min-w-0">
             <p className="text-xs text-white font-medium truncate">{songA.originalName}</p>
             <div className="flex items-center space-x-1.5">
               {songA.analysis?.bpm && (
-                <span className="text-[10px] text-cyan-400">{Math.round(songA.analysis.bpm)} BPM</span>
+                <span className="text-[9px] text-cyan-400">{Math.round(songA.analysis.bpm)} BPM</span>
               )}
               {songA.analysis?.key && (
-                <span className="text-[10px] text-gray-500">{songA.analysis.key}</span>
+                <span className="text-[9px] text-gray-500">{songA.analysis.key}</span>
               )}
             </div>
           </div>
         </div>
 
         <div className="flex items-center space-x-1.5 flex-shrink-0 px-2">
-          <div className="w-6 h-px bg-gray-600" />
-          <div className="text-[10px] text-gray-400 font-medium whitespace-nowrap">{transitionDuration}s</div>
-          <div className="w-6 h-px bg-gray-600" />
+          <div className="w-5 h-px bg-gray-600" />
+          <div className="text-[9px] text-gray-400 font-medium whitespace-nowrap">{transitionDuration}s</div>
+          <div className="w-5 h-px bg-gray-600" />
         </div>
 
         <div className="flex items-center space-x-2 min-w-0 flex-1 justify-end">
@@ -555,15 +667,15 @@ const SongInfoBar: React.FC<{
             <p className="text-xs text-white font-medium truncate">{songB.originalName}</p>
             <div className="flex items-center space-x-1.5 justify-end">
               {songB.analysis?.bpm && (
-                <span className="text-[10px] text-green-400">{Math.round(songB.analysis.bpm)} BPM</span>
+                <span className="text-[9px] text-green-400">{Math.round(songB.analysis.bpm)} BPM</span>
               )}
               {songB.analysis?.key && (
-                <span className="text-[10px] text-gray-500">{songB.analysis.key}</span>
+                <span className="text-[9px] text-gray-500">{songB.analysis.key}</span>
               )}
             </div>
           </div>
-          <div className="w-7 h-7 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0">
-            <span className="text-xs font-bold text-green-400">B</span>
+          <div className="w-6 h-6 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0">
+            <span className="text-[10px] font-bold text-green-400">B</span>
           </div>
         </div>
       </div>
@@ -592,16 +704,16 @@ const DurationTabs: React.FC<{
             key={tab.id}
             onClick={() => onChange(tab.id)}
             className={`
-              flex-1 py-2.5 px-3 rounded-lg border-2 transition-all duration-200 flex flex-col items-center space-y-0.5
+              flex-1 py-2 px-3 rounded-lg border-2 transition-all duration-200 flex flex-col items-center space-y-0.5
               ${isActive
                 ? 'border-cyan-500 bg-cyan-500/10 shadow-lg shadow-cyan-500/10'
                 : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
               }
             `}
-            style={isActive ? { boxShadow: '0 0 15px rgba(6,182,212,0.15)' } : undefined}
+            style={isActive ? { boxShadow: '0 0 12px rgba(6,182,212,0.12)' } : undefined}
           >
             <div className="flex items-center space-x-1.5">
-              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-cyan-400' : 'text-gray-400'}`} />
+              <Icon className={`w-3 h-3 ${isActive ? 'text-cyan-400' : 'text-gray-400'}`} />
               <span className={`text-xs font-semibold ${isActive ? 'text-cyan-400' : 'text-white'}`}>
                 {tab.label}
               </span>
@@ -623,39 +735,39 @@ const SelectedTemplateCard: React.FC<{
   onClear: () => void;
 }> = ({ template, isPlaying, onPlayToggle, onClear }) => {
   return (
-    <div className="relative rounded-xl overflow-hidden"
+    <div className="relative rounded-lg overflow-hidden"
       style={{
-        boxShadow: '0 0 25px rgba(6,182,212,0.2), 0 0 50px rgba(59,130,246,0.1)',
-        border: '1px solid rgba(6,182,212,0.4)',
+        boxShadow: '0 0 20px rgba(6,182,212,0.15), 0 0 40px rgba(59,130,246,0.08)',
+        border: '1px solid rgba(6,182,212,0.3)',
       }}
     >
       <div className="absolute inset-0 pointer-events-none animate-pulse"
         style={{
-          background: 'linear-gradient(135deg, rgba(6,182,212,0.06) 0%, transparent 50%, rgba(59,130,246,0.06) 100%)',
+          background: 'linear-gradient(135deg, rgba(6,182,212,0.04) 0%, transparent 50%, rgba(59,130,246,0.04) 100%)',
         }}
       />
-      <div className="relative bg-gray-800/90 p-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3 min-w-0">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-cyan-500/30">
-            <Check className="w-5 h-5 text-white" />
+      <div className="relative bg-gray-800/90 p-3 flex items-center justify-between">
+        <div className="flex items-center space-x-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-cyan-500/30">
+            <Check className="w-4 h-4 text-white" />
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-white truncate">{template.name}</p>
-            <p className="text-xs text-cyan-400/80">{template.duration}s -- Selected Template</p>
+            <p className="text-[10px] text-cyan-400/80">{template.duration}s -- Selected Template</p>
           </div>
         </div>
         <div className="flex items-center space-x-2 flex-shrink-0">
           {template.templateData?.previewUrl && (
             <button
               onClick={onPlayToggle}
-              className="w-8 h-8 rounded-full bg-cyan-500/20 hover:bg-cyan-500/30 flex items-center justify-center transition-colors"
+              className="w-7 h-7 rounded-full bg-cyan-500/20 hover:bg-cyan-500/30 flex items-center justify-center transition-colors"
             >
-              {isPlaying ? <Pause className="w-4 h-4 text-cyan-400" /> : <Play className="w-4 h-4 text-cyan-400" />}
+              {isPlaying ? <Pause className="w-3.5 h-3.5 text-cyan-400" /> : <Play className="w-3.5 h-3.5 text-cyan-400" />}
             </button>
           )}
           <button
             onClick={onClear}
-            className="text-xs text-gray-400 hover:text-white transition-colors px-2 py-1"
+            className="text-[10px] text-gray-400 hover:text-white transition-colors px-2 py-1"
           >
             Change
           </button>
