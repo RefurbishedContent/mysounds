@@ -546,19 +546,6 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({ onBack, onSave, i
               </div>
             </div>
 
-            <div className="bg-gray-900/50 rounded-lg border border-gray-700/50 p-4">
-              <div className="flex items-center justify-center space-x-8">
-                <div className="flex items-center space-x-2">
-                  <div className="w-0.5 h-8 bg-gradient-to-b from-green-500/80 via-green-500 to-green-500/80" style={{ boxShadow: '0 0 10px #10b981' }}></div>
-                  <span className="text-sm text-gray-300">Start/In Point</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-0.5 h-8 bg-gradient-to-b from-red-500/80 via-red-500 to-red-500/80" style={{ boxShadow: '0 0 10px #ef4444' }}></div>
-                  <span className="text-sm text-gray-300">End/Out Point</span>
-                </div>
-              </div>
-            </div>
-
             <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-4">

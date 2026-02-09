@@ -199,6 +199,11 @@ export function AudioScrubber({
     setDraggingMarkerId(markerId);
   }, []);
 
+  const handleMarkerTouchStart = useCallback((markerId: string, e: React.TouchEvent) => {
+    e.stopPropagation();
+    setDraggingMarkerId(markerId);
+  }, []);
+
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!draggingMarkerId || !waveformContainerRef.current) return;
 
@@ -213,7 +218,28 @@ export function AudioScrubber({
     }
   }, [draggingMarkerId, duration, markers]);
 
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    if (!draggingMarkerId || !waveformContainerRef.current) return;
+
+    const touch = e.touches[0];
+    if (!touch) return;
+
+    const rect = waveformContainerRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(touch.clientX - rect.left, rect.width));
+    const progress = x / rect.width;
+    const newTime = progress * duration;
+
+    const marker = markers.find(m => m.id === draggingMarkerId);
+    if (marker?.onDrag) {
+      marker.onDrag(newTime);
+    }
+  }, [draggingMarkerId, duration, markers]);
+
   const handleMouseUp = useCallback(() => {
+    setDraggingMarkerId(null);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
     setDraggingMarkerId(null);
   }, []);
 
@@ -221,12 +247,16 @@ export function AudioScrubber({
     if (draggingMarkerId) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('touchmove', handleTouchMove);
+      document.addEventListener('touchend', handleTouchEnd);
       return () => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
       };
     }
-  }, [draggingMarkerId, handleMouseMove, handleMouseUp]);
+  }, [draggingMarkerId, handleMouseMove, handleMouseUp, handleTouchMove, handleTouchEnd]);
 
   const progress = playbackTime / duration;
 
@@ -239,20 +269,33 @@ export function AudioScrubber({
 
   return (
     <div className="bg-gray-800 rounded-lg p-4">
-      <div className="flex items-center space-x-3 mb-6">
-        <button
-          onClick={handlePlayPause}
-          className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors"
-          title={isPlaying ? 'Pause' : 'Play'}
-        >
-          {isPlaying ? (
-            <Pause className="w-5 h-5 text-white" />
-          ) : (
-            <Play className="w-5 h-5 text-white" />
-          )}
-        </button>
-        <div className="text-sm font-mono text-gray-300">
-          {formatTime(playbackTime)} / {formatTime(duration)}
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={handlePlayPause}
+            className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors"
+            title={isPlaying ? 'Pause' : 'Play'}
+          >
+            {isPlaying ? (
+              <Pause className="w-5 h-5 text-white" />
+            ) : (
+              <Play className="w-5 h-5 text-white" />
+            )}
+          </button>
+          <div className="text-sm font-mono text-gray-300">
+            {formatTime(playbackTime)} / {formatTime(duration)}
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <div className="w-0.5 h-6 bg-gradient-to-b from-green-500/80 via-green-500 to-green-500/80" style={{ boxShadow: '0 0 8px #10b981' }}></div>
+            <span className="text-xs text-gray-300">Start Point</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-0.5 h-6 bg-gradient-to-b from-red-500/80 via-red-500 to-red-500/80" style={{ boxShadow: '0 0 8px #ef4444' }}></div>
+            <span className="text-xs text-gray-300">End Point</span>
+          </div>
         </div>
       </div>
 
@@ -292,12 +335,17 @@ export function AudioScrubber({
         {markers.map((marker) => (
           <div
             key={marker.id}
-            className="absolute top-0 bottom-0 cursor-ew-resize group"
-            style={{ left: `${(marker.time / duration) * 100}%` }}
+            className="absolute top-0 bottom-0 cursor-ew-resize group touch-none"
+            style={{
+              left: `${(marker.time / duration) * 100}%`,
+              width: '44px',
+              marginLeft: '-22px'
+            }}
             onMouseDown={(e) => handleMarkerMouseDown(marker.id, e)}
+            onTouchStart={(e) => handleMarkerTouchStart(marker.id, e)}
           >
             <div
-              className="absolute -top-3 -bottom-3 transition-all group-hover:scale-110"
+              className="absolute -top-3 -bottom-3 transition-all group-hover:scale-110 left-1/2 -translate-x-1/2"
               style={{
                 width: '3px',
                 boxShadow: `0 0 20px ${marker.color}, 0 0 40px ${marker.color}80`,
