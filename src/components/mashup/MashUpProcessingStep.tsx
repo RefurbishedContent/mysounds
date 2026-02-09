@@ -152,14 +152,113 @@ const MashUpProcessingStep: React.FC<MashUpProcessingStepProps> = ({
 
   return (
     <div className="h-full flex flex-col bg-gray-900">
+      {/* Mobile fullscreen video overlay */}
+      <div className="md:hidden fixed inset-0 z-40 bg-black/80">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover opacity-60"
+          src="https://yuotfcbbzrsdpxohoiks.supabase.co/storage/v1/object/sign/Video/Loading%20Screen%20Video%20MySoundsAI.mov?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jYTc4YWI4OS1mMWQ5LTRkNWUtYWYyNS1lYjAyZDY0ZGQwNTUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJWaWRlby9Mb2FkaW5nIFNjcmVlbiBWaWRlbyBNeVNvdW5kc0FJLm1vdiIsImlhdCI6MTc3MDY3MDE5MiwiZXhwIjoxODAyMjA2MTkyfQ.-az3CuvQfC3POO2fTVSafphZTJ5eeauVvBg5K6bxUm4"
+        />
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-6">
+          <div className="text-center mb-6">
+            <h2 className="text-xl font-bold text-white mb-1">{mashUpName}</h2>
+            <p className="text-gray-300 text-sm">Creating your mash ups...</p>
+          </div>
+
+          <div className="w-full max-w-xs mb-5">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-gray-300">{currentMessage}</span>
+              <span className="text-sm font-medium text-white">{Math.round(totalProgress)}%</span>
+            </div>
+            <div className="w-full h-2.5 bg-gray-700/50 rounded-full overflow-hidden backdrop-blur-sm">
+              <div
+                className="h-full bg-gradient-to-r from-teal-500 to-cyan-500 transition-all duration-500 ease-out rounded-full"
+                style={{ width: `${totalProgress}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="w-full max-w-xs space-y-1 max-h-[40vh] overflow-y-auto">
+            {pairs.map((pair, index) => {
+              const isComplete = index < completedBlends.length;
+              const isCurrent = index === currentPairIndex && !error;
+              const colorsA = SONG_COLORS[pair.songAIndex % SONG_COLORS.length];
+              const colorsB = SONG_COLORS[pair.songBIndex % SONG_COLORS.length];
+
+              return (
+                <div
+                  key={pair.transitionId}
+                  className={`flex items-center gap-2 p-2 rounded-lg transition-all ${
+                    isCurrent ? 'bg-teal-500/20 backdrop-blur-sm border border-teal-500/30' : 'border border-transparent'
+                  }`}
+                >
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    isComplete
+                      ? 'bg-green-500/30 text-green-400'
+                      : isCurrent
+                      ? 'bg-teal-500/30 text-teal-400'
+                      : 'bg-gray-700/50 text-gray-500'
+                  }`}>
+                    {isComplete ? (
+                      <CheckCircle size={10} />
+                    ) : isCurrent ? (
+                      <Loader size={10} className="animate-spin" />
+                    ) : (
+                      <span className="text-[8px] font-bold">{index + 1}</span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1 flex-1 min-w-0">
+                    <div className={`w-4 h-4 rounded flex items-center justify-center ${colorsA.bg}`}>
+                      <span className="text-white font-bold text-[7px]">
+                        {SONG_LETTERS[pair.songAIndex]}
+                      </span>
+                    </div>
+                    <ArrowRight size={8} className="text-gray-600 flex-shrink-0" />
+                    <div className={`w-4 h-4 rounded flex items-center justify-center ${colorsB.bg}`}>
+                      <span className="text-white font-bold text-[7px]">
+                        {SONG_LETTERS[pair.songBIndex]}
+                      </span>
+                    </div>
+                    <span className={`text-[10px] truncate ml-1 ${
+                      isComplete ? 'text-green-400' : isCurrent ? 'text-white font-medium' : 'text-gray-500'
+                    }`}>
+                      {pair.directCut ? 'Cut' : pair.selectedTemplate?.name || 'Template'}
+                    </span>
+                  </div>
+
+                  <div className="flex-shrink-0">
+                    {pair.directCut ? (
+                      <Scissors size={10} className={isComplete ? 'text-green-400' : 'text-gray-500'} />
+                    ) : (
+                      <Sparkles size={10} className={isComplete ? 'text-green-400' : isCurrent ? 'text-cyan-400' : 'text-gray-600'} />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={() => setShowCancelConfirm(true)}
+            className="mt-6 px-6 py-2 text-gray-400 hover:text-white transition-colors text-sm"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="max-w-2xl w-full">
-          <div className="text-center mb-6">
+          <div className="text-center mb-6 hidden md:block">
             <h2 className="text-2xl font-bold text-white mb-1">{mashUpName}</h2>
             <p className="text-gray-400 text-sm">Creating your mash ups...</p>
           </div>
 
-          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 mb-6">
+          <div className="hidden md:block bg-gray-800 border border-gray-700 rounded-xl p-6 mb-6">
             <div className="w-full h-48 bg-gray-900 rounded-lg mb-5 overflow-hidden">
               <video
                 autoPlay
@@ -246,7 +345,7 @@ const MashUpProcessingStep: React.FC<MashUpProcessingStepProps> = ({
             </div>
           </div>
 
-          <div className="text-center">
+          <div className="text-center hidden md:block">
             <button
               onClick={() => setShowCancelConfirm(true)}
               className="px-6 py-2 text-gray-400 hover:text-white transition-colors text-sm"

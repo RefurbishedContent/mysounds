@@ -253,14 +253,98 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
 
   return (
     <div className="h-full flex flex-col bg-gray-900">
+      {/* Mobile fullscreen video overlay */}
+      <div className="md:hidden fixed inset-0 z-40 bg-black/80">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover opacity-60"
+          src="https://yuotfcbbzrsdpxohoiks.supabase.co/storage/v1/object/sign/Video/Loading%20Screen%20Video%20MySoundsAI.mov?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jYTc4YWI4OS1mMWQ5LTRkNWUtYWYyNS1lYjAyZDY0ZGQwNTUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJWaWRlby9Mb2FkaW5nIFNjcmVlbiBWaWRlbyBNeVNvdW5kc0FJLm1vdiIsImlhdCI6MTc3MDY3MDE5MiwiZXhwIjoxODAyMjA2MTkyfQ.-az3CuvQfC3POO2fTVSafphZTJ5eeauVvBg5K6bxUm4"
+        />
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-6">
+          <div className="text-center mb-8">
+            <h2 className="text-xl font-bold text-white mb-2">Creating Your Mash Up</h2>
+            <p className="text-gray-300 text-sm">Please wait while we process your audio...</p>
+          </div>
+
+          <div className="w-full max-w-xs mb-6">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-gray-300">{message}</span>
+              <span className="text-sm font-medium text-white">{Math.round(progress)}%</span>
+            </div>
+            <div className="w-full h-2 bg-gray-700/50 rounded-full overflow-hidden backdrop-blur-sm">
+              <div
+                className="h-full bg-gradient-to-r from-teal-500 to-cyan-500 transition-all duration-500 ease-out"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="w-full max-w-xs space-y-1.5">
+            {processingStages.map((stage, index) => {
+              const Icon = stage.icon;
+              const isComplete = index < currentStageIndex;
+              const isCurrent = index === currentStageIndex;
+
+              return (
+                <div
+                  key={stage.key}
+                  className={`flex items-center space-x-3 p-2 rounded-lg transition-all ${
+                    isCurrent ? 'bg-teal-500/20 backdrop-blur-sm' : ''
+                  }`}
+                >
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      isComplete
+                        ? 'bg-green-500/30 text-green-400'
+                        : isCurrent
+                        ? 'bg-teal-500/30 text-teal-400'
+                        : 'bg-gray-700/50 text-gray-500'
+                    }`}
+                  >
+                    {isComplete ? (
+                      <CheckCircle size={12} />
+                    ) : isCurrent ? (
+                      <Loader size={12} className="animate-spin" />
+                    ) : (
+                      <Icon size={12} />
+                    )}
+                  </div>
+                  <span
+                    className={`text-xs ${
+                      isComplete
+                        ? 'text-green-400'
+                        : isCurrent
+                        ? 'text-white font-medium'
+                        : 'text-gray-500'
+                    }`}
+                  >
+                    {stage.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={handleCancel}
+            className="mt-6 px-6 py-2 text-gray-400 hover:text-white transition-colors text-sm"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="max-w-2xl w-full">
-          <div className="text-center mb-8">
+          <div className="text-center mb-8 hidden md:block">
             <h2 className="text-2xl font-bold text-white mb-2">Creating Your Mash Up</h2>
             <p className="text-gray-400">Please wait while we process your audio...</p>
           </div>
 
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-8 mb-6">
+          <div className="hidden md:block bg-gray-800 border border-gray-700 rounded-lg p-8 mb-6">
             <div className="w-full h-64 bg-gray-900 rounded-lg mb-6 overflow-hidden">
               <video
                 autoPlay
@@ -333,7 +417,7 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
             </div>
           </div>
 
-          <div className="text-center">
+          <div className="text-center hidden md:block">
             <button
               onClick={handleCancel}
               className="px-6 py-2 text-gray-400 hover:text-white transition-colors text-sm"

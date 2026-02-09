@@ -169,6 +169,7 @@ const AppShell: React.FC = () => {
     setEditingTransitionId(undefined);
     setEditingPairConfigs(undefined);
     setEditingMashUpName(undefined);
+    setLibraryInitialTab('blends');
     setCurrentView('library');
   };
 
