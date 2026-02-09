@@ -556,7 +556,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-16">
+      <div className={`flex-1 overflow-y-auto ${isMobile ? 'pb-36' : 'pb-16'}`}>
         <SongInfoBar songA={songA} songB={songB} transitionDuration={transitionDuration} />
 
         <div className={`px-4 ${isMobile ? 'py-2' : 'py-3'}`}>
@@ -650,7 +650,7 @@ export const TransitionEditorView: React.FC<TransitionEditorViewProps> = ({
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-gray-900/95 backdrop-blur-lg border-t border-cyan-500/20"
+      <div className={`fixed left-0 right-0 z-40 bg-gray-900/95 backdrop-blur-lg border-t border-cyan-500/20 ${isMobile ? 'bottom-[4.5rem]' : 'bottom-0'}`}
         style={{
           paddingBottom: isMobile ? 'max(0.5rem, env(safe-area-inset-bottom))' : '0.5rem',
           boxShadow: '0 -4px 30px rgba(6,182,212,0.1)',
