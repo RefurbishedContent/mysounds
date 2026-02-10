@@ -6,6 +6,7 @@ import AppShell from './components/AppShell';
 import ErrorBoundary from './components/ErrorBoundary';
 import ReloadDetector from './components/ReloadDetector';
 import './styles/theme.css';
+import './lib/hmrTracker';
 import './lib/debugMonitor';
 import './lib/sessionPersistence';
 

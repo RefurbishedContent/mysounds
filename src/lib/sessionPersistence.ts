@@ -11,11 +11,14 @@ interface SessionState {
   formData?: Record<string, any>;
 }
 
+const SESSION_INITIALIZED_KEY = '__sessionPersistenceInitialized__';
+
 class SessionPersistence {
   private readonly STORAGE_KEY = 'app_session_state';
   private readonly MAX_AGE_MS = 5 * 60 * 1000;
   private autoSaveInterval: number | null = null;
   private currentState: SessionState | null = null;
+  private initialized = false;
 
   constructor() {
     this.initialize();
@@ -23,10 +26,22 @@ class SessionPersistence {
 
   private initialize() {
     if (typeof window === 'undefined') return;
+    if (this.initialized || (window as any)[SESSION_INITIALIZED_KEY]) return;
+    this.initialized = true;
+    (window as any)[SESSION_INITIALIZED_KEY] = true;
 
     this.checkForRecovery();
     this.setupAutoSave();
     this.setupUnloadHandler();
+    this.setupHMRBoundary();
+  }
+
+  private setupHMRBoundary() {
+    if (import.meta.hot) {
+      import.meta.hot.accept(() => {
+        console.info('[SessionPersistence] Module hot-updated without full reload');
+      });
+    }
   }
 
   private checkForRecovery() {

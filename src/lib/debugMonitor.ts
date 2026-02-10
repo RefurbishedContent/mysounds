@@ -1,6 +1,6 @@
 interface DebugLog {
   timestamp: number;
-  type: 'log' | 'warn' | 'error' | 'info' | 'event' | 'reload';
+  type: 'log' | 'warn' | 'error' | 'info' | 'event' | 'reload' | 'hmr';
   message: string;
   data?: any;
   stack?: string;
@@ -12,6 +12,8 @@ interface DebugMonitorState {
   enabled: boolean;
   reloadAttempts: number;
 }
+
+const CONSOLE_INTERCEPTED_KEY = '__debugMonitorIntercepted__';
 
 class DebugMonitor {
   private state: DebugMonitorState = {
@@ -28,21 +30,31 @@ class DebugMonitor {
     info: console.info,
   };
 
+  private initialized = false;
+
   constructor() {
     this.initialize();
   }
 
   private initialize() {
     if (typeof window === 'undefined') return;
+    if (this.initialized) return;
+    this.initialized = true;
 
     this.interceptConsole();
     this.trackReloadEvents();
     this.trackUnhandledErrors();
     this.restoreState();
     this.setupKeyboardShortcut();
+    this.setupHMRBoundary();
   }
 
   private interceptConsole() {
+    if ((window as any)[CONSOLE_INTERCEPTED_KEY]) {
+      return;
+    }
+    (window as any)[CONSOLE_INTERCEPTED_KEY] = true;
+
     console.log = (...args: any[]) => {
       this.originalConsole.log(...args);
       this.addLog('log', this.formatArgs(args));
@@ -62,6 +74,14 @@ class DebugMonitor {
       this.originalConsole.info(...args);
       this.addLog('info', this.formatArgs(args));
     };
+  }
+
+  private setupHMRBoundary() {
+    if (import.meta.hot) {
+      import.meta.hot.accept(() => {
+        this.originalConsole.info('[DebugMonitor] Module hot-updated without full reload');
+      });
+    }
   }
 
   private formatArgs(args: any[]): string {
