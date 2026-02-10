@@ -183,7 +183,7 @@ const MashUpSongSelector: React.FC<MashUpSongSelectorProps> = ({
             })}
 
             {selectedSongs.length > 0 && canAddMore && (
-              <div className="h-12" />
+              <div className="h-6" />
             )}
 
             {canAddMore && (
