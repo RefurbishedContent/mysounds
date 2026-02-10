@@ -226,7 +226,7 @@ const AppShell: React.FC = () => {
             songAIndex: t.metadata?.pairIndex ?? index,
             songBIndex: (t.metadata?.pairIndex ?? index) + 1,
             selectedTemplate: null,
-            directCut: false,
+            directCut: true,
             transitionDuration: t.transitionDuration || DEFAULT_TRANSITION_DURATION,
           }));
 

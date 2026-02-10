@@ -253,7 +253,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
           songAIndex: i,
           songBIndex: i + 1,
           selectedTemplate: null,
-          directCut: false,
+          directCut: true,
           transitionDuration: DEFAULT_TRANSITION_DURATION,
         });
       }

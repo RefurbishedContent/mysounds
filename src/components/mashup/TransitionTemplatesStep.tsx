@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Scissors, Check, ChevronRight, Zap, Clock, Timer,
-  Sparkles, ArrowRight, Play, Pause, X
+  Sparkles, ArrowRight, Play, Pause, X, LayoutGrid
 } from 'lucide-react';
 import * as Tone from 'tone';
 import { TemplateData } from '../../lib/database';
@@ -67,6 +67,9 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
   const [durationSizes, setDurationSizes] = useState<DurationSize[]>(
     pairs.map(p => getDurationSizeFromValue(p.transitionDuration))
   );
+  const [showTemplateLibrary, setShowTemplateLibrary] = useState<boolean[]>(
+    pairs.map(() => false)
+  );
 
   const allPairsConfigured = pairs.every(p => p.directCut || p.selectedTemplate !== null);
   const configuredCount = pairs.filter(p => p.directCut || p.selectedTemplate !== null).length;
@@ -86,6 +89,9 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
     const newSizes = [...durationSizes];
     newSizes[pairIndex] = getDurationSizeFromValue(template.duration);
     setDurationSizes(newSizes);
+    const newShowLibrary = [...showTemplateLibrary];
+    newShowLibrary[pairIndex] = false;
+    setShowTemplateLibrary(newShowLibrary);
   };
 
   const handleDirectCutToggle = (pairIndex: number, enabled: boolean) => {
@@ -93,6 +99,20 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
       directCut: enabled,
       selectedTemplate: enabled ? null : pairs[pairIndex].selectedTemplate,
     });
+    if (enabled) {
+      const newShowLibrary = [...showTemplateLibrary];
+      newShowLibrary[pairIndex] = false;
+      setShowTemplateLibrary(newShowLibrary);
+    }
+  };
+
+  const handleBrowseEffects = (pairIndex: number) => {
+    updatePair(pairIndex, {
+      directCut: false,
+    });
+    const newShowLibrary = [...showTemplateLibrary];
+    newShowLibrary[pairIndex] = true;
+    setShowTemplateLibrary(newShowLibrary);
   };
 
   const handleDurationChange = (pairIndex: number, size: DurationSize) => {
@@ -103,7 +123,19 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
   };
 
   const handleClearTemplate = (pairIndex: number) => {
-    updatePair(pairIndex, { selectedTemplate: null });
+    updatePair(pairIndex, {
+      selectedTemplate: null,
+      directCut: true
+    });
+    const newShowLibrary = [...showTemplateLibrary];
+    newShowLibrary[pairIndex] = false;
+    setShowTemplateLibrary(newShowLibrary);
+  };
+
+  const handleChangeEffect = (pairIndex: number) => {
+    const newShowLibrary = [...showTemplateLibrary];
+    newShowLibrary[pairIndex] = true;
+    setShowTemplateLibrary(newShowLibrary);
   };
 
   const handleContinue = async () => {
@@ -192,10 +224,10 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
       <div className="text-center mb-2">
         <h2 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-white mb-1`}>
-          Choose Transition Templates
+          Mash It Up
         </h2>
         <p className="text-sm text-gray-400">
-          Configure each transition below, or use Direct Cut for a clean splice
+          Use Direct Cut for a clean splice, or add effects to blend your songs
         </p>
         <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-gray-800/60 rounded-full border border-gray-700/50">
           <span className="text-xs text-gray-400">
@@ -221,10 +253,13 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
             pair={pair}
             pairIndex={index}
             durationSize={durationSizes[index]}
+            showLibrary={showTemplateLibrary[index]}
             onTemplateSelect={(t) => handleTemplateSelect(index, t)}
             onClearTemplate={() => handleClearTemplate(index)}
             onDirectCutToggle={(enabled) => handleDirectCutToggle(index, enabled)}
+            onBrowseEffects={() => handleBrowseEffects(index)}
             onDurationChange={(size) => handleDurationChange(index, size)}
+            onChangeEffect={() => handleChangeEffect(index)}
             isMobile={isMobile}
           />
         ))}
@@ -250,12 +285,27 @@ const PairTemplateCard: React.FC<{
   pair: TransitionPairConfig;
   pairIndex: number;
   durationSize: DurationSize;
+  showLibrary: boolean;
   onTemplateSelect: (template: TemplateData) => void;
   onClearTemplate: () => void;
   onDirectCutToggle: (enabled: boolean) => void;
+  onBrowseEffects: () => void;
   onDurationChange: (size: DurationSize) => void;
+  onChangeEffect: () => void;
   isMobile: boolean;
-}> = ({ pair, pairIndex, durationSize, onTemplateSelect, onClearTemplate, onDirectCutToggle, onDurationChange, isMobile }) => {
+}> = ({
+  pair,
+  pairIndex,
+  durationSize,
+  showLibrary,
+  onTemplateSelect,
+  onClearTemplate,
+  onDirectCutToggle,
+  onBrowseEffects,
+  onDurationChange,
+  onChangeEffect,
+  isMobile
+}) => {
   const colorsA = SONG_COLORS[pair.songAIndex % SONG_COLORS.length];
   const colorsB = SONG_COLORS[pair.songBIndex % SONG_COLORS.length];
   const letterA = SONG_LETTERS[pair.songAIndex];
@@ -302,7 +352,7 @@ const PairTemplateCard: React.FC<{
       <div className="p-4 space-y-3">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => onDirectCutToggle(!pair.directCut)}
+            onClick={() => onDirectCutToggle(true)}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 border-dashed transition-all font-medium text-sm ${
               pair.directCut
                 ? 'border-teal-500 bg-teal-500/10 text-teal-400'
@@ -314,57 +364,72 @@ const PairTemplateCard: React.FC<{
             {pair.directCut && <Check size={14} className="ml-1" />}
           </button>
 
-          {!pair.directCut && (
-            <div className="flex gap-1.5 flex-1">
-              {(['short', 'medium', 'long'] as DurationSize[]).map(size => {
-                const icons = { short: Zap, medium: Clock, long: Timer };
-                const Icon = icons[size];
-                const isActive = durationSize === size;
-                return (
-                  <button
-                    key={size}
-                    onClick={() => onDurationChange(size)}
-                    className={`flex-1 py-2 px-2 rounded-lg border transition-all flex items-center justify-center gap-1 ${
-                      isActive
-                        ? 'border-cyan-500 bg-cyan-500/10 text-cyan-400'
-                        : 'border-gray-700 bg-gray-800/50 text-gray-500 hover:border-gray-600'
-                    }`}
-                  >
-                    <Icon size={12} />
-                    <span className="text-[11px] font-medium capitalize">{size}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          <div className="tracing-border-wrapper variant-cyan">
+            <button
+              onClick={onBrowseEffects}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all font-medium text-sm ${
+                !pair.directCut && (showLibrary || pair.selectedTemplate)
+                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/30'
+                  : 'bg-gradient-to-r from-cyan-600/80 to-blue-600/80 text-white hover:from-cyan-600 hover:to-blue-600 hover:shadow-lg hover:shadow-cyan-500/40'
+              }`}
+            >
+              <Sparkles size={16} />
+              <span>Browse Effects</span>
+              {!pair.directCut && pair.selectedTemplate && <Check size={14} className="ml-1" />}
+            </button>
+          </div>
         </div>
 
-        {pair.directCut && (
+        {pair.directCut && !showLibrary && (
           <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-700/50 text-center">
             <Scissors size={20} className="text-teal-400 mx-auto mb-1" />
             <p className="text-xs text-gray-400">
-              Songs will be joined with a clean splice -- no transition effect
+              Songs will be joined with a clean splice - no effect added
             </p>
           </div>
         )}
 
-        {!pair.directCut && pair.selectedTemplate && (
+        {!pair.directCut && pair.selectedTemplate && !showLibrary && (
           <TemplatePreviewCard
             template={pair.selectedTemplate}
             onClear={onClearTemplate}
+            onChangeEffect={onChangeEffect}
           />
         )}
 
-        {!pair.directCut && (
-          <div className="relative rounded-lg overflow-hidden border border-gray-700/50">
-            <div className="bg-gray-800/60 px-3 py-2 flex items-center justify-between border-b border-gray-700/30">
-              <div className="flex items-center gap-1.5">
-                <Sparkles size={12} className="text-cyan-400" />
-                <span className="text-[11px] font-medium text-gray-300">Templates</span>
+        {showLibrary && (
+          <div className="relative rounded-lg overflow-hidden border border-cyan-500/30 transition-all duration-300">
+            <div className="bg-gray-800/60 px-3 py-2 border-b border-gray-700/30">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                  <LayoutGrid size={12} className="text-cyan-400" />
+                  <span className="text-[11px] font-medium text-gray-300">Effect Library</span>
+                </div>
+                <span className="text-[10px] text-gray-500">
+                  {DURATION_RANGES[durationSize].min}-{DURATION_RANGES[durationSize].max}s
+                </span>
               </div>
-              <span className="text-[10px] text-gray-500">
-                {DURATION_RANGES[durationSize].min}-{DURATION_RANGES[durationSize].max}s
-              </span>
+              <div className="flex gap-1.5">
+                {(['short', 'medium', 'long'] as DurationSize[]).map(size => {
+                  const icons = { short: Zap, medium: Clock, long: Timer };
+                  const Icon = icons[size];
+                  const isActive = durationSize === size;
+                  return (
+                    <button
+                      key={size}
+                      onClick={() => onDurationChange(size)}
+                      className={`flex-1 py-1.5 px-2 rounded-md border transition-all flex items-center justify-center gap-1 ${
+                        isActive
+                          ? 'border-cyan-500 bg-cyan-500/10 text-cyan-400'
+                          : 'border-gray-700 bg-gray-800/50 text-gray-500 hover:border-gray-600'
+                      }`}
+                    >
+                      <Icon size={11} />
+                      <span className="text-[10px] font-medium capitalize">{size}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div className={`${isMobile ? 'max-h-[35vh]' : 'max-h-[30vh]'} overflow-y-auto p-2`}>
               <TemplateGallery
@@ -386,7 +451,8 @@ const PairTemplateCard: React.FC<{
 const TemplatePreviewCard: React.FC<{
   template: TemplateData;
   onClear: () => void;
-}> = ({ template, onClear }) => {
+  onChangeEffect: () => void;
+}> = ({ template, onClear, onChangeEffect }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(0);
   const playerRef = useRef<Tone.Player | null>(null);
@@ -509,16 +575,25 @@ const TemplatePreviewCard: React.FC<{
           </div>
           <div>
             <p className="text-sm font-semibold text-white">{template.name}</p>
-            <p className="text-[10px] text-cyan-400/80">{template.duration}s transition</p>
+            <p className="text-[10px] text-cyan-400/80">{template.duration}s effect</p>
           </div>
         </div>
-        <button
-          onClick={onClear}
-          className="p-1.5 rounded-lg hover:bg-gray-700/50 text-gray-500 hover:text-gray-300 transition-colors"
-          title="Clear selection"
-        >
-          <X size={14} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onChangeEffect}
+            className="px-2 py-1 rounded-lg text-[10px] font-medium text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+            title="Browse more effects"
+          >
+            Change
+          </button>
+          <button
+            onClick={onClear}
+            className="p-1.5 rounded-lg hover:bg-gray-700/50 text-gray-500 hover:text-gray-300 transition-colors"
+            title="Remove effect"
+          >
+            <X size={14} />
+          </button>
+        </div>
       </div>
 
       <div className="p-3">
@@ -527,7 +602,7 @@ const TemplatePreviewCard: React.FC<{
             onClick={handlePlayPause}
             disabled={!audioUrl}
             className="p-2 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all shadow-lg shadow-cyan-500/20"
-            title={isPlaying ? 'Pause' : 'Play template'}
+            title={isPlaying ? 'Pause' : 'Play effect preview'}
           >
             {isPlaying ? (
               <Pause className="w-4 h-4 text-white" />
