@@ -31,6 +31,7 @@ export function WaveformDisplay({
   const containerRef = useRef<HTMLDivElement>(null);
   const [waveformData, setWaveformData] = useState<WaveformData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [containerWidth, setContainerWidth] = useState(800);
 
@@ -38,8 +39,15 @@ export function WaveformDisplay({
     let mounted = true;
 
     const loadWaveform = async () => {
+      if (!audioUrl) {
+        setIsLoading(false);
+        setLoadError(true);
+        return;
+      }
+
       try {
         setIsLoading(true);
+        setLoadError(false);
         const data = await waveformGenerator.generateWaveform(audioUrl, 500);
         if (mounted) {
           setWaveformData(data);
@@ -49,6 +57,7 @@ export function WaveformDisplay({
         console.error('Failed to load waveform:', error);
         if (mounted) {
           setIsLoading(false);
+          setLoadError(true);
         }
       }
     };
@@ -133,6 +142,21 @@ export function WaveformDisplay({
       {isLoading ? (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-800 rounded">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+        </div>
+      ) : loadError || !waveformData ? (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-800 rounded">
+          <div className="flex flex-col items-center gap-1">
+            <div className="flex gap-0.5">
+              {[...Array(12)].map((_, i) => (
+                <div
+                  key={i}
+                  className="w-1 bg-gray-600 rounded-full"
+                  style={{ height: `${10 + Math.sin(i * 0.5) * 8}px` }}
+                />
+              ))}
+            </div>
+            <span className="text-[10px] text-gray-500">Waveform unavailable</span>
+          </div>
         </div>
       ) : (
         <canvas
