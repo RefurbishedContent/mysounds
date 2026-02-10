@@ -662,7 +662,7 @@ const TemplatePreviewCard: React.FC<{
           )}
 
           <div
-            className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg pointer-events-none transition-all"
+            className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg pointer-events-none"
             style={{
               left: `${progress * 100}%`,
               boxShadow: '0 0 8px rgba(255,255,255,0.8)'
