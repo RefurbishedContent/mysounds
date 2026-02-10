@@ -46,6 +46,7 @@ export function AudioScrubber({
   const [playbackTime, setPlaybackTime] = useState(currentTime);
   const [flashInMarker, setFlashInMarker] = useState(false);
   const [flashEndMarker, setFlashEndMarker] = useState(false);
+  const [isSnapping, setIsSnapping] = useState(false);
   const playerRef = useRef<Tone.Player | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
@@ -57,6 +58,10 @@ export function AudioScrubber({
 
   markersRef.current = markers;
   durationRef.current = duration;
+
+  const SNAP_THRESHOLD_SECONDS = 0.5;
+  const playbackTimeRef = useRef(playbackTime);
+  playbackTimeRef.current = playbackTime;
 
   useEffect(() => {
     const initializePlayer = async () => {
@@ -253,7 +258,16 @@ export function AudioScrubber({
     if (!markerId) return;
 
     e.preventDefault();
-    const newTime = calcTimeFromPointer(e.clientX);
+    let newTime = calcTimeFromPointer(e.clientX);
+
+    const distanceToPlayhead = Math.abs(newTime - playbackTimeRef.current);
+    if (distanceToPlayhead <= SNAP_THRESHOLD_SECONDS) {
+      newTime = playbackTimeRef.current;
+      setIsSnapping(true);
+    } else {
+      setIsSnapping(false);
+    }
+
     const marker = markersRef.current.find(m => m.id === markerId);
     if (marker?.onDrag) {
       marker.onDrag(newTime);
@@ -266,6 +280,7 @@ export function AudioScrubber({
 
     const marker = markersRef.current.find(m => m.id === markerId);
     draggingMarkerIdRef.current = null;
+    setIsSnapping(false);
     (e.target as HTMLElement).releasePointerCapture(e.pointerId);
 
     if (!marker) return;
@@ -283,6 +298,7 @@ export function AudioScrubber({
 
   const handleLostPointerCapture = useCallback(() => {
     draggingMarkerIdRef.current = null;
+    setIsSnapping(false);
   }, []);
 
   const progress = playbackTime / duration;
@@ -315,6 +331,10 @@ export function AudioScrubber({
         </div>
 
         <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <div className="w-px h-6 bg-white" style={{ boxShadow: '0 0 6px rgba(255, 255, 255, 0.5)' }}></div>
+            <span className="text-xs text-gray-300">Playhead</span>
+          </div>
           <div className="flex items-center space-x-2">
             <div className="w-0.5 h-6 bg-gradient-to-b from-green-500/80 via-green-500 to-green-500/80" style={{ boxShadow: '0 0 8px #10b981' }}></div>
             <span className="text-xs text-gray-300">Start Point</span>
@@ -389,23 +409,28 @@ export function AudioScrubber({
             </div>
           );
         })}
-        {isPlaying && (
+        <div
+          className="absolute top-0 bottom-0 pointer-events-none transition-all duration-75"
+          style={{
+            left: `${progress * 100}%`,
+            zIndex: 5,
+          }}
+        >
           <div
-            className="absolute top-0 bottom-0 pointer-events-none"
+            className={`absolute -top-1 -bottom-1 transition-all duration-75 ${isSnapping ? 'w-1' : 'w-px'}`}
             style={{
-              left: `${progress * 100}%`,
-              zIndex: 5,
+              backgroundColor: isSnapping ? 'rgba(255, 255, 255, 1)' : 'rgba(255, 255, 255, 0.8)',
+              boxShadow: isSnapping
+                ? '0 0 12px rgba(255, 255, 255, 0.9), 0 0 24px rgba(255, 255, 255, 0.6)'
+                : '0 0 6px rgba(255, 255, 255, 0.5), 0 0 12px rgba(255, 255, 255, 0.3)',
             }}
-          >
-            <div
-              className="absolute -top-1 -bottom-1 w-px"
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                boxShadow: '0 0 6px rgba(255, 255, 255, 0.5), 0 0 12px rgba(255, 255, 255, 0.3)',
-              }}
-            />
-          </div>
-        )}
+          />
+          {isSnapping && (
+            <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-white text-gray-900 text-xs px-2 py-0.5 rounded font-medium whitespace-nowrap">
+              Snap
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
