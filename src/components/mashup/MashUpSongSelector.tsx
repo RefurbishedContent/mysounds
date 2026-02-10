@@ -62,10 +62,6 @@ const MashUpSongSelector: React.FC<MashUpSongSelectorProps> = ({
     onSongsChange(newSongs);
   };
 
-  const selectedSongIds = selectedSongs
-    .filter((_, i) => replacingIndex === null || i !== replacingIndex)
-    .map(s => s.id);
-
   const modalTitle = replacingIndex !== null
     ? `Replace Song ${SONG_LETTERS[replacingIndex]}`
     : `Select Song ${SONG_LETTERS[selectedSongs.length]}`;
@@ -223,7 +219,6 @@ const MashUpSongSelector: React.FC<MashUpSongSelectorProps> = ({
         onClose={() => { setShowModal(false); setReplacingIndex(null); }}
         onSelectSong={handleSongSelected}
         songs={allSongs}
-        selectedSongIds={selectedSongIds}
         modalTitle={modalTitle}
       />
     </div>
