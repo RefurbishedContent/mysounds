@@ -453,13 +453,14 @@ const TemplatePreviewCard: React.FC<{
 }> = ({ template, onClear, onChangeEffect }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(0);
+  const [actualDuration, setActualDuration] = useState<number | null>(null);
   const playerRef = useRef<Tone.Player | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
   const pauseTimeRef = useRef<number>(0);
 
   const audioUrl = template.templateData?.previewUrl || '';
-  const duration = template.duration || 10;
+  const duration = actualDuration ?? template.duration ?? 10;
 
   useEffect(() => {
     if (!audioUrl) return;
@@ -467,7 +468,18 @@ const TemplatePreviewCard: React.FC<{
     const initPlayer = async () => {
       try {
         await Tone.start();
-        playerRef.current = new Tone.Player(audioUrl).toDestination();
+        const player = new Tone.Player({
+          url: audioUrl,
+          onload: () => {
+            if (player.buffer && player.buffer.duration > 0) {
+              setActualDuration(player.buffer.duration);
+            }
+          },
+          onstop: () => {
+            setIsPlaying(false);
+          }
+        }).toDestination();
+        playerRef.current = player;
       } catch (err) {
         console.error('Failed to init template player:', err);
       }
@@ -484,6 +496,7 @@ const TemplatePreviewCard: React.FC<{
         playerRef.current.dispose();
         playerRef.current = null;
       }
+      setActualDuration(null);
     };
   }, [audioUrl]);
 
@@ -497,7 +510,9 @@ const TemplatePreviewCard: React.FC<{
       setIsPlaying(false);
       setPlaybackTime(0);
       pauseTimeRef.current = 0;
-      playerRef.current.stop();
+      if (playerRef.current.state === 'started') {
+        playerRef.current.stop();
+      }
       return;
     }
 
@@ -524,13 +539,16 @@ const TemplatePreviewCard: React.FC<{
 
     try {
       if (isPlaying) {
-        playerRef.current.stop();
+        if (playerRef.current.state === 'started') {
+          playerRef.current.stop();
+        }
         pauseTimeRef.current = playbackTime;
         setIsPlaying(false);
       } else {
         await Tone.start();
 
-        if (playbackTime >= duration) {
+        const currentDuration = playerRef.current.buffer?.duration || duration;
+        if (playbackTime >= currentDuration - 0.1) {
           pauseTimeRef.current = 0;
           setPlaybackTime(0);
         } else {
