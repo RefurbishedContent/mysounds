@@ -129,6 +129,32 @@ export function AudioScrubber({
     };
   }, [isPlaying, updatePlaybackTime]);
 
+  const startPlaybackAt = useCallback(async (time: number) => {
+    if (!playerRef.current || !playerRef.current.loaded) {
+      console.warn('Player not ready');
+      return;
+    }
+
+    try {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      playerRef.current.stop();
+
+      await Tone.start();
+
+      const clampedTime = Math.max(0, Math.min(time, duration));
+      pauseTimeRef.current = clampedTime;
+      setPlaybackTime(clampedTime);
+
+      startTimeRef.current = Tone.now();
+      playerRef.current.start(Tone.now(), clampedTime);
+      setIsPlaying(true);
+    } catch (error) {
+      console.error('Playback error:', error);
+    }
+  }, [duration]);
+
   const handlePlayPause = async () => {
     if (!playerRef.current || !playerRef.current.loaded) {
       console.warn('Player not ready');
@@ -172,19 +198,14 @@ export function AudioScrubber({
     (progress: number) => {
       const time = progress * duration;
 
-      if (playerRef.current) {
-        playerRef.current.stop();
-      }
-
-      setPlaybackTime(time);
-      pauseTimeRef.current = time;
-      setIsPlaying(false);
-
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
+      if (isPlaying) {
+        startPlaybackAt(time);
+      } else {
+        setPlaybackTime(time);
+        pauseTimeRef.current = time;
       }
     },
-    [duration]
+    [duration, isPlaying, startPlaybackAt]
   );
 
   const handleSetInMarker = () => {
@@ -240,10 +261,25 @@ export function AudioScrubber({
   }, [calcTimeFromPointer]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
-    if (!draggingMarkerIdRef.current) return;
+    const markerId = draggingMarkerIdRef.current;
+    if (!markerId) return;
+
+    const marker = markersRef.current.find(m => m.id === markerId);
     draggingMarkerIdRef.current = null;
     (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-  }, []);
+
+    if (!marker) return;
+
+    const isEndMarker = markerId.includes('end') || marker.label?.toUpperCase() === 'END';
+    const isStartMarker = markerId.includes('start') || marker.label?.toUpperCase() === 'START';
+
+    if (isEndMarker) {
+      const previewStart = Math.max(0, marker.time - 5);
+      startPlaybackAt(previewStart);
+    } else if (isStartMarker) {
+      startPlaybackAt(marker.time);
+    }
+  }, [startPlaybackAt]);
 
   const handleLostPointerCapture = useCallback(() => {
     draggingMarkerIdRef.current = null;
@@ -353,6 +389,23 @@ export function AudioScrubber({
             </div>
           );
         })}
+        {isPlaying && (
+          <div
+            className="absolute top-0 bottom-0 pointer-events-none"
+            style={{
+              left: `${progress * 100}%`,
+              zIndex: 5,
+            }}
+          >
+            <div
+              className="absolute -top-1 -bottom-1 w-px"
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                boxShadow: '0 0 6px rgba(255, 255, 255, 0.5), 0 0 12px rgba(255, 255, 255, 0.3)',
+              }}
+            />
+          </div>
+        )}
       </div>
 
       <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
