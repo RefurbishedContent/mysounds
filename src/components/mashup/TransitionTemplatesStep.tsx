@@ -364,20 +364,18 @@ const PairTemplateCard: React.FC<{
             {pair.directCut && <Check size={14} className="ml-1" />}
           </button>
 
-          <div className="tracing-border-wrapper variant-cyan">
-            <button
-              onClick={onBrowseEffects}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all font-medium text-sm ${
-                !pair.directCut && (showLibrary || pair.selectedTemplate)
-                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/30'
-                  : 'bg-gradient-to-r from-cyan-600/80 to-blue-600/80 text-white hover:from-cyan-600 hover:to-blue-600 hover:shadow-lg hover:shadow-cyan-500/40'
-              }`}
-            >
-              <Sparkles size={16} />
-              <span>Browse Effects</span>
-              {!pair.directCut && pair.selectedTemplate && <Check size={14} className="ml-1" />}
-            </button>
-          </div>
+          <button
+            onClick={onBrowseEffects}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all font-medium text-sm ${
+              !pair.directCut && (showLibrary || pair.selectedTemplate)
+                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/30'
+                : 'bg-gradient-to-r from-purple-600/80 to-pink-600/80 text-white hover:from-purple-600 hover:to-pink-600 hover:shadow-lg hover:shadow-purple-500/40'
+            }`}
+          >
+            <Sparkles size={16} />
+            <span>Browse Effects</span>
+            {!pair.directCut && pair.selectedTemplate && <Check size={14} className="ml-1" />}
+          </button>
         </div>
 
         {pair.directCut && !showLibrary && (
