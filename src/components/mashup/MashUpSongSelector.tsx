@@ -101,9 +101,11 @@ const MashUpSongSelector: React.FC<MashUpSongSelectorProps> = ({
               const colors = SONG_COLORS[index % SONG_COLORS.length];
               const letter = SONG_LETTERS[index];
 
+              const isLastSong = index === selectedSongs.length - 1;
+
               return (
                 <React.Fragment key={`${song.id}-${index}`}>
-                  <div className={`tracing-border-wrapper ${colors.tracingVariant}`}>
+                  <div className={`tracing-border-wrapper ${colors.tracingVariant} ${isLastSong && canAddMore ? 'mb-16' : ''}`}>
                     <div
                       className={`bg-gray-900/50 rounded-xl p-3 border-2 transition-all backdrop-blur-sm relative z-10 ${colors.border} ${colors.fill}`}
                     >
@@ -181,7 +183,7 @@ const MashUpSongSelector: React.FC<MashUpSongSelectorProps> = ({
             })}
 
             {canAddMore && (
-              <div className="tracing-border-wrapper variant-neutral mt-24">
+              <div className="tracing-border-wrapper variant-neutral mt-6">
                 <button
                   onClick={handleAddSong}
                   className="w-full bg-gray-900/30 rounded-xl p-3 border border-white/30 transition-all duration-200 group flex items-center gap-3 relative z-10"
