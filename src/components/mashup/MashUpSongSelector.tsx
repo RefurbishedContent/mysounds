@@ -103,10 +103,11 @@ const MashUpSongSelector: React.FC<MashUpSongSelectorProps> = ({
 
               return (
                 <React.Fragment key={`${song.id}-${index}`}>
-                  <div
-                    className={`bg-gray-900/50 rounded-xl p-3 border-2 transition-all backdrop-blur-sm ${colors.border} ${colors.fill} ${colors.glow}`}
-                  >
-                    <div className="flex items-center gap-2.5">
+                  <div className={`tracing-border-wrapper ${colors.tracingVariant}`}>
+                    <div
+                      className={`bg-gray-900/50 rounded-xl p-3 border-2 transition-all backdrop-blur-sm relative z-10 ${colors.border} ${colors.fill}`}
+                    >
+                      <div className="flex items-center gap-2.5">
                       {selectedSongs.length > 1 && (
                         <div className="flex flex-col gap-px">
                           <button
@@ -166,6 +167,7 @@ const MashUpSongSelector: React.FC<MashUpSongSelectorProps> = ({
                         <X size={16} className="text-gray-400 hover:text-white" />
                       </button>
                     </div>
+                    </div>
                   </div>
 
                   {index < selectedSongs.length - 1 && (
@@ -179,26 +181,28 @@ const MashUpSongSelector: React.FC<MashUpSongSelectorProps> = ({
             })}
 
             {canAddMore && (
-              <button
-                onClick={handleAddSong}
-                className="w-full bg-gray-900/30 rounded-xl p-3 border border-white/40 shadow-[0_0_8px_rgba(255,255,255,0.08)] hover:border-cyan-400/70 hover:shadow-[0_0_12px_rgba(34,211,238,0.15)] hover:bg-cyan-500/5 transition-all duration-200 group flex items-center gap-3 mt-8"
-              >
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gray-700 group-hover:bg-cyan-500/20 transition-colors flex-shrink-0">
-                  <Plus size={20} className="text-gray-400 group-hover:text-cyan-400 transition-colors" />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-medium text-gray-400 group-hover:text-white transition-colors">
-                    Add Song {SONG_LETTERS[selectedSongs.length]}
-                  </p>
-                  <p className="text-xs text-gray-600 group-hover:text-gray-400 transition-colors">
-                    {selectedSongs.length === 0
-                      ? 'Click to select your first song'
-                      : selectedSongs.length === 1
-                      ? 'Add one more song to continue'
-                      : `${MAX_SONGS - selectedSongs.length} more slot${MAX_SONGS - selectedSongs.length !== 1 ? 's' : ''} available`}
-                  </p>
-                </div>
-              </button>
+              <div className="tracing-border-wrapper variant-neutral mt-8">
+                <button
+                  onClick={handleAddSong}
+                  className="w-full bg-gray-900/30 rounded-xl p-3 border border-white/30 transition-all duration-200 group flex items-center gap-3 relative z-10"
+                >
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gray-700 group-hover:bg-cyan-500/20 transition-colors flex-shrink-0">
+                    <Plus size={20} className="text-gray-400 group-hover:text-cyan-400 transition-colors" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-medium text-gray-400 group-hover:text-white transition-colors">
+                      Add Song {SONG_LETTERS[selectedSongs.length]}
+                    </p>
+                    <p className="text-xs text-gray-600 group-hover:text-gray-400 transition-colors">
+                      {selectedSongs.length === 0
+                        ? 'Click to select your first song'
+                        : selectedSongs.length === 1
+                        ? 'Add one more song to continue'
+                        : `${MAX_SONGS - selectedSongs.length} more slot${MAX_SONGS - selectedSongs.length !== 1 ? 's' : ''} available`}
+                    </p>
+                  </div>
+                </button>
+              </div>
             )}
           </div>
 
