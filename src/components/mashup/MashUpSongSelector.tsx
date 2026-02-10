@@ -181,7 +181,7 @@ const MashUpSongSelector: React.FC<MashUpSongSelectorProps> = ({
             })}
 
             {canAddMore && (
-              <div className="tracing-border-wrapper variant-neutral mt-12">
+              <div className="tracing-border-wrapper variant-neutral mt-24">
                 <button
                   onClick={handleAddSong}
                   className="w-full bg-gray-900/30 rounded-xl p-3 border border-white/30 transition-all duration-200 group flex items-center gap-3 relative z-10"
