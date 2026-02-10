@@ -85,22 +85,33 @@ export function AudioScrubber({
     setPlaybackTime(currentTime);
   }, [currentTime]);
 
+  const getClipBoundaries = useCallback(() => {
+    const startMarker = markers.find(m => m.id.includes('start') || m.label?.toUpperCase() === 'START');
+    const endMarker = markers.find(m => m.id.includes('end') || m.label?.toUpperCase() === 'END');
+    return {
+      start: startMarker?.time ?? 0,
+      end: endMarker?.time ?? duration
+    };
+  }, [markers, duration]);
+
   const updatePlaybackTime = useCallback(() => {
     if (!playerRef.current || !isPlaying) return;
 
     const elapsed = Tone.now() - startTimeRef.current;
     const newTime = pauseTimeRef.current + elapsed;
+    const { end } = getClipBoundaries();
 
-    if (newTime >= duration) {
+    if (newTime >= end || newTime >= duration) {
       setIsPlaying(false);
-      setPlaybackTime(duration);
+      const stopTime = Math.min(end, duration);
+      setPlaybackTime(stopTime);
       playerRef.current.stop();
       return;
     }
 
     setPlaybackTime(newTime);
     animationFrameRef.current = requestAnimationFrame(updatePlaybackTime);
-  }, [isPlaying, duration]);
+  }, [isPlaying, duration, getClipBoundaries]);
 
   useEffect(() => {
     if (isPlaying) {
@@ -132,12 +143,21 @@ export function AudioScrubber({
       } else {
         await Tone.start();
 
-        if (playbackTime >= duration) {
-          pauseTimeRef.current = 0;
-          setPlaybackTime(0);
-        } else {
-          pauseTimeRef.current = playbackTime;
+        const { start, end } = getClipBoundaries();
+        const hasClipMarkers = markers.length >= 2;
+
+        let startPosition = playbackTime;
+
+        if (hasClipMarkers) {
+          if (playbackTime < start || playbackTime >= end) {
+            startPosition = start;
+          }
+        } else if (playbackTime >= duration) {
+          startPosition = 0;
         }
+
+        pauseTimeRef.current = startPosition;
+        setPlaybackTime(startPosition);
 
         startTimeRef.current = Tone.now();
         playerRef.current.start(Tone.now(), pauseTimeRef.current);
