@@ -10,6 +10,7 @@ interface VinylTurntableProps {
   isActive?: boolean;
   canAcceptDrop?: boolean;
   accentColor?: string;
+  deckLabel?: string;
   onPlay?: () => void;
   onPause?: () => void;
   onDrop?: (songId: string) => void;
@@ -24,6 +25,7 @@ export const VinylTurntable: React.FC<VinylTurntableProps> = ({
   isActive = false,
   canAcceptDrop = false,
   accentColor = '#06b6d4',
+  deckLabel = 'A',
   onPlay,
   onPause,
   onDrop
@@ -32,6 +34,7 @@ export const VinylTurntable: React.FC<VinylTurntableProps> = ({
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
   const tonearmRotation = 20 + (progress * 0.25);
+  const showDropZone = canAcceptDrop && !trackName;
 
   const handleDragOver = (e: React.DragEvent) => {
     if (!canAcceptDrop) return;
@@ -63,12 +66,30 @@ export const VinylTurntable: React.FC<VinylTurntableProps> = ({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {/* Deck Label */}
+      <div
+        className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-full text-xs font-bold"
+        style={{
+          backgroundColor: accentColor,
+          color: 'white',
+          boxShadow: `0 0 10px ${accentColor}60`
+        }}
+      >
+        DECK {deckLabel}
+      </div>
+
       {/* Turntable base/platter */}
       <div className={`relative w-48 h-48 md:w-56 md:h-56 lg:w-64 lg:h-64 rounded-full transition-all duration-300 ${
         isDragOver && canAcceptDrop
-          ? 'ring-4 ring-cyan-400 ring-opacity-80 shadow-lg shadow-cyan-500/50'
+          ? 'ring-4 ring-opacity-80 shadow-lg'
+          : showDropZone
+          ? 'ring-2 ring-dashed ring-opacity-50'
           : ''
-      }`}>
+      }`}
+      style={{
+        ringColor: accentColor,
+        boxShadow: isDragOver && canAcceptDrop ? `0 0 30px ${accentColor}60` : undefined
+      }}>
         {/* Outer platter ring */}
         <div className="absolute inset-0 rounded-full bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 shadow-xl">
           <div className="absolute inset-1 rounded-full bg-gradient-to-br from-gray-600 via-gray-700 to-gray-800" />
@@ -167,8 +188,11 @@ export const VinylTurntable: React.FC<VinylTurntableProps> = ({
                   </div>
                 </>
               ) : (
-                <div className="text-[10px] md:text-xs text-gray-500">
-                  Drop track
+                <div
+                  className="text-[10px] md:text-xs font-medium"
+                  style={{ color: canAcceptDrop ? accentColor : '#6b7280' }}
+                >
+                  {canAcceptDrop ? 'Drag here' : 'Locked'}
                 </div>
               )}
             </div>
@@ -195,8 +219,33 @@ export const VinylTurntable: React.FC<VinylTurntableProps> = ({
 
         {/* Drop zone indicator */}
         {canAcceptDrop && isDragOver && (
-          <div className="absolute inset-0 rounded-full border-4 border-dashed border-cyan-400 bg-cyan-500/10 flex items-center justify-center animate-pulse">
-            <span className="text-cyan-400 font-bold text-sm">Drop here</span>
+          <div
+            className="absolute inset-0 rounded-full border-4 border-dashed flex items-center justify-center animate-pulse"
+            style={{
+              borderColor: accentColor,
+              backgroundColor: `${accentColor}15`
+            }}
+          >
+            <span className="font-bold text-sm" style={{ color: accentColor }}>
+              Drop to load
+            </span>
+          </div>
+        )}
+
+        {/* Empty deck indicator */}
+        {showDropZone && !isDragOver && (
+          <div
+            className="absolute inset-0 rounded-full border-2 border-dashed flex items-center justify-center opacity-60"
+            style={{
+              borderColor: accentColor
+            }}
+          >
+            <div className="text-center">
+              <div className="text-sm font-medium" style={{ color: accentColor }}>
+                Drag track here
+              </div>
+              <div className="text-xs text-gray-500 mt-1">from queue</div>
+            </div>
           </div>
         )}
       </div>

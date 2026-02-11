@@ -182,6 +182,7 @@ export const DJMixerTable: React.FC<DJMixerTableProps> = ({
                   isActive={isPlaying}
                   canAcceptDrop={!isPlaying}
                   accentColor={mixerTheme.deckAColors?.primary || '#06b6d4'}
+                  deckLabel="A"
                   onPlay={onPlay}
                   onPause={onPause}
                   onDrop={handleDropOnDeckA}
@@ -467,6 +468,7 @@ export const DJMixerTable: React.FC<DJMixerTableProps> = ({
                   isActive={isMixing}
                   canAcceptDrop={true}
                   accentColor={mixerTheme.deckBColors?.primary || '#3b82f6'}
+                  deckLabel="B"
                   onDrop={handleDropOnDeckB}
                 />
 
@@ -504,6 +506,7 @@ export const DJMixerTable: React.FC<DJMixerTableProps> = ({
                     isActive={isPlaying}
                     canAcceptDrop={!isPlaying}
                     accentColor={mixerTheme.deckAColors?.primary || '#06b6d4'}
+                    deckLabel="A"
                     onPlay={onPlay}
                     onPause={onPause}
                     onDrop={handleDropOnDeckA}
@@ -519,6 +522,7 @@ export const DJMixerTable: React.FC<DJMixerTableProps> = ({
                     isActive={isMixing}
                     canAcceptDrop={true}
                     accentColor={mixerTheme.deckBColors?.primary || '#3b82f6'}
+                    deckLabel="B"
                     onDrop={handleDropOnDeckB}
                   />
                 </div>
