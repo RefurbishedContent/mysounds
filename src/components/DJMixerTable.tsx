@@ -1,7 +1,6 @@
 import React from 'react';
 import { Volume2, Activity, Play, Pause, SkipForward, SkipBack, Zap } from 'lucide-react';
 import { VinylTurntable } from './VinylTurntable';
-import { SongQueuePanel } from './SongQueuePanel';
 import { MixTrack } from '../lib/mixerService';
 import { MixerTheme } from '../lib/themeUtils';
 
@@ -31,6 +30,7 @@ interface DJMixerTableProps {
   onDeckBEQChange: (type: 'high' | 'mid' | 'low', value: number) => void;
   onSelectTrack: (index: number) => void;
   onLoadTrackToDeck: (trackId: string, deck: 'A' | 'B') => void;
+  isAIActive?: boolean;
 }
 
 export const DJMixerTable: React.FC<DJMixerTableProps> = ({
@@ -58,7 +58,8 @@ export const DJMixerTable: React.FC<DJMixerTableProps> = ({
   onDeckAEQChange,
   onDeckBEQChange,
   onSelectTrack,
-  onLoadTrackToDeck
+  onLoadTrackToDeck,
+  isAIActive = false
 }) => {
   const [syncEnabled, setSyncEnabled] = React.useState(false);
 
@@ -67,6 +68,10 @@ export const DJMixerTable: React.FC<DJMixerTableProps> = ({
 
   const currentBPM = currentTrack?.blend?.duration ? 120 + (currentTrack.blend.duration % 20) : 120;
   const nextBPM = nextTrack?.blend?.duration ? 120 + (nextTrack.blend.duration % 20) : 120;
+
+  const glowColorA = mixerTheme.deckAColors?.glow || '#06b6d4';
+  const glowColorB = mixerTheme.deckBColors?.glow || '#3b82f6';
+  const isNightclub = mixerTheme.isNightclub;
 
   const handleSync = () => {
     setSyncEnabled(!syncEnabled);
@@ -100,16 +105,28 @@ export const DJMixerTable: React.FC<DJMixerTableProps> = ({
       >
         {/* Main Mixer Table Surface */}
         <div
-          className="relative bg-gradient-to-b from-gray-800 via-gray-850 to-gray-900 rounded-t-2xl overflow-hidden"
+          className={`relative rounded-t-2xl overflow-hidden transition-all duration-500 ${
+            isNightclub
+              ? 'bg-gradient-to-b from-gray-900 via-black to-gray-900'
+              : 'bg-gradient-to-b from-gray-800 via-gray-850 to-gray-900'
+          }`}
           style={{
             transform: 'rotateX(5deg)',
             transformOrigin: 'center bottom',
-            boxShadow: `
-              0 20px 60px -20px rgba(0, 0, 0, 0.8),
-              0 40px 80px -40px rgba(0, 0, 0, 0.6),
-              inset 0 1px 0 rgba(255, 255, 255, 0.1),
-              inset 0 -1px 0 rgba(0, 0, 0, 0.3)
-            `
+            boxShadow: isNightclub && isPlaying
+              ? `
+                0 20px 60px -20px rgba(0, 0, 0, 0.9),
+                0 40px 80px -40px rgba(0, 0, 0, 0.7),
+                inset 0 1px 0 ${glowColorA}40,
+                inset 0 -1px 0 ${glowColorB}30,
+                0 0 40px ${glowColorA}15
+              `
+              : `
+                0 20px 60px -20px rgba(0, 0, 0, 0.8),
+                0 40px 80px -40px rgba(0, 0, 0, 0.6),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.3)
+              `
           }}
         >
           {/* Surface texture overlay */}
@@ -128,19 +145,26 @@ export const DJMixerTable: React.FC<DJMixerTableProps> = ({
 
           {/* LED strip indicator */}
           <div className="absolute top-2 left-1/2 -translate-x-1/2 flex gap-1">
-            {[...Array(12)].map((_, i) => (
-              <div
-                key={i}
-                className={`w-1.5 h-1.5 rounded-full transition-all duration-100 ${
-                  isPlaying
-                    ? i < 8 ? 'bg-green-500 shadow-sm shadow-green-500/50' : i < 10 ? 'bg-yellow-500' : 'bg-red-500'
-                    : 'bg-gray-700'
-                }`}
-                style={{
-                  opacity: isPlaying ? (vuMeterLevels.left + vuMeterLevels.right) / 2 > i / 12 ? 1 : 0.3 : 0.3
-                }}
-              />
-            ))}
+            {[...Array(12)].map((_, i) => {
+              const isActive = isPlaying && (vuMeterLevels.left + vuMeterLevels.right) / 2 > i / 12;
+              return (
+                <div
+                  key={i}
+                  className="w-1.5 h-1.5 rounded-full transition-all duration-100"
+                  style={{
+                    backgroundColor: isPlaying
+                      ? isNightclub
+                        ? i < 8 ? glowColorA : i < 10 ? glowColorB : '#ef4444'
+                        : i < 8 ? '#22c55e' : i < 10 ? '#eab308' : '#ef4444'
+                      : '#374151',
+                    opacity: isActive ? 1 : 0.3,
+                    boxShadow: isActive && isNightclub
+                      ? `0 0 6px ${i < 8 ? glowColorA : glowColorB}`
+                      : undefined
+                  }}
+                />
+              );
+            })}
           </div>
 
           {/* Main content area */}
@@ -194,9 +218,17 @@ export const DJMixerTable: React.FC<DJMixerTableProps> = ({
                   </button>
                   <button
                     onClick={isPlaying ? onPause : onPlay}
-                    className={`p-5 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white shadow-lg shadow-cyan-500/40 transition-all transform hover:scale-105 ${
-                      isPlaying ? 'animate-pulse' : ''
+                    className={`p-5 rounded-full text-white transition-all transform hover:scale-105 ${
+                      isPlaying && !isNightclub ? 'animate-pulse' : ''
                     }`}
+                    style={{
+                      background: isNightclub
+                        ? `linear-gradient(135deg, ${glowColorA}, ${glowColorB})`
+                        : 'linear-gradient(to right, #06b6d4, #3b82f6)',
+                      boxShadow: isNightclub
+                        ? `0 0 30px ${glowColorA}60, 0 0 60px ${glowColorA}30`
+                        : '0 10px 30px -10px rgba(6, 182, 212, 0.4)'
+                    }}
                   >
                     {isPlaying ? <Pause size={28} fill="white" /> : <Play size={28} fill="white" className="ml-0.5" />}
                   </button>
@@ -224,9 +256,16 @@ export const DJMixerTable: React.FC<DJMixerTableProps> = ({
                     </div>
                   </button>
                   {isMixing && (
-                    <div className="inline-flex items-center gap-1.5 px-3 py-2 bg-cyan-500/20 text-cyan-400 rounded-lg text-xs font-bold animate-pulse">
+                    <div
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold animate-pulse"
+                      style={{
+                        backgroundColor: `${glowColorA}20`,
+                        color: glowColorA,
+                        boxShadow: isNightclub ? `0 0 15px ${glowColorA}40` : undefined
+                      }}
+                    >
                       <Activity size={14} className="animate-bounce" />
-                      <span>MIXING</span>
+                      <span>{isAIActive ? 'AI MIXING' : 'MIXING'}</span>
                     </div>
                   )}
                 </div>
@@ -299,28 +338,46 @@ export const DJMixerTable: React.FC<DJMixerTableProps> = ({
                   {/* VU Meters */}
                   <div className="flex gap-1">
                     <div className="flex flex-col-reverse gap-0.5">
-                      {[...Array(10)].map((_, i) => (
-                        <div
-                          key={i}
-                          className={`w-2 h-2 rounded-sm transition-all ${
-                            vuMeterLevels.left > i / 10
-                              ? i >= 8 ? 'bg-red-500' : i >= 6 ? 'bg-yellow-500' : 'bg-green-500'
-                              : 'bg-gray-700'
-                          }`}
-                        />
-                      ))}
+                      {[...Array(10)].map((_, i) => {
+                        const isActive = vuMeterLevels.left > i / 10;
+                        return (
+                          <div
+                            key={i}
+                            className="w-2 h-2 rounded-sm transition-all"
+                            style={{
+                              backgroundColor: isActive
+                                ? isNightclub
+                                  ? i >= 8 ? '#ef4444' : i >= 6 ? glowColorB : glowColorA
+                                  : i >= 8 ? '#ef4444' : i >= 6 ? '#eab308' : '#22c55e'
+                                : '#374151',
+                              boxShadow: isActive && isNightclub
+                                ? `0 0 4px ${i >= 8 ? '#ef4444' : i >= 6 ? glowColorB : glowColorA}`
+                                : undefined
+                            }}
+                          />
+                        );
+                      })}
                     </div>
                     <div className="flex flex-col-reverse gap-0.5">
-                      {[...Array(10)].map((_, i) => (
-                        <div
-                          key={i}
-                          className={`w-2 h-2 rounded-sm transition-all ${
-                            vuMeterLevels.right > i / 10
-                              ? i >= 8 ? 'bg-red-500' : i >= 6 ? 'bg-yellow-500' : 'bg-green-500'
-                              : 'bg-gray-700'
-                          }`}
-                        />
-                      ))}
+                      {[...Array(10)].map((_, i) => {
+                        const isActive = vuMeterLevels.right > i / 10;
+                        return (
+                          <div
+                            key={i}
+                            className="w-2 h-2 rounded-sm transition-all"
+                            style={{
+                              backgroundColor: isActive
+                                ? isNightclub
+                                  ? i >= 8 ? '#ef4444' : i >= 6 ? glowColorA : glowColorB
+                                  : i >= 8 ? '#ef4444' : i >= 6 ? '#eab308' : '#22c55e'
+                                : '#374151',
+                              boxShadow: isActive && isNightclub
+                                ? `0 0 4px ${i >= 8 ? '#ef4444' : i >= 6 ? glowColorA : glowColorB}`
+                                : undefined
+                            }}
+                          />
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -346,7 +403,12 @@ export const DJMixerTable: React.FC<DJMixerTableProps> = ({
                 </div>
 
                 {/* Crossfader */}
-                <div className="bg-gray-900/60 rounded-lg p-3">
+                <div
+                  className="rounded-lg p-3"
+                  style={{
+                    backgroundColor: isNightclub ? 'rgba(0,0,0,0.4)' : 'rgba(17,24,39,0.6)'
+                  }}
+                >
                   <div className="text-[10px] text-center text-gray-500 uppercase mb-2">Crossfader</div>
                   <input
                     type="range"
@@ -358,9 +420,12 @@ export const DJMixerTable: React.FC<DJMixerTableProps> = ({
                     className="w-full h-3 rounded-lg appearance-none cursor-pointer"
                     style={{
                       background: `linear-gradient(to right,
-                        rgb(6 182 212) 0%,
-                        rgb(59 130 246) ${crossfadePosition * 100}%,
-                        rgb(59 130 246) 100%)`
+                        ${glowColorA} 0%,
+                        ${glowColorB} ${crossfadePosition * 100}%,
+                        ${glowColorB} 100%)`,
+                      boxShadow: isNightclub && isPlaying
+                        ? `0 0 10px ${crossfadePosition < 0.5 ? glowColorA : glowColorB}40`
+                        : undefined
                     }}
                   />
                   <div className="flex justify-between mt-1 text-[9px] text-gray-600">
@@ -369,13 +434,6 @@ export const DJMixerTable: React.FC<DJMixerTableProps> = ({
                     <span>B</span>
                   </div>
                 </div>
-
-                {/* Song Queue Panel */}
-                <SongQueuePanel
-                  tracks={tracks}
-                  currentTrackIndex={currentTrackIndex}
-                  onSelectTrack={onSelectTrack}
-                />
 
                 {/* Master Volume */}
                 <div className="flex items-center gap-3 bg-gray-900/60 rounded-lg p-3">
@@ -476,9 +534,17 @@ export const DJMixerTable: React.FC<DJMixerTableProps> = ({
                 </button>
                 <button
                   onClick={isPlaying ? onPause : onPlay}
-                  className={`p-4 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/40 ${
-                    isPlaying ? 'animate-pulse' : ''
+                  className={`p-4 rounded-full text-white transition-all ${
+                    isPlaying && !isNightclub ? 'animate-pulse' : ''
                   }`}
+                  style={{
+                    background: isNightclub
+                      ? `linear-gradient(135deg, ${glowColorA}, ${glowColorB})`
+                      : 'linear-gradient(to right, #06b6d4, #3b82f6)',
+                    boxShadow: isNightclub
+                      ? `0 0 25px ${glowColorA}50`
+                      : '0 10px 30px -10px rgba(6, 182, 212, 0.4)'
+                  }}
                 >
                   {isPlaying ? <Pause size={24} fill="white" /> : <Play size={24} fill="white" className="ml-0.5" />}
                 </button>
@@ -491,7 +557,12 @@ export const DJMixerTable: React.FC<DJMixerTableProps> = ({
               </div>
 
               {/* Crossfader */}
-              <div className="bg-gray-900/60 rounded-lg p-3">
+              <div
+                className="rounded-lg p-3"
+                style={{
+                  backgroundColor: isNightclub ? 'rgba(0,0,0,0.4)' : 'rgba(17,24,39,0.6)'
+                }}
+              >
                 <div className="text-[10px] text-center text-gray-500 uppercase mb-2">Crossfader</div>
                 <input
                   type="range"
@@ -502,17 +573,13 @@ export const DJMixerTable: React.FC<DJMixerTableProps> = ({
                   onChange={(e) => onCrossfadeChange(Number(e.target.value))}
                   className="w-full h-3 rounded-lg appearance-none cursor-pointer"
                   style={{
-                    background: `linear-gradient(to right, rgb(6 182 212) 0%, rgb(59 130 246) 100%)`
+                    background: `linear-gradient(to right, ${glowColorA} 0%, ${glowColorB} 100%)`,
+                    boxShadow: isNightclub && isPlaying
+                      ? `0 0 10px ${crossfadePosition < 0.5 ? glowColorA : glowColorB}40`
+                      : undefined
                   }}
                 />
               </div>
-
-              {/* Song Queue */}
-              <SongQueuePanel
-                tracks={tracks}
-                currentTrackIndex={currentTrackIndex}
-                onSelectTrack={onSelectTrack}
-              />
 
               {/* Master Volume */}
               <div className="flex items-center gap-3 bg-gray-900/60 rounded-lg p-3">

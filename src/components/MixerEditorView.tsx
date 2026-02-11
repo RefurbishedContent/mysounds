@@ -1,17 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Download, Settings, Library, X } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { ArrowLeft, Download, Settings, Library, X, Palette } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { mixerService, MixSession, MixTrack } from '../lib/mixerService';
 import { BlendData } from '../lib/blendExportService';
-import { MixerTheme, parseThemeFromMetadata, getDefaultTheme } from '../lib/themeUtils';
+import { MixerTheme, parseThemeFromMetadata, getDefaultTheme, getPresetThemes, PresetTheme } from '../lib/themeUtils';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { DJMixerTable } from './DJMixerTable';
 import { BlendLibraryPanel } from './BlendLibraryPanel';
+import { MixerQueueStrip, AIAutoMixPanel, NightclubEffects } from './mixer';
 
 interface MixerEditorViewProps {
   sessionId?: string;
   onBack?: () => void;
 }
+
+type AIMood = 'smooth' | 'energetic' | 'chill' | 'party';
 
 const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) => {
   const { user } = useAuth();
@@ -26,11 +29,15 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
   const [isMixing, setIsMixing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showLibraryPanel, setShowLibraryPanel] = useState(false);
+  const [showThemePanel, setShowThemePanel] = useState(false);
   const [deckAVolume, setDeckAVolume] = useState(0.8);
   const [deckBVolume, setDeckBVolume] = useState(0.8);
   const [deckAEQ, setDeckAEQ] = useState({ high: 0, mid: 0, low: 0 });
   const [deckBEQ, setDeckBEQ] = useState({ high: 0, mid: 0, low: 0 });
   const [mixerTheme, setMixerTheme] = useState<MixerTheme>(getDefaultTheme());
+  const [isAIActive, setIsAIActive] = useState(false);
+  const [aiMood, setAiMood] = useState<AIMood>('smooth');
+  const fadeIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
     const loadSession = async () => {
@@ -184,6 +191,56 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
     console.log('Sync enabled');
   };
 
+  const handleSoftSkip = useCallback(() => {
+    if (currentTrackIndex >= tracks.length - 1) return;
+
+    if (fadeIntervalRef.current) {
+      clearInterval(fadeIntervalRef.current);
+    }
+
+    setIsMixing(true);
+    let fadeProgress = 0;
+    const fadeDuration = aiMood === 'chill' ? 120 : aiMood === 'smooth' ? 80 : 40;
+
+    fadeIntervalRef.current = window.setInterval(() => {
+      fadeProgress++;
+      const progress = fadeProgress / fadeDuration;
+      setCrossfadePosition(0.5 + progress * 0.5);
+
+      if (fadeProgress >= fadeDuration) {
+        if (fadeIntervalRef.current) {
+          clearInterval(fadeIntervalRef.current);
+          fadeIntervalRef.current = null;
+        }
+        handleNext();
+      }
+    }, 50);
+  }, [currentTrackIndex, tracks.length, aiMood]);
+
+  const handleHardSkip = useCallback(() => {
+    if (currentTrackIndex >= tracks.length - 1) return;
+
+    if (fadeIntervalRef.current) {
+      clearInterval(fadeIntervalRef.current);
+      fadeIntervalRef.current = null;
+    }
+
+    handleNext();
+  }, [currentTrackIndex, tracks.length]);
+
+  const handleThemeChange = (theme: PresetTheme) => {
+    setMixerTheme(theme);
+    setShowThemePanel(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (fadeIntervalRef.current) {
+        clearInterval(fadeIntervalRef.current);
+      }
+    };
+  }, []);
+
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center bg-gray-900">
@@ -246,6 +303,20 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
               <span className="hidden md:inline">Library</span>
             </button>
             <button
+              onClick={() => setShowThemePanel(!showThemePanel)}
+              className={`flex items-center gap-2 p-2 md:px-4 md:py-2 rounded-lg font-medium transition-colors ${
+                showThemePanel
+                  ? 'text-white'
+                  : 'bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white'
+              }`}
+              style={showThemePanel ? {
+                backgroundColor: mixerTheme.deckAColors?.glow || '#06b6d4'
+              } : undefined}
+            >
+              <Palette size={18} />
+              <span className="hidden md:inline">Theme</span>
+            </button>
+            <button
               onClick={handleExportMix}
               disabled={tracks.length < 2}
               className={`flex items-center gap-2 p-2 md:px-4 md:py-2 rounded-lg font-medium transition-colors ${
@@ -306,40 +377,153 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
 
         {/* DJ Booth Area */}
         <div className="flex-1 overflow-y-auto">
-          <div className="p-3 md:p-6 lg:p-8">
-            <DJMixerTable
+          <div className="p-3 md:p-6 lg:p-8 space-y-4">
+            {/* Queue Strip - Above Mixer */}
+            <MixerQueueStrip
               tracks={tracks}
               currentTrackIndex={currentTrackIndex}
-              currentTime={currentTime}
-              isPlaying={isPlaying}
-              isMixing={isMixing}
-              masterVolume={masterVolume}
-              crossfadePosition={crossfadePosition}
-              deckAVolume={deckAVolume}
-              deckBVolume={deckBVolume}
-              deckAEQ={deckAEQ}
-              deckBEQ={deckBEQ}
-              mixerTheme={mixerTheme}
-              onPlay={handlePlay}
-              onPause={handlePause}
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-              onSync={handleSync}
-              onCrossfadeChange={setCrossfadePosition}
-              onMasterVolumeChange={setMasterVolume}
-              onDeckAVolumeChange={setDeckAVolume}
-              onDeckBVolumeChange={setDeckBVolume}
-              onDeckAEQChange={(type, value) => setDeckAEQ({ ...deckAEQ, [type]: value })}
-              onDeckBEQChange={(type, value) => setDeckBEQ({ ...deckBEQ, [type]: value })}
               onSelectTrack={(index) => {
                 setCurrentTrackIndex(index);
                 setCurrentTime(0);
                 setIsMixing(false);
               }}
-              onLoadTrackToDeck={handleLoadTrackToDeck}
+              mixerTheme={mixerTheme}
             />
+
+            {/* Main Mixer Area with AI Panel */}
+            <div className="flex flex-col lg:flex-row gap-4">
+              {/* DJ Mixer Table */}
+              <div className="flex-1 relative">
+                <NightclubEffects
+                  mixerTheme={mixerTheme}
+                  isPlaying={isPlaying}
+                  isAIActive={isAIActive}
+                />
+                <DJMixerTable
+                  tracks={tracks}
+                  currentTrackIndex={currentTrackIndex}
+                  currentTime={currentTime}
+                  isPlaying={isPlaying}
+                  isMixing={isMixing}
+                  masterVolume={masterVolume}
+                  crossfadePosition={crossfadePosition}
+                  deckAVolume={deckAVolume}
+                  deckBVolume={deckBVolume}
+                  deckAEQ={deckAEQ}
+                  deckBEQ={deckBEQ}
+                  mixerTheme={mixerTheme}
+                  onPlay={handlePlay}
+                  onPause={handlePause}
+                  onNext={handleNext}
+                  onPrevious={handlePrevious}
+                  onSync={handleSync}
+                  onCrossfadeChange={setCrossfadePosition}
+                  onMasterVolumeChange={setMasterVolume}
+                  onDeckAVolumeChange={setDeckAVolume}
+                  onDeckBVolumeChange={setDeckBVolume}
+                  onDeckAEQChange={(type, value) => setDeckAEQ({ ...deckAEQ, [type]: value })}
+                  onDeckBEQChange={(type, value) => setDeckBEQ({ ...deckBEQ, [type]: value })}
+                  onSelectTrack={(index) => {
+                    setCurrentTrackIndex(index);
+                    setCurrentTime(0);
+                    setIsMixing(false);
+                  }}
+                  onLoadTrackToDeck={handleLoadTrackToDeck}
+                  isAIActive={isAIActive}
+                />
+              </div>
+
+              {/* AI Panel - Side on desktop, below on mobile */}
+              <div className="lg:w-64 flex-shrink-0">
+                <AIAutoMixPanel
+                  isAIActive={isAIActive}
+                  onToggleAI={setIsAIActive}
+                  onSoftSkip={handleSoftSkip}
+                  onHardSkip={handleHardSkip}
+                  trackCount={tracks.length}
+                  mixerTheme={mixerTheme}
+                  isPlaying={isPlaying}
+                  currentAIMood={aiMood}
+                  onMoodChange={setAiMood}
+                />
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* Theme Panel Overlay */}
+        {showThemePanel && (
+          <>
+            <div
+              className="fixed inset-0 bg-black/60 z-40"
+              onClick={() => setShowThemePanel(false)}
+            />
+            <div className={`fixed z-50 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden ${
+              isMobile
+                ? 'inset-x-4 bottom-4 max-h-[70vh]'
+                : 'right-4 top-20 w-80 max-h-[calc(100vh-6rem)]'
+            }`}>
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+                <h3 className="font-bold text-white">Choose Theme</h3>
+                <button
+                  onClick={() => setShowThemePanel(false)}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="p-4 overflow-y-auto max-h-[60vh] space-y-3">
+                <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Nightclub Themes</div>
+                {getPresetThemes().filter(t => t.category === 'nightclub').map(theme => (
+                  <button
+                    key={theme.id}
+                    onClick={() => handleThemeChange(theme)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                      mixerTheme.presetName === theme.presetName
+                        ? 'border-white/30 bg-white/10'
+                        : 'border-gray-700 hover:border-gray-600 hover:bg-gray-800'
+                    }`}
+                  >
+                    <div
+                      className="w-10 h-10 rounded-lg flex-shrink-0"
+                      style={{
+                        background: `linear-gradient(135deg, ${theme.deckAColors.from}, ${theme.deckBColors.to})`,
+                        boxShadow: `0 0 15px ${theme.deckAColors.glow}50`
+                      }}
+                    />
+                    <div className="text-left">
+                      <div className="text-sm font-medium text-white">{theme.name}</div>
+                      <div className="text-xs text-gray-500">{theme.description}</div>
+                    </div>
+                  </button>
+                ))}
+                <div className="text-xs text-gray-500 uppercase tracking-wider mb-2 mt-4">Classic Themes</div>
+                {getPresetThemes().filter(t => t.category === 'classic').map(theme => (
+                  <button
+                    key={theme.id}
+                    onClick={() => handleThemeChange(theme)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                      mixerTheme.presetName === theme.presetName
+                        ? 'border-white/30 bg-white/10'
+                        : 'border-gray-700 hover:border-gray-600 hover:bg-gray-800'
+                    }`}
+                  >
+                    <div
+                      className="w-10 h-10 rounded-lg flex-shrink-0"
+                      style={{
+                        background: `linear-gradient(135deg, ${theme.deckAColors.from}, ${theme.deckBColors.to})`
+                      }}
+                    />
+                    <div className="text-left">
+                      <div className="text-sm font-medium text-white">{theme.name}</div>
+                      <div className="text-xs text-gray-500">{theme.description}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
