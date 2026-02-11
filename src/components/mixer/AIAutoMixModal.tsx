@@ -10,7 +10,9 @@ import {
   Heart,
   Flame,
   CloudMoon,
-  Power
+  Power,
+  Play,
+  Pause
 } from 'lucide-react';
 import { MixerTheme } from '../../lib/themeUtils';
 
@@ -28,6 +30,8 @@ interface AIAutoMixModalProps {
   isPlaying: boolean;
   currentAIMood: AIMood;
   onMoodChange: (mood: AIMood) => void;
+  onPlay: () => void;
+  onPause: () => void;
 }
 
 const moodConfig: Record<AIMood, { icon: React.ElementType; label: string; description: string }> = {
@@ -48,7 +52,9 @@ export const AIAutoMixModal: React.FC<AIAutoMixModalProps> = ({
   mixerTheme,
   isPlaying,
   currentAIMood,
-  onMoodChange
+  onMoodChange,
+  onPlay,
+  onPause
 }) => {
   const [aiStatus, setAiStatus] = useState<'idle' | 'analyzing' | 'transitioning'>('idle');
   const [skipFeedback, setSkipFeedback] = useState<'soft' | 'hard' | null>(null);
@@ -169,40 +175,74 @@ export const AIAutoMixModal: React.FC<AIAutoMixModalProps> = ({
             </div>
 
             {isAIActive && (
-              <div
-                className="flex items-center gap-3 px-4 py-3 rounded-xl"
-                style={{
-                  backgroundColor: `${glowColor}10`,
-                  border: `1px solid ${glowColor}30`
-                }}
-              >
-                {aiStatus === 'analyzing' && (
-                  <>
-                    <Activity size={18} style={{ color: glowColor }} className="animate-pulse" />
-                    <div>
-                      <div className="text-sm font-medium text-white">Analyzing beats...</div>
-                      <div className="text-xs text-gray-400">Finding optimal transition point</div>
-                    </div>
-                  </>
-                )}
-                {aiStatus === 'transitioning' && (
-                  <>
-                    <Sparkles size={18} style={{ color: glowColor }} className="animate-bounce" />
-                    <div>
-                      <div className="text-sm font-medium" style={{ color: glowColor }}>Transitioning</div>
-                      <div className="text-xs text-gray-400">Mixing to next track</div>
-                    </div>
-                  </>
-                )}
-                {aiStatus === 'idle' && !isPlaying && (
-                  <>
-                    <Cpu size={18} className="text-gray-500" />
-                    <div>
-                      <div className="text-sm font-medium text-gray-400">Waiting</div>
-                      <div className="text-xs text-gray-500">Press play to start AI mixing</div>
-                    </div>
-                  </>
-                )}
+              <div className="space-y-3">
+                <div
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl"
+                  style={{
+                    backgroundColor: `${glowColor}10`,
+                    border: `1px solid ${glowColor}30`
+                  }}
+                >
+                  {aiStatus === 'analyzing' && (
+                    <>
+                      <Activity size={18} style={{ color: glowColor }} className="animate-pulse" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-white">Analyzing beats...</div>
+                        <div className="text-xs text-gray-400">Finding optimal transition point</div>
+                      </div>
+                    </>
+                  )}
+                  {aiStatus === 'transitioning' && (
+                    <>
+                      <Sparkles size={18} style={{ color: glowColor }} className="animate-bounce" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium" style={{ color: glowColor }}>Transitioning</div>
+                        <div className="text-xs text-gray-400">Mixing to next track</div>
+                      </div>
+                    </>
+                  )}
+                  {aiStatus === 'idle' && isPlaying && (
+                    <>
+                      <Activity size={18} style={{ color: glowColor }} className="animate-pulse" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-white">Starting up...</div>
+                        <div className="text-xs text-gray-400">AI is preparing to analyze</div>
+                      </div>
+                    </>
+                  )}
+                  {aiStatus === 'idle' && !isPlaying && (
+                    <>
+                      <Cpu size={18} className="text-gray-500" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-400">Paused</div>
+                        <div className="text-xs text-gray-500">Press play to start AI mixing</div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <button
+                  onClick={isPlaying ? onPause : onPlay}
+                  className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl font-bold text-sm transition-all"
+                  style={{
+                    backgroundColor: isPlaying ? 'rgba(55,65,81,0.6)' : `${glowColor}20`,
+                    border: `1px solid ${isPlaying ? '#4b5563' : `${glowColor}40`}`,
+                    color: isPlaying ? '#d1d5db' : glowColor,
+                    boxShadow: !isPlaying && isNightclub ? `0 0 20px ${glowColor}25` : undefined
+                  }}
+                >
+                  {isPlaying ? (
+                    <>
+                      <Pause size={18} />
+                      Pause Playback
+                    </>
+                  ) : (
+                    <>
+                      <Play size={18} />
+                      Play to Start AI Mixing
+                    </>
+                  )}
+                </button>
               </div>
             )}
 

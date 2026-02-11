@@ -528,6 +528,8 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
         isPlaying={isPlaying}
         currentAIMood={aiMood}
         onMoodChange={setAiMood}
+        onPlay={handlePlay}
+        onPause={handlePause}
       />
     </div>
   );
