@@ -6,7 +6,7 @@ import { TransitionPairConfig } from './types';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { SongTimelineRow } from './SongTimelineRow';
 import { TransitionConnector } from './TransitionConnector';
-import { EffectsPanel } from './EffectsPanel';
+import { EffectsPanel, EffectTimelineRow } from './EffectsPanel';
 
 const DEFAULT_FADE_KEYFRAMES = {
   songAOut: [
@@ -252,6 +252,14 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
                 />
               )}
 
+              {pairIndex === 0 && pair.selectedTemplate && !pair.directCut && (
+                <EffectTimelineRow
+                  template={pair.selectedTemplate}
+                  onClear={() => handleClearTemplate(pairIndex)}
+                  isMobile={isMobile}
+                />
+              )}
+
               <TransitionConnector
                 songAIndex={pair.songAIndex}
                 songBIndex={pair.songBIndex}
@@ -285,6 +293,14 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
                 onToggleExpand={() => !isLastPair && handleToggleExpand(pairIndex + 1)}
                 isMobile={isMobile}
               />
+
+              {!isLastPair && pairs[pairIndex + 1]?.selectedTemplate && !pairs[pairIndex + 1]?.directCut && (
+                <EffectTimelineRow
+                  template={pairs[pairIndex + 1].selectedTemplate!}
+                  onClear={() => handleClearTemplate(pairIndex + 1)}
+                  isMobile={isMobile}
+                />
+              )}
             </React.Fragment>
           );
         })}

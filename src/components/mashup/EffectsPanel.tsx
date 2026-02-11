@@ -51,7 +51,13 @@ export const EffectsPanel: React.FC<EffectsPanelProps> = ({
   const [durationSize, setDurationSize] = useState<DurationSize>(
     getDurationSizeFromValue(transitionDuration)
   );
-  const [showLibrary, setShowLibrary] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(!directCut);
+
+  useEffect(() => {
+    if (isExpanded && !directCut) {
+      setShowLibrary(true);
+    }
+  }, [isExpanded, directCut]);
 
   const handleDurationChange = (size: DurationSize) => {
     setDurationSize(size);
@@ -401,6 +407,240 @@ const SelectedTemplateCard: React.FC<{
             }}
           />
         </div>
+      </div>
+    </div>
+  );
+};
+
+interface EffectTimelineRowProps {
+  template: TemplateData;
+  onClear: () => void;
+  isMobile: boolean;
+}
+
+export const EffectTimelineRow: React.FC<EffectTimelineRowProps> = ({
+  template,
+  onClear,
+  isMobile,
+}) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackTime, setPlaybackTime] = useState(0);
+  const [actualDuration, setActualDuration] = useState<number | null>(null);
+  const playerRef = useRef<Tone.Player | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number>(0);
+  const pauseTimeRef = useRef<number>(0);
+
+  const audioUrl = template.templateData?.previewUrl || '';
+  const duration = actualDuration ?? template.duration ?? 10;
+
+  useEffect(() => {
+    if (!audioUrl) return;
+
+    const initPlayer = async () => {
+      try {
+        await Tone.start();
+        const player = new Tone.Player({
+          url: audioUrl,
+          onload: () => {
+            if (player.buffer && player.buffer.duration > 0) {
+              setActualDuration(player.buffer.duration);
+            }
+          },
+          onstop: () => {
+            setIsPlaying(false);
+          }
+        }).toDestination();
+        playerRef.current = player;
+      } catch (err) {
+        console.error('Failed to init effect player:', err);
+      }
+    };
+
+    initPlayer();
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (playerRef.current) {
+        playerRef.current.stop();
+        playerRef.current.dispose();
+        playerRef.current = null;
+      }
+      setActualDuration(null);
+    };
+  }, [audioUrl]);
+
+  const updatePlaybackTime = useCallback(() => {
+    if (!playerRef.current || !isPlaying) return;
+
+    const elapsed = Tone.now() - startTimeRef.current;
+    const newTime = pauseTimeRef.current + elapsed;
+
+    if (newTime >= duration) {
+      setIsPlaying(false);
+      setPlaybackTime(0);
+      pauseTimeRef.current = 0;
+      if (playerRef.current.state === 'started') {
+        playerRef.current.stop();
+      }
+      return;
+    }
+
+    setPlaybackTime(newTime);
+    animationFrameRef.current = requestAnimationFrame(updatePlaybackTime);
+  }, [isPlaying, duration]);
+
+  useEffect(() => {
+    if (isPlaying) {
+      animationFrameRef.current = requestAnimationFrame(updatePlaybackTime);
+    } else if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [isPlaying, updatePlaybackTime]);
+
+  const handlePlayPause = async () => {
+    if (!playerRef.current || !playerRef.current.loaded) return;
+
+    try {
+      if (isPlaying) {
+        if (playerRef.current.state === 'started') {
+          playerRef.current.stop();
+        }
+        pauseTimeRef.current = playbackTime;
+        setIsPlaying(false);
+      } else {
+        await Tone.start();
+
+        const currentDuration = playerRef.current.buffer?.duration || duration;
+        if (playbackTime >= currentDuration - 0.1) {
+          pauseTimeRef.current = 0;
+          setPlaybackTime(0);
+        } else {
+          pauseTimeRef.current = playbackTime;
+        }
+
+        startTimeRef.current = Tone.now();
+        playerRef.current.start(Tone.now(), pauseTimeRef.current);
+        setIsPlaying(true);
+      }
+    } catch (error) {
+      console.error('Effect playback error:', error);
+    }
+  };
+
+  const handleSeek = (progress: number) => {
+    const time = progress * duration;
+    if (playerRef.current && isPlaying) {
+      playerRef.current.stop();
+      setIsPlaying(false);
+    }
+    setPlaybackTime(time);
+    pauseTimeRef.current = time;
+  };
+
+  const progress = duration > 0 ? playbackTime / duration : 0;
+
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div
+      className="ml-4 mr-4 rounded-xl border border-cyan-500/30 bg-gradient-to-r from-cyan-500/5 to-teal-500/5 transition-all"
+      style={{ boxShadow: '0 0 20px rgba(6,182,212,0.1)' }}
+    >
+      <div className={`${isMobile ? 'p-3' : 'p-4'}`}>
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-cyan-500/30">
+            <Sparkles size={16} className="text-white" />
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-white truncate" title={template.name}>
+              {template.name}
+            </p>
+            <p className="text-[10px] text-cyan-400/80">
+              {template.duration}s effect
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono text-gray-400">
+              {formatTime(playbackTime)} / {formatTime(duration)}
+            </span>
+
+            <button
+              onClick={handlePlayPause}
+              disabled={!audioUrl}
+              className={`p-2 rounded-lg transition-all flex-shrink-0 ${
+                isPlaying
+                  ? 'bg-white/10 text-white'
+                  : 'bg-gradient-to-r from-cyan-600 to-teal-600 text-white hover:from-cyan-500 hover:to-teal-500'
+              } disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-cyan-500/20`}
+              title={isPlaying ? 'Pause' : 'Play effect'}
+            >
+              {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+            </button>
+
+            <button
+              onClick={onClear}
+              className="p-2 rounded-lg hover:bg-gray-700/50 text-gray-500 hover:text-gray-300 transition-colors flex-shrink-0"
+              title="Remove effect"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+
+        <div className="relative rounded-lg overflow-hidden bg-gray-900/50 border border-gray-700/30">
+          {audioUrl ? (
+            <WaveformDisplay
+              audioUrl={audioUrl}
+              progress={progress}
+              height={isMobile ? 50 : 60}
+              onSeek={handleSeek}
+              showScrubber={false}
+              progressColor="#ffffff"
+              gradientRegion={{
+                startTime: 0,
+                endTime: duration,
+                startColor: '#06b6d4',
+                endColor: '#14b8a6'
+              }}
+            />
+          ) : (
+            <div className={`${isMobile ? 'h-[50px]' : 'h-[60px]'} flex items-center justify-center`}>
+              <span className="text-xs text-gray-500">No preview available</span>
+            </div>
+          )}
+
+          {progress > 0 && (
+            <div
+              className="absolute top-0 bottom-0 w-0.5 bg-white pointer-events-none"
+              style={{
+                left: `${progress * 100}%`,
+                boxShadow: '0 0 8px rgba(255,255,255,0.8)'
+              }}
+            />
+          )}
+        </div>
+
+        {isPlaying && (
+          <div className="mt-2 flex items-center justify-center gap-1 text-[10px] text-cyan-400">
+            <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" />
+            Playing Effect
+          </div>
+        )}
       </div>
     </div>
   );
