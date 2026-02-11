@@ -3,6 +3,7 @@ import { Music, AudioWaveform, Sliders, Upload, FileAudio, Clock, TrendingUp, Za
 import { useAuth } from '../contexts/AuthContext';
 import { databaseService } from '../lib/database';
 import { storageService } from '../lib/storage';
+import { FeedSection } from './feed';
 
 interface HomeViewProps {
   onNavigate: (view: string) => void;
@@ -262,6 +263,8 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
             })}
           </div>
         </div>
+
+        <FeedSection />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Activity */}
