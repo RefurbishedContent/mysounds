@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Download, Settings, Library, Layers, Maximize2, X } from 'lucide-react';
+import { ArrowLeft, Download, Settings, Library, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { mixerService, MixSession, MixTrack } from '../lib/mixerService';
-import { blendExportService, BlendData } from '../lib/blendExportService';
+import { BlendData } from '../lib/blendExportService';
 import { MixerTheme, parseThemeFromMetadata, getDefaultTheme } from '../lib/themeUtils';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { DJDeck } from './DJDeck';
-import { DJCrossfader } from './DJCrossfader';
-import { PlaylistQueueDrawer } from './PlaylistQueueDrawer';
+import { DJMixerTable } from './DJMixerTable';
 import { BlendLibraryPanel } from './BlendLibraryPanel';
 
 interface MixerEditorViewProps {
@@ -28,7 +26,6 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
   const [isMixing, setIsMixing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showLibraryPanel, setShowLibraryPanel] = useState(false);
-  const [showQueueDrawer, setShowQueueDrawer] = useState(false);
   const [deckAVolume, setDeckAVolume] = useState(0.8);
   const [deckBVolume, setDeckBVolume] = useState(0.8);
   const [deckAEQ, setDeckAEQ] = useState({ high: 0, mid: 0, low: 0 });
@@ -123,9 +120,20 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
     }
   };
 
-  const handleReorderTracks = async (reorderedTracks: MixTrack[]) => {
-    setTracks(reorderedTracks);
-    // TODO: Save new order to database
+  const handleLoadTrackToDeck = (trackId: string, deck: 'A' | 'B') => {
+    const trackIndex = tracks.findIndex(t => t.id === trackId);
+    if (trackIndex === -1) return;
+
+    if (deck === 'A' && !isPlaying) {
+      setCurrentTrackIndex(trackIndex);
+      setCurrentTime(0);
+      setIsMixing(false);
+    } else if (deck === 'B') {
+      const reorderedTracks = [...tracks];
+      const [movedTrack] = reorderedTracks.splice(trackIndex, 1);
+      reorderedTracks.splice(currentTrackIndex + 1, 0, movedTrack);
+      setTracks(reorderedTracks);
+    }
   };
 
   const handleExportMix = async () => {
@@ -173,16 +181,8 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
   };
 
   const handleSync = () => {
-    // TODO: Implement BPM sync between decks
     console.log('Sync enabled');
   };
-
-  const currentTrack = tracks[currentTrackIndex];
-  const nextTrack = tracks[currentTrackIndex + 1];
-
-  // Calculate BPM from duration (mock calculation)
-  const currentBPM = currentTrack?.blend?.duration ? 120 + (currentTrack.blend.duration % 20) : 120;
-  const nextBPM = nextTrack?.blend?.duration ? 120 + (nextTrack.blend.duration % 20) : 120;
 
   if (loading) {
     return (
@@ -305,82 +305,40 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
         )}
 
         {/* DJ Booth Area */}
-        <div className="flex-1 flex flex-col overflow-y-auto">
-          <div className="flex-1 p-3 md:p-6 space-y-4 md:space-y-6">
-            {/* Dual Deck Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-              {/* Deck A - Current Track */}
-              <DJDeck
-                deckId="A"
-                trackName={currentTrack?.blend?.name}
-                artist=""
-                bpm={currentBPM}
-                key="Am"
-                duration={currentTrack?.blend?.duration || 0}
-                currentTime={currentTime}
-                isPlaying={isPlaying}
-                volume={deckAVolume}
-                eq={deckAEQ}
-                deckColors={mixerTheme.deckAColors}
-                onPlay={handlePlay}
-                onPause={handlePause}
-                onVolumeChange={setDeckAVolume}
-                onEQChange={(type, value) => setDeckAEQ({ ...deckAEQ, [type]: value })}
-              />
-
-              {/* Deck B - Next Track */}
-              <DJDeck
-                deckId="B"
-                trackName={nextTrack?.blend?.name}
-                artist=""
-                bpm={nextBPM}
-                key="Gm"
-                duration={nextTrack?.blend?.duration || 0}
-                currentTime={0}
-                isPlaying={false}
-                isCueing={isMixing}
-                volume={deckBVolume}
-                eq={deckBEQ}
-                deckColors={mixerTheme.deckBColors}
-                onVolumeChange={setDeckBVolume}
-                onEQChange={(type, value) => setDeckBEQ({ ...deckBEQ, [type]: value })}
-              />
-            </div>
-
-            {/* Crossfader and Master Controls */}
-            <DJCrossfader
-              crossfadePosition={crossfadePosition}
-              masterVolume={masterVolume}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-3 md:p-6 lg:p-8">
+            <DJMixerTable
+              tracks={tracks}
+              currentTrackIndex={currentTrackIndex}
+              currentTime={currentTime}
               isPlaying={isPlaying}
               isMixing={isMixing}
-              onCrossfadeChange={setCrossfadePosition}
-              onMasterVolumeChange={setMasterVolume}
+              masterVolume={masterVolume}
+              crossfadePosition={crossfadePosition}
+              deckAVolume={deckAVolume}
+              deckBVolume={deckBVolume}
+              deckAEQ={deckAEQ}
+              deckBEQ={deckBEQ}
+              mixerTheme={mixerTheme}
               onPlay={handlePlay}
               onPause={handlePause}
               onNext={handleNext}
               onPrevious={handlePrevious}
               onSync={handleSync}
-              vuMeterLevels={{
-                left: deckAVolume * (1 - crossfadePosition),
-                right: deckBVolume * crossfadePosition
+              onCrossfadeChange={setCrossfadePosition}
+              onMasterVolumeChange={setMasterVolume}
+              onDeckAVolumeChange={setDeckAVolume}
+              onDeckBVolumeChange={setDeckBVolume}
+              onDeckAEQChange={(type, value) => setDeckAEQ({ ...deckAEQ, [type]: value })}
+              onDeckBEQChange={(type, value) => setDeckBEQ({ ...deckBEQ, [type]: value })}
+              onSelectTrack={(index) => {
+                setCurrentTrackIndex(index);
+                setCurrentTime(0);
+                setIsMixing(false);
               }}
+              onLoadTrackToDeck={handleLoadTrackToDeck}
             />
           </div>
-
-          {/* Playlist Queue Drawer (Bottom) */}
-          <PlaylistQueueDrawer
-            tracks={tracks}
-            currentTrackIndex={currentTrackIndex}
-            isOpen={showQueueDrawer}
-            onToggle={() => setShowQueueDrawer(!showQueueDrawer)}
-            onRemoveTrack={handleRemoveTrack}
-            onReorderTracks={handleReorderTracks}
-            onSelectTrack={(index) => {
-              setCurrentTrackIndex(index);
-              setCurrentTime(0);
-              setIsMixing(false);
-            }}
-          />
         </div>
       </div>
     </div>
