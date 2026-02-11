@@ -1,6 +1,7 @@
 import React from 'react';
 import { Volume2, Activity, Play, Pause, SkipForward, SkipBack, Zap } from 'lucide-react';
 import { VinylTurntable } from './VinylTurntable';
+import { DeckEQPanel } from './mixer/DeckEQPanel';
 import { MixTrack } from '../lib/mixerService';
 import { MixerTheme } from '../lib/themeUtils';
 
@@ -205,6 +206,17 @@ export const DJMixerTable: React.FC<DJMixerTableProps> = ({
                     <span>+8%</span>
                   </div>
                 </div>
+
+                {/* Deck A EQ Knobs */}
+                <div className="mt-4 w-full">
+                  <DeckEQPanel
+                    eq={deckAEQ}
+                    accentColor={mixerTheme.deckAColors?.primary || '#06b6d4'}
+                    deckLabel="A"
+                    isNightclub={isNightclub}
+                    onChange={onDeckAEQChange}
+                  />
+                </div>
               </div>
 
               {/* Center Mixer Panel */}
@@ -269,49 +281,6 @@ export const DJMixerTable: React.FC<DJMixerTableProps> = ({
                       <span>{isAIActive ? 'AI MIXING' : 'MIXING'}</span>
                     </div>
                   )}
-                </div>
-
-                {/* EQ Section */}
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Deck A EQ */}
-                  <div className="bg-gray-900/60 rounded-lg p-3 space-y-2">
-                    <div className="text-[10px] text-cyan-400 font-semibold uppercase tracking-wider text-center">EQ</div>
-                    {(['high', 'mid', 'low'] as const).map((band) => (
-                      <div key={band} className="flex items-center gap-2">
-                        <span className="text-[9px] text-gray-500 uppercase w-8">{band}</span>
-                        <input
-                          type="range"
-                          min="-12"
-                          max="12"
-                          step="1"
-                          value={deckAEQ[band]}
-                          onChange={(e) => onDeckAEQChange(band, Number(e.target.value))}
-                          className="flex-1 h-1.5 bg-gray-700 rounded-full appearance-none cursor-pointer accent-cyan-500"
-                        />
-                        <span className="text-[9px] text-gray-500 w-6 text-right">{deckAEQ[band]}dB</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Deck B EQ */}
-                  <div className="bg-gray-900/60 rounded-lg p-3 space-y-2">
-                    <div className="text-[10px] text-blue-400 font-semibold uppercase tracking-wider text-center">EQ</div>
-                    {(['high', 'mid', 'low'] as const).map((band) => (
-                      <div key={band} className="flex items-center gap-2">
-                        <span className="text-[9px] text-gray-500 uppercase w-8">{band}</span>
-                        <input
-                          type="range"
-                          min="-12"
-                          max="12"
-                          step="1"
-                          value={deckBEQ[band]}
-                          onChange={(e) => onDeckBEQChange(band, Number(e.target.value))}
-                          className="flex-1 h-1.5 bg-gray-700 rounded-full appearance-none cursor-pointer accent-blue-500"
-                        />
-                        <span className="text-[9px] text-gray-500 w-6 text-right">{deckBEQ[band]}dB</span>
-                      </div>
-                    ))}
-                  </div>
                 </div>
 
                 {/* Volume Faders */}
@@ -489,6 +458,17 @@ export const DJMixerTable: React.FC<DJMixerTableProps> = ({
                     <span>+8%</span>
                   </div>
                 </div>
+
+                {/* Deck B EQ Knobs */}
+                <div className="mt-4 w-full">
+                  <DeckEQPanel
+                    eq={deckBEQ}
+                    accentColor={mixerTheme.deckBColors?.primary || '#3b82f6'}
+                    deckLabel="B"
+                    isNightclub={isNightclub}
+                    onChange={onDeckBEQChange}
+                  />
+                </div>
               </div>
             </div>
 
@@ -496,35 +476,57 @@ export const DJMixerTable: React.FC<DJMixerTableProps> = ({
             <div className="md:hidden space-y-4">
               {/* Turntables row */}
               <div className="flex justify-center gap-4">
-                <div className="scale-75 origin-center">
-                  <VinylTurntable
-                    trackName={currentTrack?.blend?.name}
-                    bpm={currentBPM}
-                    duration={currentTrack?.blend?.duration || 0}
-                    currentTime={currentTime}
-                    isPlaying={isPlaying}
-                    isActive={isPlaying}
-                    canAcceptDrop={!isPlaying}
-                    accentColor={mixerTheme.deckAColors?.primary || '#06b6d4'}
-                    deckLabel="A"
-                    onPlay={onPlay}
-                    onPause={onPause}
-                    onDrop={handleDropOnDeckA}
-                  />
+                <div className="flex flex-col items-center">
+                  <div className="scale-75 origin-center">
+                    <VinylTurntable
+                      trackName={currentTrack?.blend?.name}
+                      bpm={currentBPM}
+                      duration={currentTrack?.blend?.duration || 0}
+                      currentTime={currentTime}
+                      isPlaying={isPlaying}
+                      isActive={isPlaying}
+                      canAcceptDrop={!isPlaying}
+                      accentColor={mixerTheme.deckAColors?.primary || '#06b6d4'}
+                      deckLabel="A"
+                      onPlay={onPlay}
+                      onPause={onPause}
+                      onDrop={handleDropOnDeckA}
+                    />
+                  </div>
+                  <div className="mt-2 scale-90">
+                    <DeckEQPanel
+                      eq={deckAEQ}
+                      accentColor={mixerTheme.deckAColors?.primary || '#06b6d4'}
+                      deckLabel="A"
+                      isNightclub={isNightclub}
+                      onChange={onDeckAEQChange}
+                    />
+                  </div>
                 </div>
-                <div className="scale-75 origin-center">
-                  <VinylTurntable
-                    trackName={nextTrack?.blend?.name}
-                    bpm={nextBPM}
-                    duration={nextTrack?.blend?.duration || 0}
-                    currentTime={0}
-                    isPlaying={false}
-                    isActive={isMixing}
-                    canAcceptDrop={true}
-                    accentColor={mixerTheme.deckBColors?.primary || '#3b82f6'}
-                    deckLabel="B"
-                    onDrop={handleDropOnDeckB}
-                  />
+                <div className="flex flex-col items-center">
+                  <div className="scale-75 origin-center">
+                    <VinylTurntable
+                      trackName={nextTrack?.blend?.name}
+                      bpm={nextBPM}
+                      duration={nextTrack?.blend?.duration || 0}
+                      currentTime={0}
+                      isPlaying={false}
+                      isActive={isMixing}
+                      canAcceptDrop={true}
+                      accentColor={mixerTheme.deckBColors?.primary || '#3b82f6'}
+                      deckLabel="B"
+                      onDrop={handleDropOnDeckB}
+                    />
+                  </div>
+                  <div className="mt-2 scale-90">
+                    <DeckEQPanel
+                      eq={deckBEQ}
+                      accentColor={mixerTheme.deckBColors?.primary || '#3b82f6'}
+                      deckLabel="B"
+                      isNightclub={isNightclub}
+                      onChange={onDeckBEQChange}
+                    />
+                  </div>
                 </div>
               </div>
 

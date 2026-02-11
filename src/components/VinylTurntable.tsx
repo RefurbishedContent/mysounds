@@ -66,9 +66,23 @@ export const VinylTurntable: React.FC<VinylTurntableProps> = ({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {/* Track Name Above Turntable */}
+      <div className="mb-2 text-center min-h-[28px]">
+        {trackName ? (
+          <div
+            className="text-sm md:text-base font-semibold truncate max-w-[180px] md:max-w-[220px] mx-auto"
+            style={{ color: accentColor }}
+          >
+            {trackName}
+          </div>
+        ) : (
+          <div className="text-sm text-gray-500">No track loaded</div>
+        )}
+      </div>
+
       {/* Deck Label */}
       <div
-        className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-full text-xs font-bold"
+        className="absolute top-6 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-full text-xs font-bold"
         style={{
           backgroundColor: accentColor,
           color: 'white',
@@ -312,21 +326,14 @@ export const VinylTurntable: React.FC<VinylTurntableProps> = ({
         </svg>
       </div>
 
-      {/* Track info below turntable */}
-      <div className="mt-3 text-center">
-        {trackName ? (
-          <div className="space-y-0.5">
-            <div className="text-sm md:text-base font-semibold text-white truncate max-w-[180px] md:max-w-[220px] mx-auto">
-              {trackName}
-            </div>
-            <div className="text-xs text-gray-400">
-              {Math.floor(currentTime / 60)}:{String(Math.floor(currentTime % 60)).padStart(2, '0')} / {Math.floor(duration / 60)}:{String(Math.floor(duration % 60)).padStart(2, '0')}
-            </div>
+      {/* Time display below turntable */}
+      {trackName && (
+        <div className="mt-2 text-center">
+          <div className="text-xs text-gray-400">
+            {Math.floor(currentTime / 60)}:{String(Math.floor(currentTime % 60)).padStart(2, '0')} / {Math.floor(duration / 60)}:{String(Math.floor(duration % 60)).padStart(2, '0')}
           </div>
-        ) : (
-          <div className="text-sm text-gray-500">No track loaded</div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

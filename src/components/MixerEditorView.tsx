@@ -7,7 +7,7 @@ import { MixerTheme, parseThemeFromMetadata, getDefaultTheme, getPresetThemes, P
 import { useIsMobile } from '../hooks/useIsMobile';
 import { DJMixerTable } from './DJMixerTable';
 import { BlendLibraryPanel } from './BlendLibraryPanel';
-import { MixerQueueStrip, AIAutoMixPanel, NightclubEffects } from './mixer';
+import { MixerQueueStrip, AIAutoMixButton, AIAutoMixModal, NightclubEffects } from './mixer';
 
 interface MixerEditorViewProps {
   sessionId?: string;
@@ -37,6 +37,7 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
   const [mixerTheme, setMixerTheme] = useState<MixerTheme>(getDefaultTheme());
   const [isAIActive, setIsAIActive] = useState(false);
   const [aiMood, setAiMood] = useState<AIMood>('smooth');
+  const [showAIModal, setShowAIModal] = useState(false);
   const fadeIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -302,6 +303,12 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
               <Library size={18} />
               <span className="hidden md:inline">Library</span>
             </button>
+            <AIAutoMixButton
+              isAIActive={isAIActive}
+              onClick={() => setShowAIModal(true)}
+              mixerTheme={mixerTheme}
+              disabled={tracks.length < 2}
+            />
             <button
               onClick={() => setShowThemePanel(!showThemePanel)}
               className={`flex items-center gap-2 p-2 md:px-4 md:py-2 rounded-lg font-medium transition-colors ${
@@ -390,63 +397,45 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
               mixerTheme={mixerTheme}
             />
 
-            {/* Main Mixer Area with AI Panel */}
-            <div className="flex flex-col lg:flex-row gap-4">
-              {/* DJ Mixer Table */}
-              <div className="flex-1 relative">
-                <NightclubEffects
-                  mixerTheme={mixerTheme}
-                  isPlaying={isPlaying}
-                  isAIActive={isAIActive}
-                />
-                <DJMixerTable
-                  tracks={tracks}
-                  currentTrackIndex={currentTrackIndex}
-                  currentTime={currentTime}
-                  isPlaying={isPlaying}
-                  isMixing={isMixing}
-                  masterVolume={masterVolume}
-                  crossfadePosition={crossfadePosition}
-                  deckAVolume={deckAVolume}
-                  deckBVolume={deckBVolume}
-                  deckAEQ={deckAEQ}
-                  deckBEQ={deckBEQ}
-                  mixerTheme={mixerTheme}
-                  onPlay={handlePlay}
-                  onPause={handlePause}
-                  onNext={handleNext}
-                  onPrevious={handlePrevious}
-                  onSync={handleSync}
-                  onCrossfadeChange={setCrossfadePosition}
-                  onMasterVolumeChange={setMasterVolume}
-                  onDeckAVolumeChange={setDeckAVolume}
-                  onDeckBVolumeChange={setDeckBVolume}
-                  onDeckAEQChange={(type, value) => setDeckAEQ({ ...deckAEQ, [type]: value })}
-                  onDeckBEQChange={(type, value) => setDeckBEQ({ ...deckBEQ, [type]: value })}
-                  onSelectTrack={(index) => {
-                    setCurrentTrackIndex(index);
-                    setCurrentTime(0);
-                    setIsMixing(false);
-                  }}
-                  onLoadTrackToDeck={handleLoadTrackToDeck}
-                  isAIActive={isAIActive}
-                />
-              </div>
-
-              {/* AI Panel - Side on desktop, below on mobile */}
-              <div className="lg:w-64 flex-shrink-0">
-                <AIAutoMixPanel
-                  isAIActive={isAIActive}
-                  onToggleAI={setIsAIActive}
-                  onSoftSkip={handleSoftSkip}
-                  onHardSkip={handleHardSkip}
-                  trackCount={tracks.length}
-                  mixerTheme={mixerTheme}
-                  isPlaying={isPlaying}
-                  currentAIMood={aiMood}
-                  onMoodChange={setAiMood}
-                />
-              </div>
+            {/* Main Mixer Area */}
+            <div className="relative">
+              <NightclubEffects
+                mixerTheme={mixerTheme}
+                isPlaying={isPlaying}
+                isAIActive={isAIActive}
+              />
+              <DJMixerTable
+                tracks={tracks}
+                currentTrackIndex={currentTrackIndex}
+                currentTime={currentTime}
+                isPlaying={isPlaying}
+                isMixing={isMixing}
+                masterVolume={masterVolume}
+                crossfadePosition={crossfadePosition}
+                deckAVolume={deckAVolume}
+                deckBVolume={deckBVolume}
+                deckAEQ={deckAEQ}
+                deckBEQ={deckBEQ}
+                mixerTheme={mixerTheme}
+                onPlay={handlePlay}
+                onPause={handlePause}
+                onNext={handleNext}
+                onPrevious={handlePrevious}
+                onSync={handleSync}
+                onCrossfadeChange={setCrossfadePosition}
+                onMasterVolumeChange={setMasterVolume}
+                onDeckAVolumeChange={setDeckAVolume}
+                onDeckBVolumeChange={setDeckBVolume}
+                onDeckAEQChange={(type, value) => setDeckAEQ({ ...deckAEQ, [type]: value })}
+                onDeckBEQChange={(type, value) => setDeckBEQ({ ...deckBEQ, [type]: value })}
+                onSelectTrack={(index) => {
+                  setCurrentTrackIndex(index);
+                  setCurrentTime(0);
+                  setIsMixing(false);
+                }}
+                onLoadTrackToDeck={handleLoadTrackToDeck}
+                isAIActive={isAIActive}
+              />
             </div>
           </div>
         </div>
@@ -525,6 +514,21 @@ const MixerEditorView: React.FC<MixerEditorViewProps> = ({ sessionId, onBack }) 
           </>
         )}
       </div>
+
+      {/* AI Auto-Mix Modal */}
+      <AIAutoMixModal
+        isOpen={showAIModal}
+        onClose={() => setShowAIModal(false)}
+        isAIActive={isAIActive}
+        onToggleAI={setIsAIActive}
+        onSoftSkip={handleSoftSkip}
+        onHardSkip={handleHardSkip}
+        trackCount={tracks.length}
+        mixerTheme={mixerTheme}
+        isPlaying={isPlaying}
+        currentAIMood={aiMood}
+        onMoodChange={setAiMood}
+      />
     </div>
   );
 };
