@@ -1,30 +1,12 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import {
-  Scissors, Check, ChevronRight, Zap, Clock, Timer,
-  Sparkles, ArrowRight, Play, Pause, X, LayoutGrid
-} from 'lucide-react';
-import * as Tone from 'tone';
+import React, { useState, useEffect } from 'react';
+import { ChevronRight } from 'lucide-react';
 import { TemplateData } from '../../lib/database';
 import { transitionsService } from '../../lib/transitionsService';
-import TemplateGallery from '../TemplateGallery';
-import { WaveformDisplay } from '../WaveformDisplay';
-import { SONG_LETTERS, SONG_COLORS } from './constants';
 import { TransitionPairConfig } from './types';
 import { useIsMobile } from '../../hooks/useIsMobile';
-
-type DurationSize = 'short' | 'medium' | 'long';
-
-const DURATION_RANGES: Record<DurationSize, { min: number; max: number; default: number }> = {
-  short: { min: 4, max: 8, default: 6 },
-  medium: { min: 8, max: 15, default: 12 },
-  long: { min: 16, max: 25, default: 20 },
-};
-
-const getDurationSizeFromValue = (duration: number): DurationSize => {
-  if (duration >= 4 && duration <= 8) return 'short';
-  if (duration > 8 && duration <= 15) return 'medium';
-  return 'long';
-};
+import { SongTimelineRow } from './SongTimelineRow';
+import { TransitionConnector } from './TransitionConnector';
+import { EffectsPanel } from './EffectsPanel';
 
 const DEFAULT_FADE_KEYFRAMES = {
   songAOut: [
@@ -49,6 +31,13 @@ const DEFAULT_FADE_KEYFRAMES = {
   ],
 };
 
+interface ClipData {
+  songAClipStart: number;
+  songAClipEnd: number;
+  songBClipStart: number;
+  songBClipEnd: number;
+}
+
 interface TransitionTemplatesStepProps {
   pairs: TransitionPairConfig[];
   onPairsChange: (pairs: TransitionPairConfig[]) => void;
@@ -60,19 +49,42 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
   pairs,
   onPairsChange,
   onContinue,
-  onBack,
 }) => {
   const isMobile = useIsMobile();
   const [saving, setSaving] = useState(false);
-  const [durationSizes, setDurationSizes] = useState<DurationSize[]>(
-    pairs.map(p => getDurationSizeFromValue(p.transitionDuration))
-  );
-  const [showTemplateLibrary, setShowTemplateLibrary] = useState<boolean[]>(
-    pairs.map(() => false)
-  );
+  const [expandedPanelIndex, setExpandedPanelIndex] = useState<number | null>(null);
+  const [clipData, setClipData] = useState<Record<string, ClipData>>({});
 
   const allPairsConfigured = pairs.every(p => p.directCut || p.selectedTemplate !== null);
   const configuredCount = pairs.filter(p => p.directCut || p.selectedTemplate !== null).length;
+
+  useEffect(() => {
+    const loadClipData = async () => {
+      const data: Record<string, ClipData> = {};
+      for (const pair of pairs) {
+        try {
+          const transition = await transitionsService.getTransition(pair.transitionId);
+          data[pair.transitionId] = {
+            songAClipStart: transition.songAClipStart ?? 0,
+            songAClipEnd: transition.songAMarkerPoint ?? (pair.songA.duration || 30),
+            songBClipStart: transition.songBMarkerPoint ?? 0,
+            songBClipEnd: transition.songBClipEnd ?? (pair.songB.duration || 30),
+          };
+        } catch (error) {
+          console.error('Failed to load clip data:', error);
+          data[pair.transitionId] = {
+            songAClipStart: 0,
+            songAClipEnd: pair.songA.duration || 30,
+            songBClipStart: 0,
+            songBClipEnd: pair.songB.duration || 30,
+          };
+        }
+      }
+      setClipData(data);
+    };
+
+    loadClipData();
+  }, [pairs]);
 
   const updatePair = (index: number, updates: Partial<TransitionPairConfig>) => {
     const newPairs = [...pairs];
@@ -86,12 +98,7 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
       directCut: false,
       transitionDuration: template.duration,
     });
-    const newSizes = [...durationSizes];
-    newSizes[pairIndex] = getDurationSizeFromValue(template.duration);
-    setDurationSizes(newSizes);
-    const newShowLibrary = [...showTemplateLibrary];
-    newShowLibrary[pairIndex] = false;
-    setShowTemplateLibrary(newShowLibrary);
+    setExpandedPanelIndex(null);
   };
 
   const handleDirectCutToggle = (pairIndex: number, enabled: boolean) => {
@@ -100,26 +107,8 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
       selectedTemplate: enabled ? null : pairs[pairIndex].selectedTemplate,
     });
     if (enabled) {
-      const newShowLibrary = [...showTemplateLibrary];
-      newShowLibrary[pairIndex] = false;
-      setShowTemplateLibrary(newShowLibrary);
+      setExpandedPanelIndex(null);
     }
-  };
-
-  const handleBrowseEffects = (pairIndex: number) => {
-    updatePair(pairIndex, {
-      directCut: false,
-    });
-    const newShowLibrary = [...showTemplateLibrary];
-    newShowLibrary[pairIndex] = true;
-    setShowTemplateLibrary(newShowLibrary);
-  };
-
-  const handleDurationChange = (pairIndex: number, size: DurationSize) => {
-    const newSizes = [...durationSizes];
-    newSizes[pairIndex] = size;
-    setDurationSizes(newSizes);
-    updatePair(pairIndex, { transitionDuration: DURATION_RANGES[size].default });
   };
 
   const handleClearTemplate = (pairIndex: number) => {
@@ -127,15 +116,10 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
       selectedTemplate: null,
       directCut: true
     });
-    const newShowLibrary = [...showTemplateLibrary];
-    newShowLibrary[pairIndex] = false;
-    setShowTemplateLibrary(newShowLibrary);
   };
 
-  const handleChangeEffect = (pairIndex: number) => {
-    const newShowLibrary = [...showTemplateLibrary];
-    newShowLibrary[pairIndex] = true;
-    setShowTemplateLibrary(newShowLibrary);
+  const handleToggleExpand = (pairIndex: number) => {
+    setExpandedPanelIndex(expandedPanelIndex === pairIndex ? null : pairIndex);
   };
 
   const handleContinue = async () => {
@@ -222,7 +206,7 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
-      <div className="text-center mb-2">
+      <div className="text-center mb-4">
         <h2 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-white mb-1`}>
           Mash It Up
         </h2>
@@ -246,23 +230,64 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
         </div>
       </div>
 
-      <div className="space-y-4">
-        {pairs.map((pair, index) => (
-          <PairTemplateCard
-            key={pair.transitionId}
-            pair={pair}
-            pairIndex={index}
-            durationSize={durationSizes[index]}
-            showLibrary={showTemplateLibrary[index]}
-            onTemplateSelect={(t) => handleTemplateSelect(index, t)}
-            onClearTemplate={() => handleClearTemplate(index)}
-            onDirectCutToggle={(enabled) => handleDirectCutToggle(index, enabled)}
-            onBrowseEffects={() => handleBrowseEffects(index)}
-            onDurationChange={(size) => handleDurationChange(index, size)}
-            onChangeEffect={() => handleChangeEffect(index)}
-            isMobile={isMobile}
-          />
-        ))}
+      <div className="space-y-1">
+        {pairs.map((pair, pairIndex) => {
+          const clip = clipData[pair.transitionId];
+          const isConfigured = pair.directCut || pair.selectedTemplate !== null;
+          const isExpanded = expandedPanelIndex === pairIndex;
+          const isLastPair = pairIndex === pairs.length - 1;
+
+          return (
+            <React.Fragment key={pair.transitionId}>
+              {pairIndex === 0 && (
+                <SongTimelineRow
+                  song={pair.songA}
+                  songIndex={pair.songAIndex}
+                  clipStart={clip?.songAClipStart ?? 0}
+                  clipEnd={clip?.songAClipEnd ?? (pair.songA.duration || 30)}
+                  isConfigured={isConfigured}
+                  isExpanded={isExpanded}
+                  onToggleExpand={() => handleToggleExpand(pairIndex)}
+                  isMobile={isMobile}
+                />
+              )}
+
+              <TransitionConnector
+                songAIndex={pair.songAIndex}
+                songBIndex={pair.songBIndex}
+                isConfigured={isConfigured}
+                isDirectCut={pair.directCut}
+                effectName={pair.selectedTemplate?.name || null}
+                onClick={() => handleToggleExpand(pairIndex)}
+                isMobile={isMobile}
+              />
+
+              <EffectsPanel
+                isExpanded={isExpanded}
+                songA={pair.songA}
+                songB={pair.songB}
+                selectedTemplate={pair.selectedTemplate}
+                directCut={pair.directCut}
+                transitionDuration={pair.transitionDuration}
+                onTemplateSelect={(t) => handleTemplateSelect(pairIndex, t)}
+                onDirectCutToggle={(enabled) => handleDirectCutToggle(pairIndex, enabled)}
+                onClearTemplate={() => handleClearTemplate(pairIndex)}
+                isMobile={isMobile}
+              />
+
+              <SongTimelineRow
+                song={pair.songB}
+                songIndex={pair.songBIndex}
+                clipStart={clip?.songBClipStart ?? 0}
+                clipEnd={clip?.songBClipEnd ?? (pair.songB.duration || 30)}
+                isConfigured={isLastPair ? true : (pairs[pairIndex + 1]?.directCut || pairs[pairIndex + 1]?.selectedTemplate !== null)}
+                isExpanded={isLastPair ? false : expandedPanelIndex === pairIndex + 1}
+                onToggleExpand={() => !isLastPair && handleToggleExpand(pairIndex + 1)}
+                isMobile={isMobile}
+              />
+            </React.Fragment>
+          );
+        })}
       </div>
 
       <div className="flex justify-center pt-4 pb-8">
@@ -276,403 +301,6 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
           </span>
           <ChevronRight size={24} />
         </button>
-      </div>
-    </div>
-  );
-};
-
-const PairTemplateCard: React.FC<{
-  pair: TransitionPairConfig;
-  pairIndex: number;
-  durationSize: DurationSize;
-  showLibrary: boolean;
-  onTemplateSelect: (template: TemplateData) => void;
-  onClearTemplate: () => void;
-  onDirectCutToggle: (enabled: boolean) => void;
-  onBrowseEffects: () => void;
-  onDurationChange: (size: DurationSize) => void;
-  onChangeEffect: () => void;
-  isMobile: boolean;
-}> = ({
-  pair,
-  pairIndex,
-  durationSize,
-  showLibrary,
-  onTemplateSelect,
-  onClearTemplate,
-  onDirectCutToggle,
-  onBrowseEffects,
-  onDurationChange,
-  onChangeEffect,
-  isMobile
-}) => {
-  const colorsA = SONG_COLORS[pair.songAIndex % SONG_COLORS.length];
-  const colorsB = SONG_COLORS[pair.songBIndex % SONG_COLORS.length];
-  const letterA = SONG_LETTERS[pair.songAIndex];
-  const letterB = SONG_LETTERS[pair.songBIndex];
-  const isConfigured = pair.directCut || pair.selectedTemplate !== null;
-
-  return (
-    <div
-      className={`rounded-xl border transition-all ${
-        isConfigured
-          ? 'border-teal-500/30 bg-gray-800/80'
-          : 'border-gray-700 bg-gray-800/50'
-      }`}
-      style={isConfigured ? { boxShadow: '0 0 20px rgba(20,184,166,0.08)' } : undefined}
-    >
-      <div className="p-4 border-b border-gray-700/50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${colorsA.bg}`}>
-              <span className="text-white font-bold text-xs">{letterA}</span>
-            </div>
-            <span className="text-xs text-gray-500 truncate max-w-[100px]" title={pair.songA.originalName}>
-              {pair.songA.originalName}
-            </span>
-            <ArrowRight size={14} className="text-gray-600 flex-shrink-0" />
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${colorsB.bg}`}>
-              <span className="text-white font-bold text-xs">{letterB}</span>
-            </div>
-            <span className="text-xs text-gray-500 truncate max-w-[100px]" title={pair.songB.originalName}>
-              {pair.songB.originalName}
-            </span>
-          </div>
-          {isConfigured && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-teal-500/10 border border-teal-500/20">
-              <Check size={12} className="text-teal-400" />
-              <span className="text-[10px] text-teal-400 font-medium">
-                {pair.directCut ? 'Direct Cut' : pair.selectedTemplate?.name}
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => onDirectCutToggle(true)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 border-dashed transition-all font-medium text-sm ${
-              pair.directCut
-                ? 'border-teal-500 bg-teal-500/10 text-teal-400'
-                : 'border-gray-600 bg-gray-800/50 text-gray-400 hover:border-gray-500 hover:text-gray-300'
-            }`}
-          >
-            <Scissors size={16} />
-            <span>Direct Cut</span>
-            {pair.directCut && <Check size={14} className="ml-1" />}
-          </button>
-
-          <button
-            onClick={onBrowseEffects}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all font-medium text-sm ${
-              !pair.directCut && (showLibrary || pair.selectedTemplate)
-                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/30'
-                : 'bg-gradient-to-r from-purple-600/80 to-pink-600/80 text-white hover:from-purple-600 hover:to-pink-600 hover:shadow-lg hover:shadow-purple-500/40'
-            }`}
-          >
-            <Sparkles size={16} />
-            <span>Browse Effects</span>
-            {!pair.directCut && pair.selectedTemplate && <Check size={14} className="ml-1" />}
-          </button>
-        </div>
-
-        {pair.directCut && !showLibrary && (
-          <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-700/50 text-center">
-            <Scissors size={20} className="text-teal-400 mx-auto mb-1" />
-            <p className="text-xs text-gray-400">
-              Songs will be joined with a clean splice - no effect added
-            </p>
-          </div>
-        )}
-
-        {!pair.directCut && pair.selectedTemplate && !showLibrary && (
-          <TemplatePreviewCard
-            template={pair.selectedTemplate}
-            onClear={onClearTemplate}
-            onChangeEffect={onChangeEffect}
-          />
-        )}
-
-        {showLibrary && (
-          <div className="relative rounded-lg overflow-hidden border border-cyan-500/30 transition-all duration-300">
-            <div className="bg-gray-800/60 px-3 py-2 border-b border-gray-700/30">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-1.5">
-                  <LayoutGrid size={12} className="text-cyan-400" />
-                  <span className="text-[11px] font-medium text-gray-300">Effect Library</span>
-                </div>
-                <span className="text-[10px] text-gray-500">
-                  {DURATION_RANGES[durationSize].min}-{DURATION_RANGES[durationSize].max}s
-                </span>
-              </div>
-              <div className="flex gap-1.5">
-                {(['short', 'medium', 'long'] as DurationSize[]).map(size => {
-                  const icons = { short: Zap, medium: Clock, long: Timer };
-                  const Icon = icons[size];
-                  const isActive = durationSize === size;
-                  return (
-                    <button
-                      key={size}
-                      onClick={() => onDurationChange(size)}
-                      className={`flex-1 py-1.5 px-2 rounded-md border transition-all flex items-center justify-center gap-1 ${
-                        isActive
-                          ? 'border-cyan-500 bg-cyan-500/10 text-cyan-400'
-                          : 'border-gray-700 bg-gray-800/50 text-gray-500 hover:border-gray-600'
-                      }`}
-                    >
-                      <Icon size={11} />
-                      <span className="text-[10px] font-medium capitalize">{size}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div className={`${isMobile ? 'max-h-[35vh]' : 'max-h-[30vh]'} overflow-y-auto p-2`}>
-              <TemplateGallery
-                onSelectTemplate={onTemplateSelect}
-                compact={true}
-                trackA={pair.songA}
-                trackB={pair.songB}
-                durationFilter={durationSize}
-                selectedTemplateId={pair.selectedTemplate?.id}
-              />
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const TemplatePreviewCard: React.FC<{
-  template: TemplateData;
-  onClear: () => void;
-  onChangeEffect: () => void;
-}> = ({ template, onClear, onChangeEffect }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackTime, setPlaybackTime] = useState(0);
-  const [actualDuration, setActualDuration] = useState<number | null>(null);
-  const playerRef = useRef<Tone.Player | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  const startTimeRef = useRef<number>(0);
-  const pauseTimeRef = useRef<number>(0);
-
-  const audioUrl = template.templateData?.previewUrl || '';
-  const duration = actualDuration ?? template.duration ?? 10;
-
-  useEffect(() => {
-    if (!audioUrl) return;
-
-    const initPlayer = async () => {
-      try {
-        await Tone.start();
-        const player = new Tone.Player({
-          url: audioUrl,
-          onload: () => {
-            if (player.buffer && player.buffer.duration > 0) {
-              setActualDuration(player.buffer.duration);
-            }
-          },
-          onstop: () => {
-            setIsPlaying(false);
-          }
-        }).toDestination();
-        playerRef.current = player;
-      } catch (err) {
-        console.error('Failed to init template player:', err);
-      }
-    };
-
-    initPlayer();
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      if (playerRef.current) {
-        playerRef.current.stop();
-        playerRef.current.dispose();
-        playerRef.current = null;
-      }
-      setActualDuration(null);
-    };
-  }, [audioUrl]);
-
-  const updatePlaybackTime = useCallback(() => {
-    if (!playerRef.current || !isPlaying) return;
-
-    const elapsed = Tone.now() - startTimeRef.current;
-    const newTime = pauseTimeRef.current + elapsed;
-
-    if (newTime >= duration) {
-      setIsPlaying(false);
-      setPlaybackTime(0);
-      pauseTimeRef.current = 0;
-      if (playerRef.current.state === 'started') {
-        playerRef.current.stop();
-      }
-      return;
-    }
-
-    setPlaybackTime(newTime);
-    animationFrameRef.current = requestAnimationFrame(updatePlaybackTime);
-  }, [isPlaying, duration]);
-
-  useEffect(() => {
-    if (isPlaying) {
-      animationFrameRef.current = requestAnimationFrame(updatePlaybackTime);
-    } else if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [isPlaying, updatePlaybackTime]);
-
-  const handlePlayPause = async () => {
-    if (!playerRef.current || !playerRef.current.loaded) return;
-
-    try {
-      if (isPlaying) {
-        if (playerRef.current.state === 'started') {
-          playerRef.current.stop();
-        }
-        pauseTimeRef.current = playbackTime;
-        setIsPlaying(false);
-      } else {
-        await Tone.start();
-
-        const currentDuration = playerRef.current.buffer?.duration || duration;
-        if (playbackTime >= currentDuration - 0.1) {
-          pauseTimeRef.current = 0;
-          setPlaybackTime(0);
-        } else {
-          pauseTimeRef.current = playbackTime;
-        }
-
-        startTimeRef.current = Tone.now();
-        playerRef.current.start(Tone.now(), pauseTimeRef.current);
-        setIsPlaying(true);
-      }
-    } catch (error) {
-      console.error('Template playback error:', error);
-    }
-  };
-
-  const handleSeek = (progress: number) => {
-    const time = progress * duration;
-    if (playerRef.current && isPlaying) {
-      playerRef.current.stop();
-      setIsPlaying(false);
-    }
-    setPlaybackTime(time);
-    pauseTimeRef.current = time;
-  };
-
-  const progress = duration > 0 ? playbackTime / duration : 0;
-
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  return (
-    <div className="bg-gray-900/60 rounded-xl border border-cyan-500/30 overflow-hidden" style={{ boxShadow: '0 0 20px rgba(6,182,212,0.1)' }}>
-      <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-cyan-500/10 to-teal-500/10 border-b border-cyan-500/20">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-lg shadow-cyan-500/30">
-            <Check className="w-3.5 h-3.5 text-white" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-white">{template.name}</p>
-            <p className="text-[10px] text-cyan-400/80">{template.duration}s effect</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={onChangeEffect}
-            className="px-2 py-1 rounded-lg text-[10px] font-medium text-cyan-400 hover:bg-cyan-500/10 transition-colors"
-            title="Browse more effects"
-          >
-            Change
-          </button>
-          <button
-            onClick={onClear}
-            className="p-1.5 rounded-lg hover:bg-gray-700/50 text-gray-500 hover:text-gray-300 transition-colors"
-            title="Remove effect"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      </div>
-
-      <div className="p-3">
-        <div className="flex items-center gap-3 mb-2">
-          <button
-            onClick={handlePlayPause}
-            disabled={!audioUrl}
-            className="p-2 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all shadow-lg shadow-cyan-500/20"
-            title={isPlaying ? 'Pause' : 'Play effect preview'}
-          >
-            {isPlaying ? (
-              <Pause className="w-4 h-4 text-white" />
-            ) : (
-              <Play className="w-4 h-4 text-white" />
-            )}
-          </button>
-          <div className="flex-1 flex items-center justify-between">
-            <span className="text-xs font-mono text-gray-400">
-              {formatTime(playbackTime)} / {formatTime(duration)}
-            </span>
-            {isPlaying && (
-              <span className="flex items-center gap-1 text-[10px] text-cyan-400">
-                <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" />
-                Playing
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="relative rounded-lg overflow-hidden bg-gray-800/50 border border-gray-700/50">
-          {audioUrl ? (
-            <WaveformDisplay
-              audioUrl={audioUrl}
-              progress={progress}
-              height={60}
-              onSeek={handleSeek}
-              showScrubber={false}
-              progressColor="#ffffff"
-              gradientRegion={{
-                startTime: 0,
-                endTime: duration,
-                startColor: '#06b6d4',
-                endColor: '#14b8a6'
-              }}
-            />
-          ) : (
-            <div className="h-[60px] flex items-center justify-center">
-              <span className="text-xs text-gray-500">No preview available</span>
-            </div>
-          )}
-
-          <div
-            className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg pointer-events-none"
-            style={{
-              left: `${progress * 100}%`,
-              boxShadow: '0 0 8px rgba(255,255,255,0.8)'
-            }}
-          />
-        </div>
-
-        <p className="text-[10px] text-gray-500 mt-2 text-center">
-          Click waveform to seek
-        </p>
       </div>
     </div>
   );
