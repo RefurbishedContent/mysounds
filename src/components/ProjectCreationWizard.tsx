@@ -155,8 +155,8 @@ const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ onComplet
     <div className="h-full flex flex-col bg-gray-900">
       {wizard.currentStep < 4 && (
         <>
-          <div className="flex-shrink-0 bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between">
-            <h1 className="text-xl font-bold text-white">Create New Project</h1>
+          <div className="flex-shrink-0 bg-gray-800 border-b border-gray-700 px-4 py-2 flex items-center justify-between">
+            <h1 className="text-base font-bold text-white">Create New Project</h1>
             <button
               onClick={handleCancel}
               className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors duration-200"
