@@ -724,7 +724,7 @@ const AppShell: React.FC = () => {
                       style={{
                         backgroundImage: 'linear-gradient(90deg, #22d3ee, #3b82f6, #8b5cf6, #3b82f6, #22d3ee)',
                         backgroundSize: '300% 100%',
-                        animation: 'glow-scroll 10s linear infinite',
+                        animation: 'glow-scroll 20s linear infinite',
                       }}
                     >
                       {section.title}
