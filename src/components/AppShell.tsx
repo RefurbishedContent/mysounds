@@ -749,18 +749,18 @@ const AppShell: React.FC = () => {
                         }}
                         disabled={isDisabled}
                         className={`
-                          w-full flex items-center px-2 py-1.5 text-[15px] rounded-lg transition-all duration-200
+                          nav-glow-btn w-full flex items-center px-2 py-1.5 text-[15px] rounded-lg transition-all duration-200
                           ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
                           ${isActive && !isDisabled
                             ? 'bg-gray-700 text-white font-medium'
-                            : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                            : 'text-gray-400 hover:bg-gray-700/50'
                           }
                           justify-start md:${isSidebarCollapsed ? 'justify-center' : 'justify-start'}
                         `}
                         title={isSidebarCollapsed ? item.label : undefined}
                       >
                         <Icon size={16} className="flex-shrink-0" />
-                        <span className={`ml-2 flex-1 text-left ${isSidebarCollapsed ? 'md:hidden' : ''}`}>
+                        <span className={`nav-glow-label ml-2 flex-1 text-left ${isSidebarCollapsed ? 'md:hidden' : ''}`}>
                           {item.label}
                         </span>
                         {item.comingSoon && !isSidebarCollapsed && (
