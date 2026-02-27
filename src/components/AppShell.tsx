@@ -720,10 +720,11 @@ const AppShell: React.FC = () => {
                 <div key={sectionIndex} className="space-y-0.5">
                   {section.title && !isSidebarCollapsed && (
                     <h3
-                      className="px-2 text-xs font-semibold uppercase tracking-wider mb-0.5 bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent"
+                      className="px-2 text-xs font-semibold uppercase tracking-wider mb-0.5 bg-clip-text text-transparent"
                       style={{
-                        backgroundSize: '200% 100%',
-                        animation: 'glow-shift 4s ease-in-out infinite',
+                        backgroundImage: 'linear-gradient(90deg, #22d3ee, #3b82f6, #8b5cf6, #3b82f6, #22d3ee)',
+                        backgroundSize: '300% 100%',
+                        animation: 'glow-scroll 3s linear infinite',
                       }}
                     >
                       {section.title}
