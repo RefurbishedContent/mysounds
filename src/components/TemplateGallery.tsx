@@ -279,12 +279,12 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
     <div className={`min-h-full flex flex-col ${compact ? '' : 'p-2 sm:p-3 md:p-4'}`}>
       {/* Header */}
       {!compact && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2">
           <div>
-            <h1 className="font-bold text-white transition-all duration-500 text-xl mb-1">
+            <h1 className="font-bold text-white transition-all duration-500 text-base mb-0.5">
               Template Gallery
             </h1>
-            <p className="text-sm text-gray-400 transition-opacity duration-500">Professional mixing templates created by top DJs</p>
+            <p className="text-xs text-gray-400 transition-opacity duration-500">Professional mixing templates created by top DJs</p>
           </div>
           <div className="flex items-center space-x-2 text-sm text-gray-400 transition-all duration-500">
             <span>{filteredTemplates.length} templates</span>
@@ -295,7 +295,7 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
       {/* Filters */}
       {!compact && (
         <div className="mb-3">
-          <div className="space-y-4">
+          <div className="space-y-2">
             {/* Search Bar - Always Visible */}
             <div className="relative">
               <Search size={16} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-500" />
@@ -556,18 +556,18 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
       {/* Templates Grid */}
       <div className="flex-1">
         {loading ? (
-          <div className="glass-surface rounded-2xl p-12 text-center shadow-xl shadow-cyan-500/10">
-            <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <h3 className="text-xl font-semibold text-white mb-2">Loading Templates</h3>
-            <p className="text-gray-400">Fetching the latest mixing templates...</p>
+          <div className="glass-surface rounded-xl p-6 text-center shadow-xl shadow-cyan-500/10">
+            <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+            <h3 className="text-base font-semibold text-white mb-1">Loading Templates</h3>
+            <p className="text-sm text-gray-400">Fetching the latest mixing templates...</p>
           </div>
         ) : error ? (
-          <div className="glass-surface rounded-2xl p-12 text-center">
-            <div className="w-12 h-12 bg-red-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-red-400 text-2xl">⚠</span>
+          <div className="glass-surface rounded-xl p-6 text-center">
+            <div className="w-10 h-10 bg-red-900/50 rounded-full flex items-center justify-center mx-auto mb-3">
+              <span className="text-red-400 text-xl">⚠</span>
             </div>
-            <h3 className="text-xl font-semibold text-white mb-2">Failed to Load Templates</h3>
-            <p className="text-gray-400 mb-4">{error}</p>
+            <h3 className="text-base font-semibold text-white mb-1">Failed to Load Templates</h3>
+            <p className="text-sm text-gray-400 mb-3">{error}</p>
             <button
               onClick={loadTemplates}
               className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white rounded-lg font-medium transition-all duration-200 hover:shadow-lg hover:shadow-cyan-500/30"
@@ -576,10 +576,10 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
             </button>
           </div>
         ) : filteredTemplates.length === 0 ? (
-          <div className="glass-surface rounded-2xl p-12 text-center">
-            <Search size={48} className="text-gray-500 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">No templates found</h3>
-            <p className="text-gray-400">Try adjusting your search or filters</p>
+          <div className="glass-surface rounded-xl p-6 text-center">
+            <Search size={32} className="text-gray-500 mx-auto mb-3" />
+            <h3 className="text-base font-semibold text-white mb-1">No templates found</h3>
+            <p className="text-sm text-gray-400">Try adjusting your search or filters</p>
           </div>
         ) : (
           <div className={compact ? 'grid grid-cols-3 md:grid-cols-5 gap-2' : 'grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2.5'}>

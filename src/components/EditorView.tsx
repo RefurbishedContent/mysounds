@@ -777,7 +777,7 @@ const EditorView: React.FC<EditorViewProps> = ({ projectId, template, onBack, on
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className={`border-b border-gray-700 transition-all duration-300 ${isHeaderCollapsed ? 'h-12' : 'p-6'}`}>
+      <div className={`border-b border-gray-700 transition-all duration-300 ${isHeaderCollapsed ? 'h-10' : 'p-3'}`}>
         {isHeaderCollapsed ? (
           /* Collapsed Header */
           <div className="flex items-center justify-between h-full px-4">
@@ -890,12 +890,12 @@ const EditorView: React.FC<EditorViewProps> = ({ projectId, template, onBack, on
 
       {/* Validation Errors */}
       {validationErrors.length > 0 && (
-        <div className="bg-yellow-900/30 border-b border-yellow-600/50 p-4 shadow-lg shadow-yellow-500/10">
-          <div className="flex items-start space-x-3">
-            <AlertTriangle size={20} className="text-yellow-400 flex-shrink-0 mt-0.5" />
+        <div className="bg-yellow-900/30 border-b border-yellow-600/50 p-2 shadow-lg shadow-yellow-500/10">
+          <div className="flex items-start space-x-2">
+            <AlertTriangle size={16} className="text-yellow-400 flex-shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-yellow-300 font-medium mb-2">Project Setup Required</h4>
-              <ul className="text-yellow-200 text-sm space-y-1">
+              <h4 className="text-yellow-300 text-sm font-medium mb-1">Project Setup Required</h4>
+              <ul className="text-yellow-200 text-xs space-y-0.5">
                 {validationErrors.map((error, index) => (
                   <li key={index}>• {error}</li>
                 ))}
@@ -931,7 +931,7 @@ const EditorView: React.FC<EditorViewProps> = ({ projectId, template, onBack, on
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
         {!tracksUploaded ? (
           /* Upload Interface */
-          <div className="p-6">
+          <div className="p-4">
             <div className="max-w-2xl mx-auto">
               <AudioUploader onTracksReady={handleTracksReady} />
             </div>
@@ -982,8 +982,8 @@ const EditorView: React.FC<EditorViewProps> = ({ projectId, template, onBack, on
                   </div>
                 ) : (
                   /* Expanded State */
-                  <div className="px-6 py-6">
-                    <div className="flex items-center justify-between mb-4">
+                  <div className="px-4 py-3">
+                    <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center space-x-3">
                         <div className="p-2 bg-gradient-to-r from-cyan-600/20 to-purple-600/20 rounded-lg border border-cyan-500/30">
                           <Layers size={20} className="text-cyan-400" />

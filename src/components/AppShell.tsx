@@ -554,7 +554,7 @@ const AppShell: React.FC = () => {
   return (
     <div className="h-screen bg-gray-900 flex flex-col overflow-hidden">
       {/* Top Bar - Hidden on Mobile */}
-      <div className={`bg-gray-800 border-b border-gray-700 px-3 sm:px-4 py-2 sm:py-3 flex-shrink-0 z-[60] relative ${isMobile ? 'hidden' : ''}`}>
+      <div className={`bg-gray-800 border-b border-gray-700 px-3 sm:px-4 py-1.5 flex-shrink-0 z-[60] relative ${isMobile ? 'hidden' : ''}`}>
         <div className="flex items-center justify-between gap-2">
           {/* Left Section */}
           <div className="flex items-center space-x-2 sm:space-x-4">
@@ -579,10 +579,10 @@ const AppShell: React.FC = () => {
               <img
                 src="https://images.ctfassets.net/ktdj7g8bqfli/5vsEjYHOcHlGsPgxTVzBH7/01fa743c4568d87307c57ec1127492d1/ChatGPT_Image_Feb_7__2026__08_34_18_PM.png"
                 alt="MySounds.AI Logo"
-                className="w-12 h-12 rounded-lg shadow-lg object-cover"
+                className="w-8 h-8 rounded-lg shadow-lg object-cover"
               />
               <div className="hidden sm:block">
-                <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+                <h1 className="text-base font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
                   MySounds.AI
                 </h1>
                 <p className="text-xs text-gray-500">AI-Powered Song Fusion</p>
@@ -675,7 +675,7 @@ const AppShell: React.FC = () => {
           md:translate-x-0
           md:relative inset-y-0 left-0 z-50
           md:w-auto
-          ${isSidebarCollapsed ? 'md:w-16' : 'md:w-64'}
+          ${isSidebarCollapsed ? 'md:w-14' : 'md:w-56'}
         `}>
           <button
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
@@ -702,24 +702,24 @@ const AppShell: React.FC = () => {
             </div>
 
             {/* Navigation */}
-            <nav className={`flex-1 px-3 py-4 space-y-6 overflow-y-auto ${isSidebarCollapsed ? 'md:overflow-hidden' : ''}`}>
+            <nav className={`flex-1 px-2 py-2 space-y-2 overflow-y-auto ${isSidebarCollapsed ? 'md:overflow-hidden' : ''}`}>
               {/* Create New Button */}
               {!isSidebarCollapsed && (
                 <button
                   onClick={handleCreateNew}
                   data-tutorial="create-button"
-                  className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/50"
+                  className="w-full flex items-center justify-center space-x-2 px-3 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white rounded-lg text-sm font-semibold transition-all duration-200 shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/50"
                 >
-                  <Plus size={20} />
+                  <Plus size={16} />
                   <span>Create new</span>
                 </button>
               )}
 
               {/* Menu Sections */}
               {menuSections.map((section, sectionIndex) => (
-                <div key={sectionIndex} className="space-y-1">
+                <div key={sectionIndex} className="space-y-0.5">
                   {section.title && !isSidebarCollapsed && (
-                    <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    <h3 className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-0.5">
                       {section.title}
                     </h3>
                   )}
@@ -742,7 +742,7 @@ const AppShell: React.FC = () => {
                         }}
                         disabled={isDisabled}
                         className={`
-                          w-full flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200
+                          w-full flex items-center px-2 py-1.5 text-sm rounded-lg transition-all duration-200
                           ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
                           ${isActive && !isDisabled
                             ? 'bg-gray-700 text-white font-medium'
@@ -752,12 +752,12 @@ const AppShell: React.FC = () => {
                         `}
                         title={isSidebarCollapsed ? item.label : undefined}
                       >
-                        <Icon size={20} className="flex-shrink-0" />
-                        <span className={`ml-3 flex-1 text-left ${isSidebarCollapsed ? 'md:hidden' : ''}`}>
+                        <Icon size={16} className="flex-shrink-0" />
+                        <span className={`ml-2 flex-1 text-left ${isSidebarCollapsed ? 'md:hidden' : ''}`}>
                           {item.label}
                         </span>
                         {item.comingSoon && !isSidebarCollapsed && (
-                          <span className="text-xs px-2 py-0.5 bg-gray-700 rounded text-gray-500">
+                          <span className="text-xs px-1.5 py-0.5 bg-gray-700 rounded text-gray-500">
                             Soon
                           </span>
                         )}
@@ -769,7 +769,7 @@ const AppShell: React.FC = () => {
             </nav>
 
             {/* Bottom Section */}
-            <div className="p-4 border-t border-gray-700">
+            <div className="p-2 border-t border-gray-700">
               <button
                 onClick={() => {
                   onboarding.startTutorial();
@@ -778,23 +778,23 @@ const AppShell: React.FC = () => {
                   setIsMobileSidebarOpen(false);
                 }}
                 className={`
-                  w-full flex items-center px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all duration-200 mb-2
+                  w-full flex items-center px-2 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all duration-200 mb-0.5
                   justify-start md:${isSidebarCollapsed ? 'justify-center' : 'justify-start'}
                 `}
                 title={isSidebarCollapsed ? 'Show Tutorial' : undefined}
               >
-                <HelpCircle size={20} className="flex-shrink-0" />
-                <span className={`ml-3 font-medium ${isSidebarCollapsed ? 'md:hidden' : ''}`}>
+                <HelpCircle size={16} className="flex-shrink-0" />
+                <span className={`ml-2 font-medium ${isSidebarCollapsed ? 'md:hidden' : ''}`}>
                   Show Tutorial
                 </span>
               </button>
               <button className={`
-                w-full flex items-center px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all duration-200
+                w-full flex items-center px-2 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all duration-200
                 justify-start md:${isSidebarCollapsed ? 'justify-center' : 'justify-start'}
               `}
               title={isSidebarCollapsed ? 'Settings' : undefined}>
-                <Settings size={20} className="flex-shrink-0" />
-                <span className={`ml-3 font-medium ${isSidebarCollapsed ? 'md:hidden' : ''}`}>
+                <Settings size={16} className="flex-shrink-0" />
+                <span className={`ml-2 font-medium ${isSidebarCollapsed ? 'md:hidden' : ''}`}>
                   Settings
                 </span>
               </button>

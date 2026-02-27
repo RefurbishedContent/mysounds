@@ -232,7 +232,7 @@ const TransitionsList: React.FC<TransitionsListProps> = ({
               return (
                 <div
                   key={group.groupName}
-                  className="bg-gray-800 rounded-lg border border-gray-700 p-4 hover:border-gray-600 transition-all duration-200"
+                  className="bg-gray-800 rounded-lg border border-gray-700 p-3 hover:border-gray-600 transition-all duration-200"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0">

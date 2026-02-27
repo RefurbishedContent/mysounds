@@ -155,78 +155,78 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
 
   return (
     <div className="h-full overflow-y-auto bg-gray-900">
-      <div className="max-w-7xl mx-auto p-6 space-y-8">
+      <div className="max-w-7xl mx-auto p-4 space-y-4">
         {/* Hero Section */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900 border border-gray-700 p-8">
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900 border border-gray-700 p-4">
           <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-blue-500/10 to-purple-500/10" />
           <div className="absolute inset-0 opacity-30">
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzMzMyIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-20" />
           </div>
 
           <div className="relative z-10">
-            <div className="flex items-start justify-between mb-6">
+            <div className="flex items-start justify-between mb-3">
               <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-3xl font-bold text-white">
+                <div className="flex items-center gap-2 mb-1">
+                  <h1 className="text-xl font-bold text-white">
                     {getGreeting()}, {user?.name}
                   </h1>
-                  <span className="px-3 py-1 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full text-xs font-semibold text-white uppercase tracking-wide shadow-lg shadow-cyan-500/30">
+                  <span className="px-2 py-0.5 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full text-xs font-semibold text-white uppercase tracking-wide shadow-lg shadow-cyan-500/30">
                     {user?.plan}
                   </span>
                 </div>
-                <p className="text-gray-400">Ready to create something incredible?</p>
+                <p className="text-sm text-gray-400">Ready to create something incredible?</p>
               </div>
               <button
                 onClick={onCreateNew}
-                className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/50 flex items-center gap-2"
+                className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white text-sm rounded-lg font-semibold transition-all duration-200 shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/50 flex items-center gap-2"
               >
-                <Plus size={20} />
+                <Plus size={16} />
                 Create New
               </button>
             </div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700/50">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-cyan-500/20 rounded-lg flex items-center justify-center">
-                    <Music size={20} className="text-cyan-400" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-3 border border-gray-700/50">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-cyan-500/20 rounded-lg flex items-center justify-center">
+                    <Music size={16} className="text-cyan-400" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-white">{stats.totalTracks}</p>
+                    <p className="text-lg font-bold text-white">{stats.totalTracks}</p>
                     <p className="text-xs text-gray-400">Tracks</p>
                   </div>
                 </div>
               </div>
-              <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700/50">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                    <AudioWaveform size={20} className="text-blue-400" />
+              <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-3 border border-gray-700/50">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <AudioWaveform size={16} className="text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-white">{stats.totalTransitions}</p>
+                    <p className="text-lg font-bold text-white">{stats.totalTransitions}</p>
                     <p className="text-xs text-gray-400">Mash Ups</p>
                   </div>
                 </div>
               </div>
-              <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700/50">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                    <Clock size={20} className="text-purple-400" />
+              <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-3 border border-gray-700/50">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                    <Clock size={16} className="text-purple-400" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-white">{stats.hoursProduced.toFixed(1)}</p>
+                    <p className="text-lg font-bold text-white">{stats.hoursProduced.toFixed(1)}</p>
                     <p className="text-xs text-gray-400">Hours Mixed</p>
                   </div>
                 </div>
               </div>
-              <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700/50">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-pink-500/20 rounded-lg flex items-center justify-center">
-                    <Sparkles size={20} className="text-pink-400" />
+              <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-3 border border-gray-700/50">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-pink-500/20 rounded-lg flex items-center justify-center">
+                    <Sparkles size={16} className="text-pink-400" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-white">{stats.totalBlends}</p>
+                    <p className="text-lg font-bold text-white">{stats.totalBlends}</p>
                     <p className="text-xs text-gray-400">Total Mash Ups</p>
                   </div>
                 </div>
@@ -237,25 +237,25 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
 
         {/* Quick Actions */}
         <div>
-          <h2 className="text-xl font-bold text-white mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <h2 className="text-sm font-bold text-white uppercase tracking-wide mb-2">Quick Actions</h2>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {quickActions.map((action) => {
               const Icon = action.icon;
               return (
                 <button
                   key={action.id}
                   onClick={action.action}
-                  className="group relative overflow-hidden bg-gray-800 hover:bg-gray-750 border border-gray-700 rounded-xl p-6 transition-all duration-300 hover:scale-105 hover:shadow-xl text-left"
+                  className="group relative overflow-hidden bg-gray-800 hover:bg-gray-750 border border-gray-700 rounded-lg p-3 transition-all duration-300 hover:scale-105 hover:shadow-xl text-left"
                 >
                   <div className={`absolute inset-0 bg-gradient-to-br ${action.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
                   <div className="relative z-10">
-                    <div className={`w-12 h-12 bg-gradient-to-br ${action.gradient} rounded-xl flex items-center justify-center mb-4 shadow-lg`}>
-                      <Icon size={24} className="text-white" />
+                    <div className={`w-8 h-8 bg-gradient-to-br ${action.gradient} rounded-lg flex items-center justify-center mb-2 shadow-lg`}>
+                      <Icon size={16} className="text-white" />
                     </div>
-                    <h3 className="text-lg font-semibold text-white mb-1">{action.title}</h3>
-                    <p className="text-sm text-gray-400">{action.description}</p>
-                    <div className="mt-4 flex items-center text-cyan-400 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      Get started <ArrowRight size={16} className="ml-1" />
+                    <h3 className="text-sm font-semibold text-white mb-0.5">{action.title}</h3>
+                    <p className="text-xs text-gray-400">{action.description}</p>
+                    <div className="mt-2 flex items-center text-cyan-400 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      Get started <ArrowRight size={12} className="ml-1" />
                     </div>
                   </div>
                 </button>
@@ -266,27 +266,27 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
 
         <FeedSection />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Recent Activity */}
-          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <Activity size={20} className="text-cyan-400" />
+          <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                <Activity size={16} className="text-cyan-400" />
                 Recent Activity
               </h2>
-              <button className="text-cyan-400 text-sm hover:text-cyan-300 transition-colors">
+              <button className="text-cyan-400 text-xs hover:text-cyan-300 transition-colors">
                 View All
               </button>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {recentActivities.length > 0 ? (
                 recentActivities.map((activity) => (
                   <div
                     key={activity.id}
-                    className="flex items-start gap-3 p-3 bg-gray-750 hover:bg-gray-700 rounded-lg transition-colors cursor-pointer"
+                    className="flex items-start gap-2 p-2 bg-gray-750 hover:bg-gray-700 rounded-lg transition-colors cursor-pointer"
                   >
-                    <div className="w-8 h-8 bg-cyan-500/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                      <Activity size={16} className="text-cyan-400" />
+                    <div className="w-6 h-6 bg-cyan-500/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Activity size={12} className="text-cyan-400" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-white font-medium truncate">{activity.title}</p>
@@ -297,8 +297,8 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
                   </div>
                 ))
               ) : (
-                <div className="text-center py-8">
-                  <Activity size={32} className="text-gray-600 mx-auto mb-2" />
+                <div className="text-center py-5">
+                  <Activity size={24} className="text-gray-600 mx-auto mb-2" />
                   <p className="text-gray-500 text-sm">No recent activity</p>
                   <p className="text-gray-600 text-xs mt-1">Start creating to see your activity here</p>
                 </div>
@@ -307,39 +307,39 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
           </div>
 
           {/* Performance Analytics */}
-          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <TrendingUp size={20} className="text-blue-400" />
+          <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                <TrendingUp size={16} className="text-blue-400" />
                 This Week
               </h2>
             </div>
-            <div className="space-y-4">
-              <div className="bg-gray-750 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-400">Mash Ups Created</span>
-                  <span className="text-lg font-bold text-white">{stats.totalTransitions}</span>
+            <div className="space-y-2">
+              <div className="bg-gray-750 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs text-gray-400">Mash Ups Created</span>
+                  <span className="text-sm font-bold text-white">{stats.totalTransitions}</span>
                 </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-cyan-500 to-blue-500 h-2 rounded-full" style={{ width: '75%' }} />
-                </div>
-              </div>
-              <div className="bg-gray-750 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-400">Tracks Uploaded</span>
-                  <span className="text-lg font-bold text-white">{stats.totalTracks}</span>
-                </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full" style={{ width: '60%' }} />
+                <div className="w-full bg-gray-700 rounded-full h-1.5">
+                  <div className="bg-gradient-to-r from-cyan-500 to-blue-500 h-1.5 rounded-full" style={{ width: '75%' }} />
                 </div>
               </div>
-              <div className="bg-gray-750 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-400">Mixing Streak</span>
-                  <span className="text-lg font-bold text-white">7 days</span>
+              <div className="bg-gray-750 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs text-gray-400">Tracks Uploaded</span>
+                  <span className="text-sm font-bold text-white">{stats.totalTracks}</span>
                 </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full" style={{ width: '90%' }} />
+                <div className="w-full bg-gray-700 rounded-full h-1.5">
+                  <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-1.5 rounded-full" style={{ width: '60%' }} />
+                </div>
+              </div>
+              <div className="bg-gray-750 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs text-gray-400">Mixing Streak</span>
+                  <span className="text-sm font-bold text-white">7 days</span>
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-1.5">
+                  <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-1.5 rounded-full" style={{ width: '90%' }} />
                 </div>
               </div>
             </div>
@@ -349,35 +349,35 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
         {/* Recent Tracks */}
         {recentTracks.length > 0 && (
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <Music size={20} className="text-purple-400" />
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                <Music size={16} className="text-purple-400" />
                 Recent Tracks
               </h2>
               <button
                 onClick={() => onNavigate('library')}
-                className="text-cyan-400 text-sm hover:text-cyan-300 transition-colors flex items-center gap-1"
+                className="text-cyan-400 text-xs hover:text-cyan-300 transition-colors flex items-center gap-1"
               >
-                View Library <ChevronRight size={16} />
+                View Library <ChevronRight size={12} />
               </button>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
               {recentTracks.map((track) => (
                 <div
                   key={track.id}
-                  className="group bg-gray-800 border border-gray-700 rounded-xl p-4 hover:bg-gray-750 transition-all cursor-pointer"
+                  className="group bg-gray-800 border border-gray-700 rounded-lg p-2 hover:bg-gray-750 transition-all cursor-pointer"
                 >
-                  <div className="aspect-square bg-gradient-to-br from-cyan-500/20 to-purple-500/20 rounded-lg mb-3 flex items-center justify-center relative overflow-hidden">
-                    <Music size={32} className="text-gray-600" />
+                  <div className="aspect-square bg-gradient-to-br from-cyan-500/20 to-purple-500/20 rounded-lg mb-2 flex items-center justify-center relative overflow-hidden">
+                    <Music size={20} className="text-gray-600" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <button className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-                        <Play size={16} className="text-gray-900 ml-0.5" />
+                      <button className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                        <Play size={12} className="text-gray-900 ml-0.5" />
                       </button>
                     </div>
                   </div>
-                  <p className="text-sm text-white font-medium truncate">{track.original_name}</p>
+                  <p className="text-xs text-white font-medium truncate">{track.original_name}</p>
                   {track.analysis?.bpm && (
-                    <p className="text-xs text-gray-400 mt-1">{Math.round(track.analysis.bpm)} BPM</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{Math.round(track.analysis.bpm)} BPM</p>
                   )}
                 </div>
               ))}
@@ -387,26 +387,26 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
 
         {/* Get Started Guide for New Users */}
         {stats.totalTracks === 0 && (
-          <div className="bg-gradient-to-br from-cyan-500/10 via-blue-500/10 to-purple-500/10 border border-cyan-500/20 rounded-xl p-8">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Sparkles size={24} className="text-white" />
+          <div className="bg-gradient-to-br from-cyan-500/10 via-blue-500/10 to-purple-500/10 border border-cyan-500/20 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Sparkles size={16} className="text-white" />
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-bold text-white mb-2">Welcome to MySounds.AI</h3>
-                <p className="text-gray-400 mb-4">
+                <h3 className="text-sm font-bold text-white mb-1">Welcome to MySounds.AI</h3>
+                <p className="text-xs text-gray-400 mb-3">
                   Get started by uploading your first tracks. Our AI will analyze them and help you create seamless mash ups.
                 </p>
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                   <button
                     onClick={() => onNavigate('library')}
-                    className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white rounded-lg font-medium transition-all duration-200 shadow-lg shadow-cyan-500/30"
+                    className="px-4 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white text-sm rounded-lg font-medium transition-all duration-200 shadow-lg shadow-cyan-500/30"
                   >
                     Upload Tracks
                   </button>
                   <button
                     onClick={() => onNavigate('templates')}
-                    className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-all duration-200"
+                    className="px-4 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg font-medium transition-all duration-200"
                   >
                     Browse Templates
                   </button>

@@ -40,51 +40,51 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onShowTutorial }) => {
   return (
     <div className="h-full flex flex-col bg-gray-900">
       <div className="flex-1 overflow-y-auto pb-20">
-        <div className="bg-gradient-to-br from-cyan-500/10 via-blue-500/10 to-purple-600/10 p-6 border-b border-gray-700">
-          <div className="flex items-center space-x-4 mb-4">
-            <div className="w-20 h-20 bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/30">
+        <div className="bg-gradient-to-br from-cyan-500/10 via-blue-500/10 to-purple-600/10 p-4 border-b border-gray-700">
+          <div className="flex items-center space-x-3 mb-3">
+            <div className="w-14 h-14 bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/30">
               {user?.avatar ? (
-                <img src={user.avatar} alt={user.name} className="w-20 h-20 rounded-full" />
+                <img src={user.avatar} alt={user.name} className="w-14 h-14 rounded-full" />
               ) : (
-                <User size={32} className="text-white" />
+                <User size={22} className="text-white" />
               )}
             </div>
             <div className="flex-1">
-              <h2 className="text-2xl font-bold text-white">{user?.name}</h2>
-              <p className="text-sm text-gray-400">{user?.email}</p>
-              <div className="mt-2">
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-cyan-500 to-blue-500 text-white capitalize">
+              <h2 className="text-lg font-bold text-white">{user?.name}</h2>
+              <p className="text-xs text-gray-400">{user?.email}</p>
+              <div className="mt-1">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gradient-to-r from-cyan-500 to-blue-500 text-white capitalize">
                   {user?.plan} Account
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700">
+          <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-3 border border-gray-700">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Available Credits</span>
+              <span className="text-xs text-gray-400">Available Credits</span>
               <CreditsIndicator />
             </div>
           </div>
         </div>
 
-        <div className="p-4 space-y-6">
+        <div className="p-3 space-y-3">
           {menuSections.map((section) => (
             <div key={section.title}>
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 px-2">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 px-2">
                 {section.title}
               </h3>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {section.items.map((item) => {
                   const Icon = item.icon;
                   return (
                     <button
                       key={item.id}
                       onClick={item.action}
-                      className="w-full flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
+                      className="w-full flex items-center space-x-3 px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
                     >
-                      <Icon size={20} className="text-gray-400" />
-                      <span className="flex-1 text-left">{item.label}</span>
+                      <Icon size={16} className="text-gray-400" />
+                      <span className="flex-1 text-left text-sm">{item.label}</span>
                     </button>
                   );
                 })}
@@ -92,13 +92,13 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onShowTutorial }) => {
             </div>
           ))}
 
-          <div className="pt-4 border-t border-gray-700">
+          <div className="pt-2 border-t border-gray-700">
             <button
               onClick={signOut}
-              className="w-full flex items-center space-x-3 px-4 py-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all duration-200"
+              className="w-full flex items-center space-x-3 px-3 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all duration-200"
             >
-              <LogOut size={20} />
-              <span className="flex-1 text-left font-medium">Sign Out</span>
+              <LogOut size={16} />
+              <span className="flex-1 text-left text-sm font-medium">Sign Out</span>
             </button>
           </div>
         </div>
