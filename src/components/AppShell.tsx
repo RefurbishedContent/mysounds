@@ -719,7 +719,10 @@ const AppShell: React.FC = () => {
               {menuSections.map((section, sectionIndex) => (
                 <div key={sectionIndex} className="space-y-0.5">
                   {section.title && !isSidebarCollapsed && (
-                    <h3 className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-0.5">
+                    <h3
+                      className="px-2 text-xs font-semibold uppercase tracking-wider mb-0.5 bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-300 bg-clip-text text-transparent"
+                      style={{ filter: 'drop-shadow(0 0 6px rgba(6,182,212,0.45))' }}
+                    >
                       {section.title}
                     </h3>
                   )}
