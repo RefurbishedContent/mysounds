@@ -139,16 +139,16 @@ const MixerView: React.FC<MixerViewProps> = ({ onCreateNew, onOpenSession }) => 
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
             {mixSessions.map((session) => (
               <button
                 key={session.id}
                 onClick={() => onOpenSession?.(session.id)}
-                className="group relative bg-gray-800 border-2 border-gray-700 rounded-xl p-4 text-left transition-all duration-200 hover:border-cyan-500 hover:shadow-lg hover:shadow-cyan-500/20"
+                className="group relative bg-gray-800 border-2 border-gray-700 rounded-xl p-3 text-left transition-all duration-200 hover:border-cyan-500 hover:shadow-lg hover:shadow-cyan-500/20 w-full"
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Sliders size={16} className="text-white" />
+                <div className="flex items-start justify-between mb-2">
+                  <div className="w-7 h-7 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Sliders size={14} className="text-white" />
                   </div>
                   <div className="flex items-center space-x-1">
                     {session.status === 'completed' && session.renderedUrl && (
@@ -165,16 +165,16 @@ const MixerView: React.FC<MixerViewProps> = ({ onCreateNew, onOpenSession }) => 
                       onClick={(e) => handleDeleteSession(session.id, e)}
                       className="p-1 text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={13} />
                     </button>
                   </div>
                 </div>
 
-                <h3 className="text-sm font-bold text-white mb-2 line-clamp-1" title={session.name}>
+                <h3 className="text-sm font-bold text-white mb-1.5 line-clamp-1" title={session.name}>
                   {session.name}
                 </h3>
 
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-gray-400">Mash Ups:</span>
                     <span className="text-white font-medium">{session.totalBlendsCount}</span>
@@ -191,7 +191,7 @@ const MixerView: React.FC<MixerViewProps> = ({ onCreateNew, onOpenSession }) => 
                   </div>
                 </div>
 
-                <div className="mt-2 pt-2 border-t border-gray-700 flex items-center justify-between text-xs text-gray-500">
+                <div className="mt-1.5 pt-1.5 border-t border-gray-700 flex items-center justify-between text-xs text-gray-500">
                   <div className="flex items-center space-x-1">
                     <Clock size={11} />
                     <span>{formatDate(session.updatedAt)}</span>

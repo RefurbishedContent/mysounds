@@ -742,7 +742,7 @@ const AppShell: React.FC = () => {
                         }}
                         disabled={isDisabled}
                         className={`
-                          w-full flex items-center px-2 py-1.5 text-sm rounded-lg transition-all duration-200
+                          w-full flex items-center px-2 py-1.5 text-[15px] rounded-lg transition-all duration-200
                           ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
                           ${isActive && !isDisabled
                             ? 'bg-gray-700 text-white font-medium'
@@ -778,7 +778,7 @@ const AppShell: React.FC = () => {
                   setIsMobileSidebarOpen(false);
                 }}
                 className={`
-                  w-full flex items-center px-2 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all duration-200 mb-0.5
+                  w-full flex items-center px-2 py-1.5 text-[15px] text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all duration-200 mb-0.5
                   justify-start md:${isSidebarCollapsed ? 'justify-center' : 'justify-start'}
                 `}
                 title={isSidebarCollapsed ? 'Show Tutorial' : undefined}
@@ -789,7 +789,7 @@ const AppShell: React.FC = () => {
                 </span>
               </button>
               <button className={`
-                w-full flex items-center px-2 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all duration-200
+                w-full flex items-center px-2 py-1.5 text-[15px] text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all duration-200
                 justify-start md:${isSidebarCollapsed ? 'justify-center' : 'justify-start'}
               `}
               title={isSidebarCollapsed ? 'Settings' : undefined}>
