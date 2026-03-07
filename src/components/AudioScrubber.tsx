@@ -50,6 +50,7 @@ export function AudioScrubber({
   const [flashEndMarker, setFlashEndMarker] = useState(false);
   const [isSnapping, setIsSnapping] = useState(false);
   const [isScrubbing, setIsScrubbing] = useState(false);
+  const [previewingMarkerId, setPreviewingMarkerId] = useState<string | null>(null);
   const [waveformMode, setWaveformMode] = useState<'standard' | 'rgb'>('standard');
   const [zoom, setZoom] = useState(1);
   const playerRef = useRef<Tone.Player | null>(null);
@@ -63,11 +64,14 @@ export function AudioScrubber({
   const draggingMarkerIdRef = useRef<string | null>(null);
   const isScrubbingRef = useRef(false);
   const hasInteractedRef = useRef(false);
+  const previewPlayerRef = useRef<Tone.Player | null>(null);
+  const previewingMarkerRef = useRef<string | null>(null);
 
   markersRef.current = markers;
   durationRef.current = duration;
 
   const SNAP_THRESHOLD_SECONDS = 0.5;
+  const PREVIEW_SECONDS = 5;
   const playbackTimeRef = useRef(playbackTime);
   playbackTimeRef.current = playbackTime;
 
@@ -90,6 +94,11 @@ export function AudioScrubber({
         playerRef.current.stop();
         playerRef.current.dispose();
         playerRef.current = null;
+      }
+      if (previewPlayerRef.current) {
+        try { previewPlayerRef.current.stop(); } catch {}
+        try { previewPlayerRef.current.dispose(); } catch {}
+        previewPlayerRef.current = null;
       }
     };
   }, [audioUrl]);
@@ -253,13 +262,81 @@ export function AudioScrubber({
     return Math.max(0, Math.min(progress * durationRef.current, durationRef.current));
   }, []);
 
+  const startMarkerPreview = useCallback(async (markerId: string) => {
+    if (!playerRef.current?.buffer?.loaded) return;
+
+    try {
+      await Tone.start();
+
+      if (isPlaying) {
+        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+        try { playerRef.current.stop(); } catch {}
+        pauseTimeRef.current = playbackTimeRef.current;
+        setIsPlaying(false);
+      }
+
+      if (!previewPlayerRef.current) {
+        previewPlayerRef.current = new Tone.Player().toDestination();
+      }
+      previewPlayerRef.current.buffer = playerRef.current.buffer;
+
+      const marker = markersRef.current.find(m => m.id === markerId);
+      if (!marker || !draggingMarkerIdRef.current) return;
+
+      const isStartMarker = markerId.includes('start');
+      const loopStart = isStartMarker
+        ? marker.time
+        : Math.max(0, marker.time - PREVIEW_SECONDS);
+      const loopEnd = isStartMarker
+        ? Math.min(marker.time + PREVIEW_SECONDS, durationRef.current)
+        : marker.time;
+
+      if (loopEnd - loopStart < 0.5) return;
+
+      previewPlayerRef.current.loop = true;
+      previewPlayerRef.current.loopStart = loopStart;
+      previewPlayerRef.current.loopEnd = loopEnd;
+      previewPlayerRef.current.start(Tone.now(), loopStart);
+      previewingMarkerRef.current = markerId;
+      setPreviewingMarkerId(markerId);
+    } catch (error) {
+      console.error('Preview error:', error);
+    }
+  }, [isPlaying]);
+
+  const updateMarkerPreview = useCallback((markerId: string, newTime: number) => {
+    if (previewingMarkerRef.current !== markerId || !previewPlayerRef.current) return;
+
+    const isStartMarker = markerId.includes('start');
+    const loopStart = isStartMarker
+      ? newTime
+      : Math.max(0, newTime - PREVIEW_SECONDS);
+    const loopEnd = isStartMarker
+      ? Math.min(newTime + PREVIEW_SECONDS, durationRef.current)
+      : newTime;
+
+    if (loopEnd - loopStart < 0.5) return;
+
+    previewPlayerRef.current.loopStart = loopStart;
+    previewPlayerRef.current.loopEnd = loopEnd;
+  }, []);
+
+  const stopMarkerPreview = useCallback(() => {
+    if (previewPlayerRef.current) {
+      try { previewPlayerRef.current.stop(); } catch {}
+    }
+    previewingMarkerRef.current = null;
+    setPreviewingMarkerId(null);
+  }, []);
+
   const handlePointerDown = useCallback((markerId: string, e: React.PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
     hasInteractedRef.current = true;
     draggingMarkerIdRef.current = markerId;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, []);
+    startMarkerPreview(markerId);
+  }, [startMarkerPreview]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     const markerId = draggingMarkerIdRef.current;
@@ -280,7 +357,9 @@ export function AudioScrubber({
     if (marker?.onDrag) {
       marker.onDrag(newTime);
     }
-  }, [calcTimeFromPointer]);
+
+    updateMarkerPreview(markerId, newTime);
+  }, [calcTimeFromPointer, updateMarkerPreview]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     const markerId = draggingMarkerIdRef.current;
@@ -288,13 +367,15 @@ export function AudioScrubber({
 
     draggingMarkerIdRef.current = null;
     setIsSnapping(false);
+    stopMarkerPreview();
     (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-  }, []);
+  }, [stopMarkerPreview]);
 
   const handleLostPointerCapture = useCallback(() => {
     draggingMarkerIdRef.current = null;
     setIsSnapping(false);
-  }, []);
+    stopMarkerPreview();
+  }, [stopMarkerPreview]);
 
   const handlePlayheadPointerDown = useCallback((e: React.PointerEvent) => {
     e.preventDefault();
@@ -455,6 +536,7 @@ export function AudioScrubber({
         )}
         {markers.map((marker) => {
           const markerProgress = Math.max(0, Math.min(marker.time / duration, 1));
+          const isPreviewing = previewingMarkerId === marker.id;
           return (
             <div
               key={marker.id}
@@ -472,14 +554,24 @@ export function AudioScrubber({
               onLostPointerCapture={handleLostPointerCapture}
             >
               <div
-                className="absolute -top-3 -bottom-3 transition-all group-hover:scale-110 left-1/2 -translate-x-1/2"
+                className={`absolute -top-3 -bottom-3 transition-all left-1/2 -translate-x-1/2 ${isPreviewing ? '' : 'group-hover:scale-110'}`}
                 style={{
-                  width: '3px',
-                  boxShadow: `0 0 20px ${marker.color}, 0 0 40px ${marker.color}80`,
+                  width: isPreviewing ? '5px' : '3px',
+                  boxShadow: isPreviewing
+                    ? `0 0 30px ${marker.color}, 0 0 60px ${marker.color}80, 0 0 90px ${marker.color}40`
+                    : `0 0 20px ${marker.color}, 0 0 40px ${marker.color}80`,
                   background: `linear-gradient(to bottom, ${marker.color}cc, ${marker.color}, ${marker.color}cc)`,
                   pointerEvents: 'none',
                 }}
               />
+              {isPreviewing && (
+                <div className="absolute -top-8 left-1/2 -translate-x-1/2 pointer-events-none z-20">
+                  <div className="bg-gray-900/95 text-white text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap border border-gray-600 flex items-center gap-1.5 shadow-lg">
+                    <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: marker.color }} />
+                    <span>Previewing</span>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
@@ -526,14 +618,20 @@ export function AudioScrubber({
       </div>
 
       <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
-        <span>Click waveform to jump to position</span>
-        {isPlaying && (
+        <span>{previewingMarkerId ? 'Hold marker to preview audio' : 'Click waveform to jump to position'}</span>
+        {previewingMarkerId && (
+          <span className="text-cyan-400 flex items-center space-x-1">
+            <span className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></span>
+            <span>Looping preview</span>
+          </span>
+        )}
+        {!previewingMarkerId && isPlaying && (
           <span className="text-blue-400 animate-pulse flex items-center space-x-1">
             <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
             <span>Playing</span>
           </span>
         )}
-        {isScrubbing && (
+        {!previewingMarkerId && isScrubbing && (
           <span className="text-white flex items-center space-x-1">
             <span className="w-2 h-2 bg-white rounded-full"></span>
             <span>Scrubbing</span>
