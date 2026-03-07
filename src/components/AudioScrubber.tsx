@@ -315,7 +315,8 @@ export function AudioScrubber({
   }, [isPlaying]);
 
   const updateMarkerPreview = useCallback((markerId: string, newTime: number) => {
-    if (previewingMarkerRef.current !== markerId || !previewSourceRef.current) return;
+    if (previewingMarkerRef.current !== markerId) return;
+    if (!playerRef.current?.buffer?.loaded) return;
 
     const isStartMarker = markerId.includes('start');
     const loopStart = isStartMarker
@@ -327,8 +328,27 @@ export function AudioScrubber({
 
     if (loopEnd - loopStart < 0.5) return;
 
-    previewSourceRef.current.loopStart = loopStart;
-    previewSourceRef.current.loopEnd = loopEnd;
+    if (previewSourceRef.current) {
+      try { previewSourceRef.current.stop(); } catch {}
+      try { previewSourceRef.current.disconnect(); } catch {}
+      previewSourceRef.current = null;
+    }
+
+    try {
+      const rawCtx = Tone.getContext().rawContext as AudioContext;
+      const rawBuffer = playerRef.current.buffer.get() as AudioBuffer;
+      if (!rawBuffer) return;
+
+      const source = rawCtx.createBufferSource();
+      source.buffer = rawBuffer;
+      source.loop = true;
+      source.loopStart = loopStart;
+      source.loopEnd = loopEnd;
+      source.connect(rawCtx.destination);
+      source.start(rawCtx.currentTime, loopStart);
+
+      previewSourceRef.current = source;
+    } catch {}
   }, []);
 
   const stopMarkerPreview = useCallback(() => {
