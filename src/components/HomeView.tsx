@@ -4,7 +4,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { databaseService } from '../lib/database';
 import { storageService } from '../lib/storage';
 import { FeedSection } from './feed';
-import DJLaserCanvas from './DJLaserCanvas';
 
 interface HomeViewProps {
   onNavigate: (view: string) => void;
@@ -200,111 +199,96 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
   return (
     <div className="h-full overflow-y-auto bg-transparent">
       <div className="max-w-7xl mx-auto p-4 space-y-4">
-        {/* Hero Section */}
-        <div
-          className="relative overflow-visible rounded-xl border border-cyan-500/20 min-h-[180px] shadow-2xl shadow-cyan-500/15"
-          style={{
-            isolation: 'isolate',
-            background: 'linear-gradient(to bottom, #09090f 0%, #09090f 45%, rgba(9,9,15,0.6) 75%, transparent 100%)',
-          }}
-        >
-          <div className="absolute inset-0 overflow-hidden rounded-xl z-0">
-            <DJLaserCanvas />
+        {/* Welcome Header */}
+        <div className="relative">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <div className="flex items-center gap-2.5 mb-1">
+                <h1 className="text-2xl font-bold text-white" style={{ textShadow: '0 0 30px rgba(0,245,255,0.3)' }}>
+                  {getGreeting()}, {user?.name}
+                </h1>
+                <span className="px-2.5 py-0.5 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full text-xs font-semibold text-white uppercase tracking-wide shadow-lg shadow-cyan-500/25">
+                  {user?.plan}
+                </span>
+              </div>
+              <p className="text-sm text-gray-400">Ready to create something incredible?</p>
+            </div>
+            <button
+              onClick={onCreateNew}
+              className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white text-sm rounded-lg font-semibold transition-all duration-200 shadow-lg shadow-cyan-500/40 hover:shadow-xl hover:shadow-cyan-500/60 flex items-center gap-2"
+            >
+              <Plus size={16} />
+              Create New
+            </button>
           </div>
 
-          <div className="absolute inset-0 pointer-events-none z-[1] rounded-xl" style={{ background: 'radial-gradient(ellipse at 50% 35%, transparent 25%, rgba(0,0,0,0.35) 80%)' }} />
-
-          <div className="relative z-10 p-4">
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h1 className="text-xl font-bold text-white" style={{ textShadow: '0 0 20px rgba(0,245,255,0.5), 0 0 40px rgba(0,245,255,0.2)' }}>
-                    {getGreeting()}, {user?.name}
-                  </h1>
-                  <span className="px-2 py-0.5 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full text-xs font-semibold text-white uppercase tracking-wide shadow-lg shadow-cyan-500/30">
-                    {user?.plan}
-                  </span>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-gray-900/50 backdrop-blur-sm rounded-lg p-3 border border-cyan-500/15 hover:border-cyan-500/30 transition-colors">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-cyan-500/20 rounded-full flex items-center justify-center">
+                  <Music size={16} className="text-cyan-400" />
                 </div>
-                <p className="text-sm text-gray-300">Ready to create something incredible?</p>
-              </div>
-              <button
-                onClick={onCreateNew}
-                className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white text-sm rounded-lg font-semibold transition-all duration-200 shadow-lg shadow-cyan-500/40 hover:shadow-xl hover:shadow-cyan-500/60 flex items-center gap-2"
-              >
-                <Plus size={16} />
-                Create New
-              </button>
-            </div>
-
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="stat-card-cyan bg-gray-900/70 backdrop-blur-sm rounded-lg p-3 border border-cyan-500/20">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-cyan-500/25 rounded-full flex items-center justify-center shadow-inner shadow-cyan-500/20">
-                    <Music size={16} className="text-cyan-400" />
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold text-white">{displayStats.totalTracks}</p>
-                    <p className="text-xs text-gray-400">Tracks</p>
-                  </div>
-                </div>
-              </div>
-              <div className="stat-card-blue bg-gray-900/70 backdrop-blur-sm rounded-lg p-3 border border-blue-500/20">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-blue-500/25 rounded-full flex items-center justify-center shadow-inner shadow-blue-500/20">
-                    <AudioWaveform size={16} className="text-blue-400" />
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold text-white">{displayStats.totalTransitions}</p>
-                    <p className="text-xs text-gray-400">Mash Ups</p>
-                  </div>
-                </div>
-              </div>
-              <div className="stat-card-teal bg-gray-900/70 backdrop-blur-sm rounded-lg p-3 border border-teal-500/20">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-teal-500/25 rounded-full flex items-center justify-center shadow-inner shadow-teal-500/20">
-                    <Clock size={16} className="text-teal-400" />
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold text-white">{displayStats.hoursProduced.toFixed(1)}</p>
-                    <p className="text-xs text-gray-400">Hours Mixed</p>
-                  </div>
-                </div>
-              </div>
-              <div className="stat-card-pink bg-gray-900/70 backdrop-blur-sm rounded-lg p-3 border border-pink-500/20">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-pink-500/25 rounded-full flex items-center justify-center shadow-inner shadow-pink-500/20">
-                    <Sparkles size={16} className="text-pink-400" />
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold text-white">{displayStats.totalBlends}</p>
-                    <p className="text-xs text-gray-400">Total Mash Ups</p>
-                  </div>
+                <div>
+                  <p className="text-lg font-bold text-white">{displayStats.totalTracks}</p>
+                  <p className="text-xs text-gray-400">Tracks</p>
                 </div>
               </div>
             </div>
-
-            {/* Equalizer Bars */}
-            <div className="flex items-end gap-px mt-3 h-6 opacity-50">
-              {eqBars.map((height, i) => {
-                const pct = i / (EQ_BAR_COUNT - 1);
-                const r = Math.round(0 + pct * 255);
-                const g = Math.round(245 - pct * 200);
-                const b = Math.round(255 - pct * 153);
-                return (
-                  <div
-                    key={i}
-                    className="flex-1 rounded-t-sm"
-                    style={{
-                      height: `${height}%`,
-                      background: `rgb(${r},${g},${b})`,
-                      transition: 'height 160ms ease',
-                      minWidth: 0,
-                    }}
-                  />
-                );
-              })}
+            <div className="bg-gray-900/50 backdrop-blur-sm rounded-lg p-3 border border-blue-500/15 hover:border-blue-500/30 transition-colors">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center">
+                  <AudioWaveform size={16} className="text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-white">{displayStats.totalTransitions}</p>
+                  <p className="text-xs text-gray-400">Mash Ups</p>
+                </div>
+              </div>
             </div>
+            <div className="bg-gray-900/50 backdrop-blur-sm rounded-lg p-3 border border-teal-500/15 hover:border-teal-500/30 transition-colors">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-teal-500/20 rounded-full flex items-center justify-center">
+                  <Clock size={16} className="text-teal-400" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-white">{displayStats.hoursProduced.toFixed(1)}</p>
+                  <p className="text-xs text-gray-400">Hours Mixed</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-gray-900/50 backdrop-blur-sm rounded-lg p-3 border border-pink-500/15 hover:border-pink-500/30 transition-colors">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-pink-500/20 rounded-full flex items-center justify-center">
+                  <Sparkles size={16} className="text-pink-400" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-white">{displayStats.totalBlends}</p>
+                  <p className="text-xs text-gray-400">Total Mash Ups</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-end gap-px mt-3 h-5 opacity-40">
+            {eqBars.map((height, i) => {
+              const pct = i / (EQ_BAR_COUNT - 1);
+              const r = Math.round(0 + pct * 255);
+              const g = Math.round(245 - pct * 200);
+              const b = Math.round(255 - pct * 153);
+              return (
+                <div
+                  key={i}
+                  className="flex-1 rounded-t-sm"
+                  style={{
+                    height: `${height}%`,
+                    background: `rgb(${r},${g},${b})`,
+                    transition: 'height 160ms ease',
+                    minWidth: 0,
+                    opacity: 0.6,
+                  }}
+                />
+              );
+            })}
           </div>
         </div>
 

@@ -557,7 +557,6 @@ const AppShell: React.FC = () => {
       {currentView === 'home' && (
         <GalaxyBackground
           sidebarWidth={isMobile ? 0 : isSidebarCollapsed ? 56 : 224}
-          heroBottomY={272}
         />
       )}
 

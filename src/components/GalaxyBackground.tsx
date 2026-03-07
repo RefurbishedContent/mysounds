@@ -23,23 +23,17 @@ interface NebulaCloud {
 
 interface Props {
   sidebarWidth?: number;
-  heroBottomY?: number;
 }
 
-// Matches DJLaserCanvas laser definitions exactly
 const LASER_DEFS = [
-  { xFrac: 0,    baseAngle: -Math.PI * 0.75, sweepAmp: 0.55, sweepSpeed: 0.9,  phase: 0,    r: 0,   gv: 245, b: 255 },
-  { xFrac: 0.25, baseAngle: -Math.PI * 0.65, sweepAmp: 0.45, sweepSpeed: 1.1,  phase: 1.2,  r: 26,  gv: 110, b: 255 },
-  { xFrac: 0.5,  baseAngle: -Math.PI * 0.5,  sweepAmp: 0.5,  sweepSpeed: 0.75, phase: 2.4,  r: 255, gv: 0,   b: 102 },
-  { xFrac: 0.75, baseAngle: -Math.PI * 0.35, sweepAmp: 0.45, sweepSpeed: 1.0,  phase: 0.6,  r: 57,  gv: 255, b: 20  },
-  { xFrac: 1.0,  baseAngle: -Math.PI * 0.25, sweepAmp: 0.55, sweepSpeed: 0.85, phase: 1.8,  r: 255, gv: 170, b: 0   },
+  { xFrac: 0.05, baseAngle: Math.PI * 0.35,  sweepAmp: 0.40, sweepSpeed: 0.7,  phase: 0,    r: 0,   gv: 245, b: 255 },
+  { xFrac: 0.25, baseAngle: Math.PI * 0.40,  sweepAmp: 0.35, sweepSpeed: 0.9,  phase: 1.2,  r: 26,  gv: 110, b: 255 },
+  { xFrac: 0.50, baseAngle: Math.PI * 0.50,  sweepAmp: 0.45, sweepSpeed: 0.60, phase: 2.4,  r: 255, gv: 0,   b: 102 },
+  { xFrac: 0.75, baseAngle: Math.PI * 0.60,  sweepAmp: 0.35, sweepSpeed: 0.8,  phase: 0.6,  r: 57,  gv: 255, b: 20  },
+  { xFrac: 0.95, baseAngle: Math.PI * 0.65,  sweepAmp: 0.40, sweepSpeed: 0.70, phase: 1.8,  r: 255, gv: 170, b: 0   },
 ];
 
-// Background runs at reduced speed/amplitude — ambient echo of the hero
-const BG_AMP_SCALE = 0.28;
-const BG_SPD_SCALE = 0.30;
-
-const GalaxyBackground: React.FC<Props> = ({ sidebarWidth = 224, heroBottomY = 272 }) => {
+const GalaxyBackground: React.FC<Props> = ({ sidebarWidth = 224 }) => {
   const canvasRef  = useRef<HTMLCanvasElement>(null);
   const rafRef     = useRef<number>(0);
   const starsRef   = useRef<Star[]>([]);
@@ -96,7 +90,6 @@ const GalaxyBackground: React.FC<Props> = ({ sidebarWidth = 224, heroBottomY = 2
       ctx.fillStyle = '#050510';
       ctx.fillRect(0, 0, w, h);
 
-      // Nebula clouds — concentrated below the hero card
       nebulaeRef.current.forEach((n) => {
         const rad  = Math.max(n.rx, n.ry);
         const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, rad);
@@ -111,7 +104,6 @@ const GalaxyBackground: React.FC<Props> = ({ sidebarWidth = 224, heroBottomY = 2
         ctx.restore();
       });
 
-      // Stars
       starsRef.current.forEach((s) => {
         const twinkle = 0.5 + 0.5 * Math.sin(t * s.twinkleSpeed + s.twinklePhase);
         const alpha   = s.baseBrightness * (0.55 + 0.45 * twinkle);
@@ -128,20 +120,15 @@ const GalaxyBackground: React.FC<Props> = ({ sidebarWidth = 224, heroBottomY = 2
         ctx.restore();
       });
 
-      // Content area width (right of sidebar)
       const contentW = w - sidebarWidth;
-      const originY  = heroBottomY;
+      const originY  = -20;
 
       LASER_DEFS.forEach((laser) => {
-        // X origin aligned with DJLaserCanvas origin fractions, offset by sidebar
         const originX = sidebarWidth + laser.xFrac * contentW;
 
-        // Angle flipped (+π) so the beam shoots DOWNWARD through the hero floor
-        const downAngle = laser.baseAngle + Math.PI;
-        const angle = downAngle
-          + Math.sin(t * laser.sweepSpeed * BG_SPD_SCALE + laser.phase)
-          * laser.sweepAmp
-          * BG_AMP_SCALE;
+        const angle = laser.baseAngle
+          + Math.sin(t * laser.sweepSpeed + laser.phase)
+          * laser.sweepAmp * 0.35;
 
         const len = Math.sqrt(w * w + h * h) * 1.4;
         const tx  = originX + Math.cos(angle) * len;
@@ -149,56 +136,32 @@ const GalaxyBackground: React.FC<Props> = ({ sidebarWidth = 224, heroBottomY = 2
 
         ctx.save();
 
-        // Wide soft halo
         ctx.beginPath();
         ctx.moveTo(originX, originY);
         ctx.lineTo(tx, ty);
-        ctx.strokeStyle = `rgba(${laser.r},${laser.gv},${laser.b},0.016)`;
-        ctx.lineWidth   = 28;
+        ctx.strokeStyle = `rgba(${laser.r},${laser.gv},${laser.b},0.018)`;
+        ctx.lineWidth   = 32;
         ctx.lineCap     = 'round';
         ctx.stroke();
 
-        // Mid beam
         ctx.beginPath();
         ctx.moveTo(originX, originY);
         ctx.lineTo(tx, ty);
-        ctx.strokeStyle = `rgba(${laser.r},${laser.gv},${laser.b},0.052)`;
+        ctx.strokeStyle = `rgba(${laser.r},${laser.gv},${laser.b},0.055)`;
         ctx.lineWidth   = 5;
         ctx.stroke();
 
-        // Core with glow
-        ctx.shadowBlur  = 14;
+        ctx.shadowBlur  = 16;
         ctx.shadowColor = `rgba(${laser.r},${laser.gv},${laser.b},0.5)`;
         ctx.beginPath();
         ctx.moveTo(originX, originY);
         ctx.lineTo(tx, ty);
-        ctx.strokeStyle = `rgba(${laser.r},${laser.gv},${laser.b},0.13)`;
+        ctx.strokeStyle = `rgba(${laser.r},${laser.gv},${laser.b},0.14)`;
         ctx.lineWidth   = 1.5;
         ctx.stroke();
 
         ctx.restore();
-
-        // Breakthrough glow dot at the origin (hero card floor)
-        ctx.save();
-        const dotGrad = ctx.createRadialGradient(originX, originY, 0, originX, originY, 36);
-        dotGrad.addColorStop(0,   `rgba(${laser.r},${laser.gv},${laser.b},0.28)`);
-        dotGrad.addColorStop(0.4, `rgba(${laser.r},${laser.gv},${laser.b},0.10)`);
-        dotGrad.addColorStop(1,   `rgba(${laser.r},${laser.gv},${laser.b},0)`);
-        ctx.fillStyle = dotGrad;
-        ctx.beginPath();
-        ctx.ellipse(originX, originY, 36, 18, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
       });
-
-      // Fade out the galaxy above the hero card seam — but leave a glow window near the origin
-      const heroMask = ctx.createLinearGradient(0, 0, 0, originY + 48);
-      heroMask.addColorStop(0,    'rgba(5,5,16,1)');
-      heroMask.addColorStop(0.60, 'rgba(5,5,16,0.92)');
-      heroMask.addColorStop(0.82, 'rgba(5,5,16,0.45)');
-      heroMask.addColorStop(1,    'rgba(5,5,16,0)');
-      ctx.fillStyle = heroMask;
-      ctx.fillRect(0, 0, w, originY + 48);
 
       rafRef.current = requestAnimationFrame(draw);
     };
@@ -210,7 +173,7 @@ const GalaxyBackground: React.FC<Props> = ({ sidebarWidth = 224, heroBottomY = 2
       ro.disconnect();
       window.removeEventListener('resize', onResize);
     };
-  }, [sidebarWidth, heroBottomY]);
+  }, [sidebarWidth]);
 
   return (
     <canvas
