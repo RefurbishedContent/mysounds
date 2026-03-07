@@ -9,6 +9,7 @@ import { UploadResult } from '../../lib/storage';
 import TemplateGallery from '../TemplateGallery';
 import { WaveformDisplay } from '../WaveformDisplay';
 import { WaveformModeToggle } from '../WaveformModeToggle';
+import { WaveformZoomControls } from '../WaveformZoomControls';
 
 type DurationSize = 'short' | 'medium' | 'long';
 
@@ -197,6 +198,7 @@ const SelectedTemplateCard: React.FC<{
   const [playbackTime, setPlaybackTime] = useState(0);
   const [actualDuration, setActualDuration] = useState<number | null>(null);
   const [waveformMode, setWaveformMode] = useState<'standard' | 'rgb'>('standard');
+  const [zoom, setZoom] = useState(1);
   const playerRef = useRef<Tone.Player | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
@@ -354,7 +356,7 @@ const SelectedTemplateCard: React.FC<{
       </div>
 
       <div className="p-3">
-        <div className="flex items-center gap-3 mb-2">
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
           <button
             onClick={handlePlayPause}
             disabled={!audioUrl}
@@ -366,6 +368,7 @@ const SelectedTemplateCard: React.FC<{
               <Play className="w-4 h-4 text-white" />
             )}
           </button>
+          <WaveformZoomControls zoom={zoom} onZoomChange={setZoom} />
           <WaveformModeToggle
             mode={waveformMode}
             onToggle={() => setWaveformMode(m => m === 'standard' ? 'rgb' : 'standard')}
@@ -383,36 +386,38 @@ const SelectedTemplateCard: React.FC<{
           </div>
         </div>
 
-        <div className="relative rounded-lg overflow-hidden bg-gray-900/50 border border-gray-700/30">
-          {audioUrl ? (
-            <WaveformDisplay
-              audioUrl={audioUrl}
-              progress={progress}
-              height={50}
-              onSeek={handleSeek}
-              showScrubber={false}
-              progressColor="#ffffff"
-              gradientRegion={{
-                startTime: 0,
-                endTime: duration,
-                startColor: '#06b6d4',
-                endColor: '#14b8a6'
-              }}
-              renderMode={waveformMode}
-            />
-          ) : (
-            <div className="h-[50px] flex items-center justify-center">
-              <span className="text-xs text-gray-500">No preview available</span>
-            </div>
-          )}
+        <div className={`rounded-lg bg-gray-900/50 border border-gray-700/30 ${zoom > 1 ? 'overflow-x-auto' : 'overflow-hidden'}`} style={zoom > 1 ? { scrollbarWidth: 'thin' as React.CSSProperties['scrollbarWidth'] } : undefined}>
+          <div className="relative" style={zoom > 1 ? { width: `${zoom * 100}%` } : undefined}>
+            {audioUrl ? (
+              <WaveformDisplay
+                audioUrl={audioUrl}
+                progress={progress}
+                height={50}
+                onSeek={handleSeek}
+                showScrubber={false}
+                progressColor="#ffffff"
+                gradientRegion={{
+                  startTime: 0,
+                  endTime: duration,
+                  startColor: '#06b6d4',
+                  endColor: '#14b8a6'
+                }}
+                renderMode={waveformMode}
+              />
+            ) : (
+              <div className="h-[50px] flex items-center justify-center">
+                <span className="text-xs text-gray-500">No preview available</span>
+              </div>
+            )}
 
-          <div
-            className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg pointer-events-none"
-            style={{
-              left: `${progress * 100}%`,
-              boxShadow: '0 0 8px rgba(255,255,255,0.8)'
-            }}
-          />
+            <div
+              className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg pointer-events-none"
+              style={{
+                left: `${progress * 100}%`,
+                boxShadow: '0 0 8px rgba(255,255,255,0.8)'
+              }}
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -434,6 +439,7 @@ export const EffectTimelineRow: React.FC<EffectTimelineRowProps> = ({
   const [playbackTime, setPlaybackTime] = useState(0);
   const [actualDuration, setActualDuration] = useState<number | null>(null);
   const [waveformMode, setWaveformMode] = useState<'standard' | 'rgb'>('standard');
+  const [zoom, setZoom] = useState(1);
   const playerRef = useRef<Tone.Player | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
@@ -587,6 +593,7 @@ export const EffectTimelineRow: React.FC<EffectTimelineRowProps> = ({
               {formatTime(playbackTime)} / {formatTime(duration)}
             </span>
 
+            <WaveformZoomControls zoom={zoom} onZoomChange={setZoom} />
             <WaveformModeToggle
               mode={waveformMode}
               onToggle={() => setWaveformMode(m => m === 'standard' ? 'rgb' : 'standard')}
@@ -615,38 +622,40 @@ export const EffectTimelineRow: React.FC<EffectTimelineRowProps> = ({
           </div>
         </div>
 
-        <div className="relative rounded-lg overflow-hidden bg-gray-900/50 border border-gray-700/30">
-          {audioUrl ? (
-            <WaveformDisplay
-              audioUrl={audioUrl}
-              progress={progress}
-              height={isMobile ? 50 : 60}
-              onSeek={handleSeek}
-              showScrubber={false}
-              progressColor="#ffffff"
-              gradientRegion={{
-                startTime: 0,
-                endTime: duration,
-                startColor: '#06b6d4',
-                endColor: '#14b8a6'
-              }}
-              renderMode={waveformMode}
-            />
-          ) : (
-            <div className={`${isMobile ? 'h-[50px]' : 'h-[60px]'} flex items-center justify-center`}>
-              <span className="text-xs text-gray-500">No preview available</span>
-            </div>
-          )}
+        <div className={`rounded-lg bg-gray-900/50 border border-gray-700/30 ${zoom > 1 ? 'overflow-x-auto' : 'overflow-hidden'}`} style={zoom > 1 ? { scrollbarWidth: 'thin' as React.CSSProperties['scrollbarWidth'] } : undefined}>
+          <div className="relative" style={zoom > 1 ? { width: `${zoom * 100}%` } : undefined}>
+            {audioUrl ? (
+              <WaveformDisplay
+                audioUrl={audioUrl}
+                progress={progress}
+                height={isMobile ? 50 : 60}
+                onSeek={handleSeek}
+                showScrubber={false}
+                progressColor="#ffffff"
+                gradientRegion={{
+                  startTime: 0,
+                  endTime: duration,
+                  startColor: '#06b6d4',
+                  endColor: '#14b8a6'
+                }}
+                renderMode={waveformMode}
+              />
+            ) : (
+              <div className={`${isMobile ? 'h-[50px]' : 'h-[60px]'} flex items-center justify-center`}>
+                <span className="text-xs text-gray-500">No preview available</span>
+              </div>
+            )}
 
-          {progress > 0 && (
-            <div
-              className="absolute top-0 bottom-0 w-0.5 bg-white pointer-events-none"
-              style={{
-                left: `${progress * 100}%`,
-                boxShadow: '0 0 8px rgba(255,255,255,0.8)'
-              }}
-            />
-          )}
+            {progress > 0 && (
+              <div
+                className="absolute top-0 bottom-0 w-0.5 bg-white pointer-events-none"
+                style={{
+                  left: `${progress * 100}%`,
+                  boxShadow: '0 0 8px rgba(255,255,255,0.8)'
+                }}
+              />
+            )}
+          </div>
         </div>
 
         {isPlaying && (

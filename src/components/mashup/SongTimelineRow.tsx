@@ -4,6 +4,7 @@ import * as Tone from 'tone';
 import { UploadResult } from '../../lib/storage';
 import { ClippedWaveformDisplay } from '../ClippedWaveformDisplay';
 import { WaveformModeToggle } from '../WaveformModeToggle';
+import { WaveformZoomControls } from '../WaveformZoomControls';
 import { SONG_LETTERS, SONG_COLORS, formatTime } from './constants';
 
 interface SongTimelineRowProps {
@@ -30,6 +31,7 @@ export const SongTimelineRow: React.FC<SongTimelineRowProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackProgress, setPlaybackProgress] = useState(0);
   const [waveformMode, setWaveformMode] = useState<'standard' | 'rgb'>('standard');
+  const [zoom, setZoom] = useState(1);
   const playerRef = useRef<Tone.Player | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
@@ -166,6 +168,7 @@ export const SongTimelineRow: React.FC<SongTimelineRowProps> = ({
             {isPlaying ? <Pause size={16} /> : <Play size={16} />}
           </button>
 
+          <WaveformZoomControls zoom={zoom} onZoomChange={setZoom} />
           <WaveformModeToggle
             mode={waveformMode}
             onToggle={() => setWaveformMode(m => m === 'standard' ? 'rgb' : 'standard')}
@@ -201,6 +204,7 @@ export const SongTimelineRow: React.FC<SongTimelineRowProps> = ({
             progressColor={colors.border.replace('border-', '#').replace('-500', '')}
             onSeek={handleSeek}
             showScrubber={true}
+            zoom={zoom}
             renderMode={waveformMode}
           />
 

@@ -2,6 +2,7 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import * as Tone from 'tone';
 import { WaveformDisplay } from './WaveformDisplay';
 import { WaveformModeToggle } from './WaveformModeToggle';
+import { WaveformZoomControls } from './WaveformZoomControls';
 import { Play, Pause, MapPin } from 'lucide-react';
 
 export interface AudioMarker {
@@ -50,11 +51,13 @@ export function AudioScrubber({
   const [isSnapping, setIsSnapping] = useState(false);
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [waveformMode, setWaveformMode] = useState<'standard' | 'rgb'>('standard');
+  const [zoom, setZoom] = useState(1);
   const playerRef = useRef<Tone.Player | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
   const pauseTimeRef = useRef<number>(0);
   const waveformContainerRef = useRef<HTMLDivElement>(null);
+  const scrollWrapperRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<AudioMarker[]>(markers);
   const durationRef = useRef<number>(duration);
   const draggingMarkerIdRef = useRef<string | null>(null);
@@ -347,6 +350,19 @@ export function AudioScrubber({
     }
   }, []);
 
+  useEffect(() => {
+    if (!isPlaying || zoom <= 1 || !scrollWrapperRef.current) return;
+    const wrapper = scrollWrapperRef.current;
+    const contentWidth = wrapper.scrollWidth;
+    const viewportWidth = wrapper.clientWidth;
+    const playheadX = progress * contentWidth;
+    const leftBound = wrapper.scrollLeft + viewportWidth * 0.15;
+    const rightBound = wrapper.scrollLeft + viewportWidth * 0.85;
+    if (playheadX < leftBound || playheadX > rightBound) {
+      wrapper.scrollLeft = playheadX - viewportWidth * 0.3;
+    }
+  });
+
   const progress = duration > 0 ? playbackTime / duration : 0;
 
   const gradientRegion = showGradient && markers.length >= 2 ? {
@@ -377,6 +393,7 @@ export function AudioScrubber({
         </div>
 
         <div className="flex items-center space-x-4">
+          <WaveformZoomControls zoom={zoom} onZoomChange={setZoom} />
           <WaveformModeToggle
             mode={waveformMode}
             onToggle={() => setWaveformMode(m => m === 'standard' ? 'rgb' : 'standard')}
@@ -396,7 +413,13 @@ export function AudioScrubber({
         </div>
       </div>
 
-      <div className="relative pt-8" ref={waveformContainerRef}>
+      <div className="relative pt-8">
+        <div
+          ref={scrollWrapperRef}
+          className={zoom > 1 ? 'overflow-x-auto' : ''}
+          style={zoom > 1 ? { scrollbarWidth: 'thin' as React.CSSProperties['scrollbarWidth'] } : undefined}
+        >
+        <div ref={waveformContainerRef} className="relative" style={zoom > 1 ? { width: `${zoom * 100}%` } : undefined}>
         <WaveformDisplay
           audioUrl={audioUrl}
           progress={progress}
@@ -498,6 +521,8 @@ export function AudioScrubber({
             </div>
           )}
         </div>
+      </div>
+      </div>
       </div>
 
       <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
