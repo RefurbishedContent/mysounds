@@ -554,7 +554,12 @@ const AppShell: React.FC = () => {
 
   return (
     <div className="h-screen bg-[#050510] flex flex-col overflow-hidden relative" style={{ isolation: 'isolate' }}>
-      {currentView === 'home' && <GalaxyBackground />}
+      {currentView === 'home' && (
+        <GalaxyBackground
+          sidebarWidth={isMobile ? 0 : isSidebarCollapsed ? 56 : 224}
+          heroBottomY={272}
+        />
+      )}
 
       {/* Top Bar - Hidden on Mobile */}
       <div className={`bg-gray-800/90 backdrop-blur-sm border-b border-gray-700/60 px-3 sm:px-4 py-1.5 flex-shrink-0 z-[60] relative ${isMobile ? 'hidden' : ''}`}>
