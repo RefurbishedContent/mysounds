@@ -134,12 +134,17 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
 
       setSongDurations(prev => {
         const next = [...prev];
-        next[index] = fallbackDuration;
+        if (!next[index]) {
+          next[index] = fallbackDuration;
+        }
         return next;
       });
+
       setClipMarkers(prev => {
         const next = [...prev];
-        next[index] = { start: 0, end: fallbackDuration };
+        if (!next[index]) {
+          next[index] = { start: 0, end: fallbackDuration };
+        }
         return next;
       });
 
@@ -152,9 +157,15 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
               next[index] = actualDuration;
               return next;
             });
+
             setClipMarkers(prev => {
               const next = [...prev];
-              next[index] = { start: 0, end: actualDuration };
+              if (next[index] && next[index].start === 0 && next[index].end === fallbackDuration) {
+                next[index] = { start: 0, end: actualDuration };
+              }
+              if (next[index] && next[index].end > actualDuration) {
+                next[index] = { ...next[index], end: actualDuration };
+              }
               return next;
             });
           }
