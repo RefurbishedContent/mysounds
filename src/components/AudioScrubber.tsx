@@ -577,7 +577,7 @@ export function AudioScrubber({
                 left: `${markerProgress * 100}%`,
                 width: '44px',
                 marginLeft: '-22px',
-                zIndex: 10,
+                zIndex: 20,
                 touchAction: 'none',
               }}
               onPointerDown={(e) => handlePointerDown(marker.id, e)}
