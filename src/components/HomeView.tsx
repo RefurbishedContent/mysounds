@@ -201,18 +201,18 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
     <div className="h-full overflow-y-auto bg-transparent">
       <div className="max-w-7xl mx-auto p-4 space-y-4">
         {/* Hero Section */}
-        <div className="relative overflow-visible rounded-xl bg-gray-950 border border-cyan-500/20 min-h-[180px] shadow-2xl shadow-cyan-500/15" style={{ isolation: 'isolate' }}>
+        <div
+          className="relative overflow-visible rounded-xl border border-cyan-500/20 min-h-[180px] shadow-2xl shadow-cyan-500/15"
+          style={{
+            isolation: 'isolate',
+            background: 'linear-gradient(to bottom, #09090f 0%, #09090f 45%, rgba(9,9,15,0.6) 75%, transparent 100%)',
+          }}
+        >
           <div className="absolute inset-0 overflow-hidden rounded-xl z-0">
             <DJLaserCanvas />
           </div>
 
-          <div className="absolute inset-0 pointer-events-none z-[1] rounded-xl" style={{ background: 'radial-gradient(ellipse at 50% 40%, transparent 20%, rgba(0,0,0,0.4) 100%)' }} />
-
-          {/* Bottom bleed — lasers dissolve into the galaxy below */}
-          <div
-            className="absolute bottom-0 left-0 right-0 h-16 pointer-events-none z-[2] rounded-b-xl"
-            style={{ background: 'linear-gradient(to bottom, transparent, rgba(5,5,16,0.85))' }}
-          />
+          <div className="absolute inset-0 pointer-events-none z-[1] rounded-xl" style={{ background: 'radial-gradient(ellipse at 50% 35%, transparent 25%, rgba(0,0,0,0.35) 80%)' }} />
 
           <div className="relative z-10 p-4">
             <div className="flex items-start justify-between mb-3">

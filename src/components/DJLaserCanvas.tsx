@@ -104,7 +104,12 @@ const DJLaserCanvas: React.FC = () => {
         ? 1.0 + (1 - entryProgress) * 0.6
         : 0.38;
 
-      ctx.fillStyle = '#09090f';
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+      bgGrad.addColorStop(0,    '#09090f');
+      bgGrad.addColorStop(0.50, 'rgba(9,9,15,0.96)');
+      bgGrad.addColorStop(0.78, 'rgba(9,9,15,0.55)');
+      bgGrad.addColorStop(1,    'rgba(9,9,15,0)');
+      ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, w, h);
 
       const globalAlpha = Math.min(elapsed / 0.6, 1);
@@ -145,11 +150,11 @@ const DJLaserCanvas: React.FC = () => {
         ctx.restore();
       });
 
-      const hazeGrad = ctx.createLinearGradient(0, h * 0.55, 0, h);
+      const hazeGrad = ctx.createLinearGradient(0, h * 0.3, 0, h * 0.65);
       hazeGrad.addColorStop(0, 'rgba(0,0,0,0)');
-      hazeGrad.addColorStop(1, 'rgba(0,4,16,0.72)');
+      hazeGrad.addColorStop(1, 'rgba(0,4,16,0.28)');
       ctx.fillStyle = hazeGrad;
-      ctx.fillRect(0, 0, w, h);
+      ctx.fillRect(0, 0, w, h * 0.7);
 
       const spotGrad = ctx.createRadialGradient(w / 2, h, 0, w / 2, h, w * 0.65);
       spotGrad.addColorStop(0, `rgba(0,245,255,${0.04 * globalAlpha})`);

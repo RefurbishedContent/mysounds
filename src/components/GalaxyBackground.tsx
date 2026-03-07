@@ -180,24 +180,25 @@ const GalaxyBackground: React.FC<Props> = ({ sidebarWidth = 224, heroBottomY = 2
 
         // Breakthrough glow dot at the origin (hero card floor)
         ctx.save();
-        const dotGrad = ctx.createRadialGradient(originX, originY, 0, originX, originY, 22);
-        dotGrad.addColorStop(0, `rgba(${laser.r},${laser.gv},${laser.b},0.18)`);
-        dotGrad.addColorStop(0.5, `rgba(${laser.r},${laser.gv},${laser.b},0.06)`);
-        dotGrad.addColorStop(1, `rgba(${laser.r},${laser.gv},${laser.b},0)`);
+        const dotGrad = ctx.createRadialGradient(originX, originY, 0, originX, originY, 36);
+        dotGrad.addColorStop(0,   `rgba(${laser.r},${laser.gv},${laser.b},0.28)`);
+        dotGrad.addColorStop(0.4, `rgba(${laser.r},${laser.gv},${laser.b},0.10)`);
+        dotGrad.addColorStop(1,   `rgba(${laser.r},${laser.gv},${laser.b},0)`);
         ctx.fillStyle = dotGrad;
         ctx.beginPath();
-        ctx.ellipse(originX, originY, 22, 12, 0, 0, Math.PI * 2);
+        ctx.ellipse(originX, originY, 36, 18, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       });
 
-      // Dim the topbar / hero zone so the galaxy effect stays below the hero
-      const heroMask = ctx.createLinearGradient(0, 0, 0, originY + 32);
-      heroMask.addColorStop(0,   'rgba(5,5,16,1)');
-      heroMask.addColorStop(0.7, 'rgba(5,5,16,0.85)');
-      heroMask.addColorStop(1,   'rgba(5,5,16,0)');
+      // Fade out the galaxy above the hero card seam — but leave a glow window near the origin
+      const heroMask = ctx.createLinearGradient(0, 0, 0, originY + 48);
+      heroMask.addColorStop(0,    'rgba(5,5,16,1)');
+      heroMask.addColorStop(0.60, 'rgba(5,5,16,0.92)');
+      heroMask.addColorStop(0.82, 'rgba(5,5,16,0.45)');
+      heroMask.addColorStop(1,    'rgba(5,5,16,0)');
       ctx.fillStyle = heroMask;
-      ctx.fillRect(0, 0, w, originY + 32);
+      ctx.fillRect(0, 0, w, originY + 48);
 
       rafRef.current = requestAnimationFrame(draw);
     };
