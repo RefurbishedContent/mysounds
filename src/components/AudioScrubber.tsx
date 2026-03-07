@@ -64,7 +64,7 @@ export function AudioScrubber({
   const draggingMarkerIdRef = useRef<string | null>(null);
   const isScrubbingRef = useRef(false);
   const hasInteractedRef = useRef(false);
-  const previewPlayerRef = useRef<Tone.Player | null>(null);
+  const previewSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const previewingMarkerRef = useRef<string | null>(null);
 
   markersRef.current = markers;
@@ -95,10 +95,10 @@ export function AudioScrubber({
         playerRef.current.dispose();
         playerRef.current = null;
       }
-      if (previewPlayerRef.current) {
-        try { previewPlayerRef.current.stop(); } catch {}
-        try { previewPlayerRef.current.dispose(); } catch {}
-        previewPlayerRef.current = null;
+      if (previewSourceRef.current) {
+        try { previewSourceRef.current.stop(); } catch {}
+        try { previewSourceRef.current.disconnect(); } catch {}
+        previewSourceRef.current = null;
       }
     };
   }, [audioUrl]);
@@ -275,10 +275,10 @@ export function AudioScrubber({
         setIsPlaying(false);
       }
 
-      if (previewPlayerRef.current) {
-        try { previewPlayerRef.current.stop(); } catch {}
-        try { previewPlayerRef.current.dispose(); } catch {}
-        previewPlayerRef.current = null;
+      if (previewSourceRef.current) {
+        try { previewSourceRef.current.stop(); } catch {}
+        try { previewSourceRef.current.disconnect(); } catch {}
+        previewSourceRef.current = null;
       }
 
       const marker = markersRef.current.find(m => m.id === markerId);
@@ -294,13 +294,19 @@ export function AudioScrubber({
 
       if (loopEnd - loopStart < 0.5) return;
 
-      const pp = new Tone.Player().toDestination();
-      pp.buffer = playerRef.current.buffer;
-      pp.loopStart = loopStart;
-      pp.loopEnd = loopEnd;
-      pp.loop = true;
-      previewPlayerRef.current = pp;
-      pp.start(Tone.now(), loopStart);
+      const rawCtx = Tone.getContext().rawContext as AudioContext;
+      const rawBuffer = playerRef.current.buffer.get() as AudioBuffer;
+      if (!rawBuffer) return;
+
+      const source = rawCtx.createBufferSource();
+      source.buffer = rawBuffer;
+      source.loop = true;
+      source.loopStart = loopStart;
+      source.loopEnd = loopEnd;
+      source.connect(rawCtx.destination);
+      source.start(rawCtx.currentTime, loopStart);
+
+      previewSourceRef.current = source;
       previewingMarkerRef.current = markerId;
       setPreviewingMarkerId(markerId);
     } catch (error) {
@@ -309,7 +315,7 @@ export function AudioScrubber({
   }, [isPlaying]);
 
   const updateMarkerPreview = useCallback((markerId: string, newTime: number) => {
-    if (previewingMarkerRef.current !== markerId || !previewPlayerRef.current) return;
+    if (previewingMarkerRef.current !== markerId || !previewSourceRef.current) return;
 
     const isStartMarker = markerId.includes('start');
     const loopStart = isStartMarker
@@ -321,13 +327,15 @@ export function AudioScrubber({
 
     if (loopEnd - loopStart < 0.5) return;
 
-    previewPlayerRef.current.loopStart = loopStart;
-    previewPlayerRef.current.loopEnd = loopEnd;
+    previewSourceRef.current.loopStart = loopStart;
+    previewSourceRef.current.loopEnd = loopEnd;
   }, []);
 
   const stopMarkerPreview = useCallback(() => {
-    if (previewPlayerRef.current) {
-      try { previewPlayerRef.current.stop(); } catch {}
+    if (previewSourceRef.current) {
+      try { previewSourceRef.current.stop(); } catch {}
+      try { previewSourceRef.current.disconnect(); } catch {}
+      previewSourceRef.current = null;
     }
     previewingMarkerRef.current = null;
     setPreviewingMarkerId(null);
