@@ -6,6 +6,7 @@ import { storageService, UploadResult } from '../lib/storage';
 import { transitionsService } from '../lib/transitionsService';
 import { BlendData } from '../lib/blendExportService';
 import { AudioScrubber } from './AudioScrubber';
+import DJCrowdCanvas from './DJCrowdCanvas';
 import MashUpSongSelector from './mashup/MashUpSongSelector';
 import TransitionTemplatesStep from './mashup/TransitionTemplatesStep';
 import MashUpConfirmationStep from './mashup/MashUpConfirmationStep';
@@ -338,7 +339,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
   const currentStepIndex = STEP_LABELS.findIndex(s => s.step === currentStep);
 
   return (
-    <div className="h-full flex flex-col bg-gray-900">
+    <div className="h-full flex flex-col bg-[#050510]">
       <div className="bg-gray-800 border-b border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -496,7 +497,9 @@ const TransitionPointsStep: React.FC<TransitionPointsStepProps> = ({
   const defaultName = generateMashUpName(selectedSongs);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 space-y-6" data-tutorial="transition-points-interface">
+    <div className="relative min-h-full" data-tutorial="transition-points-interface">
+      <DJCrowdCanvas />
+      <div className="relative z-10 max-w-3xl mx-auto px-4 py-6 space-y-6">
       <div className="text-center mb-4">
         <h2 className="text-2xl font-bold text-white mb-2">Set Clip Points</h2>
         <p className="text-gray-400 mb-4">Drag markers to control each song's start and end</p>
@@ -511,7 +514,7 @@ const TransitionPointsStep: React.FC<TransitionPointsStepProps> = ({
             value={customName}
             onChange={(e) => onCustomNameChange(e.target.value)}
             maxLength={60}
-            className="w-full px-4 py-2.5 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+            className="w-full px-4 py-2.5 bg-gray-800/70 backdrop-blur-sm border border-gray-600/60 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
           />
           <p className="text-xs text-gray-500 mt-1.5 text-left">
             {customName.length > 0 ? (
@@ -535,7 +538,7 @@ const TransitionPointsStep: React.FC<TransitionPointsStepProps> = ({
 
           return (
             <React.Fragment key={song.id}>
-              <div className="bg-gray-800 rounded-xl border border-gray-700 p-4 md:p-6 space-y-3">
+              <div className="bg-gray-800/70 backdrop-blur-sm rounded-xl border border-gray-700/60 p-4 md:p-6 space-y-3">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3 flex-1 min-w-0 mr-4">
                     <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${colors.bg}`}>
@@ -595,7 +598,7 @@ const TransitionPointsStep: React.FC<TransitionPointsStepProps> = ({
                   ]}
                 />
 
-                <div className="bg-gray-900 rounded-lg p-3 border border-gray-700/50">
+                <div className="bg-gray-900/60 backdrop-blur-sm rounded-lg p-3 border border-gray-700/50">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-gray-300">
                       <span className="text-cyan-400 font-mono">{formatTime(markers.start)}</span>
@@ -668,6 +671,7 @@ const TransitionPointsStep: React.FC<TransitionPointsStepProps> = ({
           </span>
           <ChevronRight size={24} />
         </button>
+      </div>
       </div>
     </div>
   );
