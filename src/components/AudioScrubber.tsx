@@ -275,10 +275,11 @@ export function AudioScrubber({
         setIsPlaying(false);
       }
 
-      if (!previewPlayerRef.current) {
-        previewPlayerRef.current = new Tone.Player().toDestination();
+      if (previewPlayerRef.current) {
+        try { previewPlayerRef.current.stop(); } catch {}
+        try { previewPlayerRef.current.dispose(); } catch {}
+        previewPlayerRef.current = null;
       }
-      previewPlayerRef.current.buffer = playerRef.current.buffer;
 
       const marker = markersRef.current.find(m => m.id === markerId);
       if (!marker || !draggingMarkerIdRef.current) return;
@@ -293,10 +294,13 @@ export function AudioScrubber({
 
       if (loopEnd - loopStart < 0.5) return;
 
-      previewPlayerRef.current.loop = true;
-      previewPlayerRef.current.loopStart = loopStart;
-      previewPlayerRef.current.loopEnd = loopEnd;
-      previewPlayerRef.current.start(Tone.now(), loopStart);
+      const pp = new Tone.Player().toDestination();
+      pp.buffer = playerRef.current.buffer;
+      pp.loopStart = loopStart;
+      pp.loopEnd = loopEnd;
+      pp.loop = true;
+      previewPlayerRef.current = pp;
+      pp.start(Tone.now(), loopStart);
       previewingMarkerRef.current = markerId;
       setPreviewingMarkerId(markerId);
     } catch (error) {
