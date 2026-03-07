@@ -138,6 +138,52 @@ export class WaveformGenerator {
     return { left: leftPeaks, right: rightPeaks };
   }
 
+  private traceWaveformPath(
+    ctx: CanvasRenderingContext2D,
+    peaks: Float32Array,
+    width: number,
+    height: number
+  ): void {
+    const centerY = height / 2;
+    const maxAmp = height / 2 - 2;
+    const len = peaks.length;
+    if (len === 0) return;
+
+    const step = len > 1 ? width / (len - 1) : width;
+
+    ctx.beginPath();
+    ctx.moveTo(0, centerY - peaks[0] * maxAmp);
+    for (let i = 1; i < len; i++) {
+      ctx.lineTo(i * step, centerY - peaks[i] * maxAmp);
+    }
+    for (let i = len - 1; i >= 0; i--) {
+      ctx.lineTo(i * step, centerY + peaks[i] * maxAmp);
+    }
+    ctx.closePath();
+  }
+
+  private traceEdge(
+    ctx: CanvasRenderingContext2D,
+    peaks: Float32Array,
+    width: number,
+    height: number,
+    upper: boolean
+  ): void {
+    const centerY = height / 2;
+    const maxAmp = height / 2 - 2;
+    const len = peaks.length;
+    if (len === 0) return;
+    const step = len > 1 ? width / (len - 1) : width;
+    const sign = upper ? -1 : 1;
+
+    ctx.beginPath();
+    ctx.moveTo(0, centerY + sign * peaks[0] * maxAmp);
+    for (let i = 1; i < len; i++) {
+      ctx.lineTo(i * step, centerY + sign * peaks[i] * maxAmp);
+    }
+    ctx.stroke();
+  }
+
   drawWaveform(
     canvas: HTMLCanvasElement,
     waveformData: WaveformData,
@@ -169,48 +215,98 @@ export class WaveformGenerator {
 
     const width = canvas.width;
     const height = canvas.height;
-    const peaks = waveformData.peaks;
-    const duration = waveformData.duration;
+    const { peaks, duration } = waveformData;
 
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, width, height);
 
-    const barWidth = width / peaks.length;
-    const centerY = height / 2;
-    const maxBarHeight = height / 2 - 4;
+    if (peaks.length === 0) return;
 
-    for (let i = 0; i < peaks.length; i++) {
-      const x = i * barWidth;
-      const barHeight = peaks[i] * maxBarHeight;
-      const isPast = (i / peaks.length) <= progress;
-      const currentTime = (i / peaks.length) * duration;
+    if (gradientRegion) {
+      const gStartX = (gradientRegion.startTime / duration) * width;
+      const gEndX = (gradientRegion.endTime / duration) * width;
 
-      let barColor = isPast ? progressColor : color;
-
-      if (gradientRegion && currentTime >= gradientRegion.startTime && currentTime <= gradientRegion.endTime) {
-        const regionProgress = (currentTime - gradientRegion.startTime) / (gradientRegion.endTime - gradientRegion.startTime);
-        barColor = this.interpolateColor(gradientRegion.startColor, gradientRegion.endColor, regionProgress);
-        if (isPast) {
-          barColor = this.lightenColor(barColor, 0.3);
-        }
+      if (gStartX > 0) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, gStartX, height);
+        ctx.clip();
+        this.traceWaveformPath(ctx, peaks, width, height);
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.55;
+        ctx.fill();
+        ctx.restore();
       }
 
-      ctx.fillStyle = barColor;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(gStartX, 0, gEndX - gStartX, height);
+      ctx.clip();
+      this.traceWaveformPath(ctx, peaks, width, height);
+      const grad = ctx.createLinearGradient(gStartX, 0, gEndX, 0);
+      grad.addColorStop(0, gradientRegion.startColor);
+      grad.addColorStop(1, gradientRegion.endColor);
+      ctx.fillStyle = grad;
+      ctx.globalAlpha = 0.65;
+      ctx.fill();
+      ctx.restore();
 
-      ctx.fillRect(
-        x,
-        centerY - barHeight,
-        Math.max(1, barWidth - 1),
-        barHeight * 2
-      );
+      if (gEndX < width) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(gEndX, 0, width - gEndX, height);
+        ctx.clip();
+        this.traceWaveformPath(ctx, peaks, width, height);
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.55;
+        ctx.fill();
+        ctx.restore();
+      }
+    } else {
+      this.traceWaveformPath(ctx, peaks, width, height);
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.55;
+      ctx.fill();
+      ctx.globalAlpha = 1;
     }
 
+    if (progress > 0) {
+      const progressX = progress * width;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, progressX, height);
+      ctx.clip();
+      this.traceWaveformPath(ctx, peaks, width, height);
+
+      if (gradientRegion) {
+        const gStartX = (gradientRegion.startTime / duration) * width;
+        const gEndX = (gradientRegion.endTime / duration) * width;
+        const lightGrad = ctx.createLinearGradient(gStartX, 0, gEndX, 0);
+        lightGrad.addColorStop(0, this.lightenColor(gradientRegion.startColor, 0.3));
+        lightGrad.addColorStop(1, this.lightenColor(gradientRegion.endColor, 0.3));
+        ctx.fillStyle = lightGrad;
+      } else {
+        ctx.fillStyle = progressColor;
+      }
+      ctx.globalAlpha = 0.85;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = gradientRegion ? gradientRegion.endColor : color;
+    ctx.lineWidth = 0.8;
+    this.traceEdge(ctx, peaks, width, height, true);
+    this.traceEdge(ctx, peaks, width, height, false);
+    ctx.restore();
+
     if (centerLine) {
-      ctx.strokeStyle = '#374151';
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(0, centerY);
-      ctx.lineTo(width, centerY);
+      ctx.moveTo(0, height / 2);
+      ctx.lineTo(width, height / 2);
       ctx.stroke();
     }
   }
@@ -238,15 +334,28 @@ export class WaveformGenerator {
   }
 
   private lightenColor(color: string, amount: number): string {
+    let r: number, g: number, b: number;
+
     if (color.startsWith('rgb')) {
       const match = color.match(/\d+/g);
       if (!match) return color;
-      const r = Math.min(255, parseInt(match[0]) + Math.round(255 * amount));
-      const g = Math.min(255, parseInt(match[1]) + Math.round(255 * amount));
-      const b = Math.min(255, parseInt(match[2]) + Math.round(255 * amount));
-      return `rgb(${r}, ${g}, ${b})`;
+      r = parseInt(match[0]);
+      g = parseInt(match[1]);
+      b = parseInt(match[2]);
+    } else if (color.startsWith('#')) {
+      const hex = this.hexToRgb(color);
+      if (!hex) return color;
+      r = hex.r;
+      g = hex.g;
+      b = hex.b;
+    } else {
+      return color;
     }
-    return color;
+
+    r = Math.min(255, r + Math.round(255 * amount));
+    g = Math.min(255, g + Math.round(255 * amount));
+    b = Math.min(255, b + Math.round(255 * amount));
+    return `rgb(${r}, ${g}, ${b})`;
   }
 
   drawStereoWaveform(
@@ -270,41 +379,48 @@ export class WaveformGenerator {
 
     const width = canvas.width;
     const height = canvas.height;
+    const len = left.length;
 
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, width, height);
 
-    const barWidth = width / left.length;
+    if (len === 0) return;
+
+    const step = len > 1 ? width / (len - 1) : width;
     const channelHeight = height / 2;
+    const maxAmp = channelHeight - 2;
+
+    const drawChannelFill = (peaks: Float32Array, yBase: number, direction: number) => {
+      ctx.beginPath();
+      ctx.moveTo(0, yBase);
+      for (let i = 0; i < len; i++) {
+        ctx.lineTo(i * step, yBase + direction * peaks[i] * maxAmp);
+      }
+      ctx.lineTo((len - 1) * step, yBase);
+      ctx.closePath();
+      ctx.fill();
+    };
 
     ctx.fillStyle = color;
+    ctx.globalAlpha = 0.5;
+    drawChannelFill(left, channelHeight, -1);
+    drawChannelFill(right, channelHeight, 1);
 
-    for (let i = 0; i < left.length; i++) {
-      const x = i * barWidth;
-      const leftBarHeight = left[i] * (channelHeight - 4);
-      const rightBarHeight = right[i] * (channelHeight - 4);
-
-      const opacity = (i / left.length) <= progress ? 1 : 0.5;
-      ctx.globalAlpha = opacity;
-
-      ctx.fillRect(
-        x,
-        channelHeight - leftBarHeight,
-        Math.max(1, barWidth - 1),
-        leftBarHeight
-      );
-
-      ctx.fillRect(
-        x,
-        channelHeight + 2,
-        Math.max(1, barWidth - 1),
-        rightBarHeight
-      );
+    if (progress > 0) {
+      const progressX = progress * width;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, progressX, height);
+      ctx.clip();
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.85;
+      drawChannelFill(left, channelHeight, -1);
+      drawChannelFill(right, channelHeight, 1);
+      ctx.restore();
     }
 
     ctx.globalAlpha = 1;
-
-    ctx.strokeStyle = '#374151';
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, channelHeight);
@@ -438,17 +554,23 @@ export class WaveformGenerator {
     const width = canvas.width;
     const height = canvas.height;
     const { lows, mids, highs, peaks } = rgbData;
-    const barWidth = width / peaks.length;
-    const centerY = height / 2;
-    const maxBarHeight = height / 2 - 4;
+    const len = peaks.length;
 
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, width, height);
 
-    for (let i = 0; i < peaks.length; i++) {
-      const x = i * barWidth;
-      const barHeight = peaks[i] * maxBarHeight;
-      const isPast = (i / peaks.length) <= progress;
+    if (len === 0) return;
+
+    const step = len > 1 ? width / (len - 1) : width;
+    const colWidth = Math.ceil(step) + 1;
+
+    ctx.save();
+    this.traceWaveformPath(ctx, peaks, width, height);
+    ctx.clip();
+
+    for (let i = 0; i < len; i++) {
+      const x = i * step;
+      const isPast = (i / len) <= progress;
 
       const total = lows[i] + mids[i] + highs[i];
       let r: number, g: number, b: number;
@@ -471,15 +593,25 @@ export class WaveformGenerator {
       }
 
       ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-      ctx.fillRect(x, centerY - barHeight, Math.max(1, barWidth - 1), barHeight * 2);
+      ctx.fillRect(x - 0.5, 0, colWidth, height);
     }
 
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalAlpha = 0.3;
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = 0.8;
+    this.traceEdge(ctx, peaks, width, height, true);
+    this.traceEdge(ctx, peaks, width, height, false);
+    ctx.restore();
+
     if (centerLine) {
-      ctx.strokeStyle = '#374151';
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(0, centerY);
-      ctx.lineTo(width, centerY);
+      ctx.moveTo(0, height / 2);
+      ctx.lineTo(width, height / 2);
       ctx.stroke();
     }
   }
