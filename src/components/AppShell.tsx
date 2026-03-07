@@ -21,6 +21,7 @@ import ProfileView from './ProfileView';
 import AIFusionView from './AIFusionView';
 import LabsView from './LabsView';
 import HomeView from './HomeView';
+import GalaxyBackground from './GalaxyBackground';
 import MobileBottomNav, { MobileNavView } from './MobileBottomNav';
 import ProjectCreationWizard from './ProjectCreationWizard';
 import NewProjectTutorialOverlay from './NewProjectTutorialOverlay';
@@ -552,9 +553,11 @@ const AppShell: React.FC = () => {
   };
 
   return (
-    <div className="h-screen bg-gray-900 flex flex-col overflow-hidden">
+    <div className="h-screen bg-[#050510] flex flex-col overflow-hidden relative" style={{ isolation: 'isolate' }}>
+      {currentView === 'home' && <GalaxyBackground />}
+
       {/* Top Bar - Hidden on Mobile */}
-      <div className={`bg-gray-800 border-b border-gray-700 px-3 sm:px-4 py-1.5 flex-shrink-0 z-[60] relative ${isMobile ? 'hidden' : ''}`}>
+      <div className={`bg-gray-800/90 backdrop-blur-sm border-b border-gray-700/60 px-3 sm:px-4 py-1.5 flex-shrink-0 z-[60] relative ${isMobile ? 'hidden' : ''}`}>
         <div className="flex items-center justify-between gap-2">
           {/* Left Section */}
           <div className="flex items-center space-x-2 sm:space-x-4">
@@ -659,7 +662,7 @@ const AppShell: React.FC = () => {
       </div>
       
       {/* Main Layout */}
-      <div className="flex flex-1 overflow-hidden relative">
+      <div className="flex flex-1 overflow-hidden relative z-[10]">
         {/* Mobile Sidebar Overlay */}
         {isMobileSidebarOpen && (
           <div
@@ -670,7 +673,7 @@ const AppShell: React.FC = () => {
 
         {/* Sidebar - Hidden on Mobile (bottom nav replaces it) */}
         <div className={`
-          bg-gray-800 border-r border-gray-700 transition-all duration-300 ease-in-out relative
+          bg-gray-900/95 backdrop-blur-sm border-r border-gray-700/60 transition-all duration-300 ease-in-out relative
           ${isMobile ? 'hidden' : ''}
           md:translate-x-0
           md:relative inset-y-0 left-0 z-50
@@ -805,7 +808,7 @@ const AppShell: React.FC = () => {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 w-full flex flex-col min-w-0">
+        <div className="flex-1 w-full flex flex-col min-w-0 relative z-[10]">
           <div className={`flex-1 overflow-y-auto overflow-x-hidden main-content-scroll ${isMobile ? 'pb-20' : ''}`} style={{ WebkitOverflowScrolling: 'touch' }}>
             {renderContent()}
           </div>

@@ -198,13 +198,21 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-gray-900">
+    <div className="h-full overflow-y-auto bg-transparent">
       <div className="max-w-7xl mx-auto p-4 space-y-4">
         {/* Hero Section */}
-        <div className="relative overflow-hidden rounded-xl bg-gray-950 border border-cyan-500/25 min-h-[180px] shadow-2xl shadow-cyan-500/10" style={{ isolation: 'isolate' }}>
-          <DJLaserCanvas />
+        <div className="relative overflow-visible rounded-xl bg-gray-950 border border-cyan-500/20 min-h-[180px] shadow-2xl shadow-cyan-500/15" style={{ isolation: 'isolate' }}>
+          <div className="absolute inset-0 overflow-hidden rounded-xl z-0">
+            <DJLaserCanvas />
+          </div>
 
-          <div className="absolute inset-0 pointer-events-none z-[1]" style={{ background: 'radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(0,0,0,0.5) 100%)' }} />
+          <div className="absolute inset-0 pointer-events-none z-[1] rounded-xl" style={{ background: 'radial-gradient(ellipse at 50% 40%, transparent 20%, rgba(0,0,0,0.4) 100%)' }} />
+
+          {/* Bottom bleed — lasers dissolve into the galaxy below */}
+          <div
+            className="absolute bottom-0 left-0 right-0 h-16 pointer-events-none z-[2] rounded-b-xl"
+            style={{ background: 'linear-gradient(to bottom, transparent, rgba(5,5,16,0.85))' }}
+          />
 
           <div className="relative z-10 p-4">
             <div className="flex items-start justify-between mb-3">
@@ -310,7 +318,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
                 <button
                   key={action.id}
                   onClick={action.action}
-                  className="group relative overflow-hidden bg-gray-800 hover:bg-gray-750 border border-gray-700 rounded-lg p-3 transition-all duration-300 hover:scale-105 hover:shadow-xl text-left"
+                  className="group relative overflow-hidden bg-gray-900/70 backdrop-blur-sm hover:bg-gray-800/70 border border-gray-700/60 rounded-lg p-3 transition-all duration-300 hover:scale-105 hover:shadow-xl text-left"
                 >
                   <div className={`absolute inset-0 bg-gradient-to-br ${action.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
                   <div className="relative z-10">
@@ -333,7 +341,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Recent Activity */}
-          <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
+          <div className="bg-gray-900/75 backdrop-blur-sm border border-gray-700/60 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-bold text-white flex items-center gap-2">
                 <Activity size={16} className="text-cyan-400" />
@@ -348,7 +356,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
                 recentActivities.map((activity) => (
                   <div
                     key={activity.id}
-                    className="flex items-start gap-2 p-2 bg-gray-750 hover:bg-gray-700 rounded-lg transition-colors cursor-pointer"
+                    className="flex items-start gap-2 p-2 bg-gray-800/60 hover:bg-gray-700/70 rounded-lg transition-colors cursor-pointer"
                   >
                     <div className="w-6 h-6 bg-cyan-500/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
                       <Activity size={12} className="text-cyan-400" />
@@ -372,7 +380,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
           </div>
 
           {/* Performance Analytics */}
-          <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
+          <div className="bg-gray-900/75 backdrop-blur-sm border border-gray-700/60 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-bold text-white flex items-center gap-2">
                 <TrendingUp size={16} className="text-blue-400" />
@@ -380,30 +388,30 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
               </h2>
             </div>
             <div className="space-y-2">
-              <div className="bg-gray-750 rounded-lg p-3">
+              <div className="bg-gray-800/60 rounded-lg p-3">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs text-gray-400">Mash Ups Created</span>
                   <span className="text-sm font-bold text-white">{displayStats.totalTransitions}</span>
                 </div>
-                <div className="w-full bg-gray-700 rounded-full h-1.5">
+                <div className="w-full bg-gray-700/60 rounded-full h-1.5">
                   <div className="bg-gradient-to-r from-cyan-500 to-blue-500 h-1.5 rounded-full" style={{ width: '75%' }} />
                 </div>
               </div>
-              <div className="bg-gray-750 rounded-lg p-3">
+              <div className="bg-gray-800/60 rounded-lg p-3">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs text-gray-400">Tracks Uploaded</span>
                   <span className="text-sm font-bold text-white">{displayStats.totalTracks}</span>
                 </div>
-                <div className="w-full bg-gray-700 rounded-full h-1.5">
+                <div className="w-full bg-gray-700/60 rounded-full h-1.5">
                   <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-1.5 rounded-full" style={{ width: '60%' }} />
                 </div>
               </div>
-              <div className="bg-gray-750 rounded-lg p-3">
+              <div className="bg-gray-800/60 rounded-lg p-3">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs text-gray-400">Mixing Streak</span>
                   <span className="text-sm font-bold text-white">7 days</span>
                 </div>
-                <div className="w-full bg-gray-700 rounded-full h-1.5">
+                <div className="w-full bg-gray-700/60 rounded-full h-1.5">
                   <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-1.5 rounded-full" style={{ width: '90%' }} />
                 </div>
               </div>
@@ -430,7 +438,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
               {recentTracks.map((track) => (
                 <div
                   key={track.id}
-                  className="group bg-gray-800 border border-gray-700 rounded-lg p-2 hover:bg-gray-750 transition-all cursor-pointer"
+                  className="group bg-gray-900/70 backdrop-blur-sm border border-gray-700/60 rounded-lg p-2 hover:bg-gray-800/70 transition-all cursor-pointer"
                 >
                   <div className="aspect-square bg-gradient-to-br from-cyan-500/20 to-purple-500/20 rounded-lg mb-2 flex items-center justify-center relative overflow-hidden">
                     <Music size={20} className="text-gray-600" />
