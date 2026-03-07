@@ -47,6 +47,7 @@ export function AudioScrubber({
   const [flashInMarker, setFlashInMarker] = useState(false);
   const [flashEndMarker, setFlashEndMarker] = useState(false);
   const [isSnapping, setIsSnapping] = useState(false);
+  const [isScrubbing, setIsScrubbing] = useState(false);
   const playerRef = useRef<Tone.Player | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
@@ -55,6 +56,8 @@ export function AudioScrubber({
   const markersRef = useRef<AudioMarker[]>(markers);
   const durationRef = useRef<number>(duration);
   const draggingMarkerIdRef = useRef<string | null>(null);
+  const isScrubbingRef = useRef(false);
+  const hasInteractedRef = useRef(false);
 
   markersRef.current = markers;
   durationRef.current = duration;
@@ -87,36 +90,40 @@ export function AudioScrubber({
   }, [audioUrl]);
 
   useEffect(() => {
-    setPlaybackTime(currentTime);
+    if (!hasInteractedRef.current) {
+      setPlaybackTime(currentTime);
+      pauseTimeRef.current = currentTime;
+    }
   }, [currentTime]);
 
   const getClipBoundaries = useCallback(() => {
-    const startMarker = markers.find(m => m.id.includes('start') || m.label?.toUpperCase() === 'START');
-    const endMarker = markers.find(m => m.id.includes('end') || m.label?.toUpperCase() === 'END');
+    const currentMarkers = markersRef.current;
+    const startMarker = currentMarkers.find(m => m.id.includes('start') || m.label?.toUpperCase() === 'START');
+    const endMarker = currentMarkers.find(m => m.id.includes('end') || m.label?.toUpperCase() === 'END');
     return {
       start: startMarker?.time ?? 0,
-      end: endMarker?.time ?? duration
+      end: endMarker?.time ?? durationRef.current
     };
-  }, [markers, duration]);
+  }, []);
 
   const updatePlaybackTime = useCallback(() => {
-    if (!playerRef.current || !isPlaying) return;
+    if (!playerRef.current) return;
 
     const elapsed = Tone.now() - startTimeRef.current;
     const newTime = pauseTimeRef.current + elapsed;
     const { end } = getClipBoundaries();
+    const effectiveEnd = Math.min(end, durationRef.current);
 
-    if (newTime >= end || newTime >= duration) {
+    if (newTime >= effectiveEnd) {
       setIsPlaying(false);
-      const stopTime = Math.min(end, duration);
-      setPlaybackTime(stopTime);
-      playerRef.current.stop();
+      setPlaybackTime(effectiveEnd);
+      try { playerRef.current.stop(); } catch {}
       return;
     }
 
     setPlaybackTime(newTime);
     animationFrameRef.current = requestAnimationFrame(updatePlaybackTime);
-  }, [isPlaying, duration, getClipBoundaries]);
+  }, [getClipBoundaries]);
 
   useEffect(() => {
     if (isPlaying) {
@@ -135,20 +142,16 @@ export function AudioScrubber({
   }, [isPlaying, updatePlaybackTime]);
 
   const startPlaybackAt = useCallback(async (time: number) => {
-    if (!playerRef.current || !playerRef.current.loaded) {
-      console.warn('Player not ready');
-      return;
-    }
+    if (!playerRef.current || !playerRef.current.loaded) return;
 
     try {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
       playerRef.current.stop();
-
       await Tone.start();
 
-      const clampedTime = Math.max(0, Math.min(time, duration));
+      const clampedTime = Math.max(0, Math.min(time, durationRef.current));
       pauseTimeRef.current = clampedTime;
       setPlaybackTime(clampedTime);
 
@@ -158,32 +161,30 @@ export function AudioScrubber({
     } catch (error) {
       console.error('Playback error:', error);
     }
-  }, [duration]);
+  }, []);
 
   const handlePlayPause = async () => {
-    if (!playerRef.current || !playerRef.current.loaded) {
-      console.warn('Player not ready');
-      return;
-    }
+    if (!playerRef.current || !playerRef.current.loaded) return;
+    hasInteractedRef.current = true;
 
     try {
       if (isPlaying) {
         playerRef.current.stop();
-        pauseTimeRef.current = playbackTime;
+        pauseTimeRef.current = playbackTimeRef.current;
         setIsPlaying(false);
       } else {
         await Tone.start();
 
         const { start, end } = getClipBoundaries();
-        const hasClipMarkers = markers.length >= 2;
+        const hasClipMarkers = markersRef.current.length >= 2;
 
-        let startPosition = playbackTime;
+        let startPosition = playbackTimeRef.current;
 
         if (hasClipMarkers) {
-          if (playbackTime < start || playbackTime >= end) {
+          if (startPosition < start || startPosition >= end) {
             startPosition = start;
           }
-        } else if (playbackTime >= duration) {
+        } else if (startPosition >= durationRef.current) {
           startPosition = 0;
         }
 
@@ -191,7 +192,7 @@ export function AudioScrubber({
         setPlaybackTime(startPosition);
 
         startTimeRef.current = Tone.now();
-        playerRef.current.start(Tone.now(), pauseTimeRef.current);
+        playerRef.current.start(Tone.now(), startPosition);
         setIsPlaying(true);
       }
     } catch (error) {
@@ -201,7 +202,8 @@ export function AudioScrubber({
 
   const handleWaveformClick = useCallback(
     (progress: number) => {
-      const time = progress * duration;
+      hasInteractedRef.current = true;
+      const time = progress * durationRef.current;
 
       if (isPlaying) {
         startPlaybackAt(time);
@@ -210,7 +212,7 @@ export function AudioScrubber({
         pauseTimeRef.current = time;
       }
     },
-    [duration, isPlaying, startPlaybackAt]
+    [isPlaying, startPlaybackAt]
   );
 
   const handleSetInMarker = () => {
@@ -219,7 +221,7 @@ export function AudioScrubber({
       setIsPlaying(false);
     }
     if (onSetInMarker) {
-      onSetInMarker(playbackTime);
+      onSetInMarker(playbackTimeRef.current);
       setFlashInMarker(true);
       setTimeout(() => setFlashInMarker(false), 500);
     }
@@ -231,7 +233,7 @@ export function AudioScrubber({
       setIsPlaying(false);
     }
     if (onSetEndMarker) {
-      onSetEndMarker(playbackTime);
+      onSetEndMarker(playbackTimeRef.current);
       setFlashEndMarker(true);
       setTimeout(() => setFlashEndMarker(false), 500);
     }
@@ -249,6 +251,7 @@ export function AudioScrubber({
   const handlePointerDown = useCallback((markerId: string, e: React.PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    hasInteractedRef.current = true;
     draggingMarkerIdRef.current = markerId;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   }, []);
@@ -278,30 +281,71 @@ export function AudioScrubber({
     const markerId = draggingMarkerIdRef.current;
     if (!markerId) return;
 
-    const marker = markersRef.current.find(m => m.id === markerId);
     draggingMarkerIdRef.current = null;
     setIsSnapping(false);
     (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-
-    if (!marker) return;
-
-    const isEndMarker = markerId.includes('end') || marker.label?.toUpperCase() === 'END';
-    const isStartMarker = markerId.includes('start') || marker.label?.toUpperCase() === 'START';
-
-    if (isEndMarker) {
-      const previewStart = Math.max(0, marker.time - 5);
-      startPlaybackAt(previewStart);
-    } else if (isStartMarker) {
-      startPlaybackAt(marker.time);
-    }
-  }, [startPlaybackAt]);
+  }, []);
 
   const handleLostPointerCapture = useCallback(() => {
     draggingMarkerIdRef.current = null;
     setIsSnapping(false);
   }, []);
 
-  const progress = playbackTime / duration;
+  const handlePlayheadPointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    hasInteractedRef.current = true;
+    isScrubbingRef.current = true;
+    setIsScrubbing(true);
+
+    if (isPlaying && playerRef.current) {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      try { playerRef.current.stop(); } catch {}
+      setIsPlaying(false);
+    }
+
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [isPlaying]);
+
+  const handlePlayheadPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!isScrubbingRef.current) return;
+    e.preventDefault();
+
+    const newTime = calcTimeFromPointer(e.clientX);
+    setPlaybackTime(newTime);
+    pauseTimeRef.current = newTime;
+
+    if (playerRef.current?.loaded) {
+      try {
+        playerRef.current.stop();
+        playerRef.current.start(Tone.now(), newTime);
+        playerRef.current.stop(Tone.now() + 0.1);
+      } catch {}
+    }
+  }, [calcTimeFromPointer]);
+
+  const handlePlayheadPointerUp = useCallback((e: React.PointerEvent) => {
+    if (!isScrubbingRef.current) return;
+    isScrubbingRef.current = false;
+    setIsScrubbing(false);
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+
+    if (playerRef.current?.loaded) {
+      try { playerRef.current.stop(); } catch {}
+    }
+  }, []);
+
+  const handlePlayheadLostCapture = useCallback(() => {
+    isScrubbingRef.current = false;
+    setIsScrubbing(false);
+    if (playerRef.current?.loaded) {
+      try { playerRef.current.stop(); } catch {}
+    }
+  }, []);
+
+  const progress = duration > 0 ? playbackTime / duration : 0;
 
   const gradientRegion = showGradient && markers.length >= 2 ? {
     startTime: Math.min(markers[0].time, markers[1].time),
@@ -409,24 +453,40 @@ export function AudioScrubber({
             </div>
           );
         })}
+
         <div
-          className="absolute top-0 bottom-0 pointer-events-none transition-all duration-75"
+          className="absolute top-0 bottom-0 cursor-ew-resize select-none"
           style={{
             left: `${progress * 100}%`,
-            zIndex: 5,
+            width: '36px',
+            marginLeft: '-18px',
+            zIndex: 15,
+            touchAction: 'none',
           }}
+          onPointerDown={handlePlayheadPointerDown}
+          onPointerMove={handlePlayheadPointerMove}
+          onPointerUp={handlePlayheadPointerUp}
+          onLostPointerCapture={handlePlayheadLostCapture}
         >
           <div
-            className={`absolute -top-1 -bottom-1 transition-all duration-75 ${isSnapping ? 'w-1' : 'w-px'}`}
+            className="absolute -top-1 -bottom-1 left-1/2 -translate-x-1/2"
             style={{
-              backgroundColor: isSnapping ? 'rgba(255, 255, 255, 1)' : 'rgba(255, 255, 255, 0.8)',
-              boxShadow: isSnapping
+              width: isScrubbing ? '3px' : isSnapping ? '3px' : '1.5px',
+              backgroundColor: 'rgba(255, 255, 255, 1)',
+              boxShadow: isScrubbing || isSnapping
                 ? '0 0 12px rgba(255, 255, 255, 0.9), 0 0 24px rgba(255, 255, 255, 0.6)'
                 : '0 0 6px rgba(255, 255, 255, 0.5), 0 0 12px rgba(255, 255, 255, 0.3)',
+              pointerEvents: 'none',
+              transition: 'width 75ms, box-shadow 75ms',
             }}
           />
-          {isSnapping && (
-            <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-white text-gray-900 text-xs px-2 py-0.5 rounded font-medium whitespace-nowrap">
+          {isScrubbing && (
+            <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-white text-gray-900 text-[10px] px-2 py-0.5 rounded font-bold whitespace-nowrap pointer-events-none shadow-lg">
+              {formatTime(playbackTime)}
+            </div>
+          )}
+          {isSnapping && !isScrubbing && (
+            <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-white text-gray-900 text-xs px-2 py-0.5 rounded font-medium whitespace-nowrap pointer-events-none">
               Snap
             </div>
           )}
@@ -439,6 +499,12 @@ export function AudioScrubber({
           <span className="text-blue-400 animate-pulse flex items-center space-x-1">
             <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
             <span>Playing</span>
+          </span>
+        )}
+        {isScrubbing && (
+          <span className="text-white flex items-center space-x-1">
+            <span className="w-2 h-2 bg-white rounded-full"></span>
+            <span>Scrubbing</span>
           </span>
         )}
       </div>
