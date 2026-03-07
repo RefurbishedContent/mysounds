@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import * as Tone from 'tone';
-import { waveformGenerator, WaveformData } from '../lib/audio/WaveformGenerator';
+import { waveformGenerator, WaveformData, RGBWaveformData } from '../lib/audio/WaveformGenerator';
 
 interface ClippedWaveformDisplayProps {
   audioUrl: string;
@@ -13,6 +12,7 @@ interface ClippedWaveformDisplayProps {
   onSeek?: (progress: number) => void;
   showScrubber?: boolean;
   zoom?: number;
+  renderMode?: 'standard' | 'rgb';
 }
 
 export function ClippedWaveformDisplay({
@@ -25,11 +25,13 @@ export function ClippedWaveformDisplay({
   progressColor = '#60a5fa',
   onSeek,
   showScrubber = false,
-  zoom = 1
+  zoom = 1,
+  renderMode = 'standard'
 }: ClippedWaveformDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [waveformData, setWaveformData] = useState<WaveformData | null>(null);
+  const [rgbData, setRgbData] = useState<RGBWaveformData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const [containerWidth, setContainerWidth] = useState(800);
@@ -75,6 +77,12 @@ export function ClippedWaveformDisplay({
             duration: clipDuration,
             sampleRate: audioBuffer.sampleRate
           });
+
+          if (renderMode === 'rgb') {
+            const rgb = waveformGenerator.extractRGBBands(clippedBuffer, samples);
+            setRgbData({ ...rgb, duration: clipDuration });
+          }
+
           setIsLoading(false);
         }
       } catch (error) {
@@ -90,7 +98,7 @@ export function ClippedWaveformDisplay({
     return () => {
       mounted = false;
     };
-  }, [audioUrl, clipStart, clipEnd, zoom]);
+  }, [audioUrl, clipStart, clipEnd, zoom, renderMode]);
 
   const extractPeaks = (audioBuffer: AudioBuffer, samples: number): Float32Array => {
     const channelData = audioBuffer.getChannelData(0);
@@ -132,19 +140,28 @@ export function ClippedWaveformDisplay({
   }, []);
 
   useEffect(() => {
-    if (!waveformData || !canvasRef.current) return;
+    if (!canvasRef.current) return;
 
-    const canvas = canvasRef.current;
-    canvas.width = containerWidth * zoom;
-    canvas.height = height;
-
-    waveformGenerator.drawWaveform(canvas, waveformData, {
-      color,
-      progressColor,
-      progress,
-      centerLine: true
-    });
-  }, [waveformData, progress, color, progressColor, height, containerWidth, zoom]);
+    if (renderMode === 'rgb' && rgbData) {
+      const canvas = canvasRef.current;
+      canvas.width = containerWidth * zoom;
+      canvas.height = height;
+      waveformGenerator.drawRGBWaveform(canvas, rgbData, {
+        progress,
+        centerLine: true
+      });
+    } else if (waveformData) {
+      const canvas = canvasRef.current;
+      canvas.width = containerWidth * zoom;
+      canvas.height = height;
+      waveformGenerator.drawWaveform(canvas, waveformData, {
+        color,
+        progressColor,
+        progress,
+        centerLine: true
+      });
+    }
+  }, [waveformData, rgbData, renderMode, progress, color, progressColor, height, containerWidth, zoom]);
 
   const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!onSeek || !canvasRef.current) return;

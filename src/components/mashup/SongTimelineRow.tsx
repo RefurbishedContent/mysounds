@@ -3,6 +3,7 @@ import { Play, Pause, Sliders, Check } from 'lucide-react';
 import * as Tone from 'tone';
 import { UploadResult } from '../../lib/storage';
 import { ClippedWaveformDisplay } from '../ClippedWaveformDisplay';
+import { WaveformModeToggle } from '../WaveformModeToggle';
 import { SONG_LETTERS, SONG_COLORS, formatTime } from './constants';
 
 interface SongTimelineRowProps {
@@ -28,6 +29,7 @@ export const SongTimelineRow: React.FC<SongTimelineRowProps> = ({
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackProgress, setPlaybackProgress] = useState(0);
+  const [waveformMode, setWaveformMode] = useState<'standard' | 'rgb'>('standard');
   const playerRef = useRef<Tone.Player | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
@@ -164,6 +166,11 @@ export const SongTimelineRow: React.FC<SongTimelineRowProps> = ({
             {isPlaying ? <Pause size={16} /> : <Play size={16} />}
           </button>
 
+          <WaveformModeToggle
+            mode={waveformMode}
+            onToggle={() => setWaveformMode(m => m === 'standard' ? 'rgb' : 'standard')}
+          />
+
           <button
             onClick={onToggleExpand}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all flex-shrink-0 ${
@@ -194,6 +201,7 @@ export const SongTimelineRow: React.FC<SongTimelineRowProps> = ({
             progressColor={colors.border.replace('border-', '#').replace('-500', '')}
             onSeek={handleSeek}
             showScrubber={true}
+            renderMode={waveformMode}
           />
 
           {playbackProgress > 0 && (

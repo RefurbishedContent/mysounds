@@ -8,6 +8,7 @@ import { TemplateData } from '../../lib/database';
 import { UploadResult } from '../../lib/storage';
 import TemplateGallery from '../TemplateGallery';
 import { WaveformDisplay } from '../WaveformDisplay';
+import { WaveformModeToggle } from '../WaveformModeToggle';
 
 type DurationSize = 'short' | 'medium' | 'long';
 
@@ -195,6 +196,7 @@ const SelectedTemplateCard: React.FC<{
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(0);
   const [actualDuration, setActualDuration] = useState<number | null>(null);
+  const [waveformMode, setWaveformMode] = useState<'standard' | 'rgb'>('standard');
   const playerRef = useRef<Tone.Player | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
@@ -364,6 +366,10 @@ const SelectedTemplateCard: React.FC<{
               <Play className="w-4 h-4 text-white" />
             )}
           </button>
+          <WaveformModeToggle
+            mode={waveformMode}
+            onToggle={() => setWaveformMode(m => m === 'standard' ? 'rgb' : 'standard')}
+          />
           <div className="flex-1 flex items-center justify-between">
             <span className="text-xs font-mono text-gray-400">
               {formatTime(playbackTime)} / {formatTime(duration)}
@@ -392,6 +398,7 @@ const SelectedTemplateCard: React.FC<{
                 startColor: '#06b6d4',
                 endColor: '#14b8a6'
               }}
+              renderMode={waveformMode}
             />
           ) : (
             <div className="h-[50px] flex items-center justify-center">
@@ -426,6 +433,7 @@ export const EffectTimelineRow: React.FC<EffectTimelineRowProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(0);
   const [actualDuration, setActualDuration] = useState<number | null>(null);
+  const [waveformMode, setWaveformMode] = useState<'standard' | 'rgb'>('standard');
   const playerRef = useRef<Tone.Player | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
@@ -579,6 +587,11 @@ export const EffectTimelineRow: React.FC<EffectTimelineRowProps> = ({
               {formatTime(playbackTime)} / {formatTime(duration)}
             </span>
 
+            <WaveformModeToggle
+              mode={waveformMode}
+              onToggle={() => setWaveformMode(m => m === 'standard' ? 'rgb' : 'standard')}
+            />
+
             <button
               onClick={handlePlayPause}
               disabled={!audioUrl}
@@ -617,6 +630,7 @@ export const EffectTimelineRow: React.FC<EffectTimelineRowProps> = ({
                 startColor: '#06b6d4',
                 endColor: '#14b8a6'
               }}
+              renderMode={waveformMode}
             />
           ) : (
             <div className={`${isMobile ? 'h-[50px]' : 'h-[60px]'} flex items-center justify-center`}>

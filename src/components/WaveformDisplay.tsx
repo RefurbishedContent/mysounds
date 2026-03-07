@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { waveformGenerator, WaveformData } from '../lib/audio/WaveformGenerator';
+import { waveformGenerator, WaveformData, RGBWaveformData } from '../lib/audio/WaveformGenerator';
 
 interface WaveformDisplayProps {
   audioUrl: string;
@@ -15,6 +15,7 @@ interface WaveformDisplayProps {
     startColor: string;
     endColor: string;
   };
+  renderMode?: 'standard' | 'rgb';
 }
 
 export function WaveformDisplay({
@@ -25,11 +26,13 @@ export function WaveformDisplay({
   progressColor = '#60a5fa',
   onSeek,
   showScrubber = false,
-  gradientRegion
+  gradientRegion,
+  renderMode = 'standard'
 }: WaveformDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [waveformData, setWaveformData] = useState<WaveformData | null>(null);
+  const [rgbData, setRgbData] = useState<RGBWaveformData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -70,6 +73,23 @@ export function WaveformDisplay({
   }, [audioUrl]);
 
   useEffect(() => {
+    if (renderMode !== 'rgb' || !audioUrl) return;
+    let mounted = true;
+
+    const loadRGB = async () => {
+      try {
+        const data = await waveformGenerator.generateRGBWaveform(audioUrl, 500);
+        if (mounted) setRgbData(data);
+      } catch {
+        // Fall back to standard mode silently
+      }
+    };
+
+    loadRGB();
+    return () => { mounted = false; };
+  }, [audioUrl, renderMode]);
+
+  useEffect(() => {
     if (!containerRef.current) return;
 
     const resizeObserver = new ResizeObserver((entries) => {
@@ -86,20 +106,28 @@ export function WaveformDisplay({
   }, []);
 
   useEffect(() => {
-    if (!waveformData || !canvasRef.current) return;
-
-    const canvas = canvasRef.current;
-    canvas.width = containerWidth;
-    canvas.height = height;
-
-    waveformGenerator.drawWaveform(canvas, waveformData, {
-      color,
-      progressColor,
-      progress,
-      centerLine: true,
-      gradientRegion
-    });
-  }, [waveformData, progress, color, progressColor, height, containerWidth, gradientRegion]);
+    if (!canvasRef.current) return;
+    if (renderMode === 'rgb' && rgbData) {
+      const canvas = canvasRef.current;
+      canvas.width = containerWidth;
+      canvas.height = height;
+      waveformGenerator.drawRGBWaveform(canvas, rgbData, {
+        progress,
+        centerLine: true
+      });
+    } else if (waveformData) {
+      const canvas = canvasRef.current;
+      canvas.width = containerWidth;
+      canvas.height = height;
+      waveformGenerator.drawWaveform(canvas, waveformData, {
+        color,
+        progressColor,
+        progress,
+        centerLine: true,
+        gradientRegion
+      });
+    }
+  }, [waveformData, rgbData, renderMode, progress, color, progressColor, height, containerWidth, gradientRegion]);
 
   const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!onSeek || !canvasRef.current) return;

@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import * as Tone from 'tone';
 import { WaveformDisplay } from './WaveformDisplay';
+import { WaveformModeToggle } from './WaveformModeToggle';
 import { Play, Pause, MapPin } from 'lucide-react';
 
 export interface AudioMarker {
@@ -48,6 +49,7 @@ export function AudioScrubber({
   const [flashEndMarker, setFlashEndMarker] = useState(false);
   const [isSnapping, setIsSnapping] = useState(false);
   const [isScrubbing, setIsScrubbing] = useState(false);
+  const [waveformMode, setWaveformMode] = useState<'standard' | 'rgb'>('standard');
   const playerRef = useRef<Tone.Player | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
@@ -375,6 +377,10 @@ export function AudioScrubber({
         </div>
 
         <div className="flex items-center space-x-4">
+          <WaveformModeToggle
+            mode={waveformMode}
+            onToggle={() => setWaveformMode(m => m === 'standard' ? 'rgb' : 'standard')}
+          />
           <div className="flex items-center space-x-2">
             <div className="w-px h-6 bg-white" style={{ boxShadow: '0 0 6px rgba(255, 255, 255, 0.5)' }}></div>
             <span className="text-xs text-gray-300">Playhead</span>
@@ -399,6 +405,7 @@ export function AudioScrubber({
           showScrubber={false}
           progressColor="#ffffff"
           gradientRegion={gradientRegion}
+          renderMode={waveformMode}
         />
         {markerTime !== undefined && markerTime > 0 && markers.length === 0 && (
           <div

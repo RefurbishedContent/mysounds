@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { WaveformData } from '../lib/audio/WaveformGenerator';
+import { waveformGenerator, RGBWaveformData } from '../lib/audio/WaveformGenerator';
 
 interface TransitionWaveformDisplayProps {
   templateAudioUrl: string | null;
@@ -9,6 +9,7 @@ interface TransitionWaveformDisplayProps {
   fadeOutKeyframes?: Array<{ position: number; value: number }>;
   zoom?: number;
   progress?: number;
+  renderMode?: 'standard' | 'rgb';
 }
 
 export function TransitionWaveformDisplay({
@@ -18,11 +19,13 @@ export function TransitionWaveformDisplay({
   fadeInKeyframes = [],
   fadeOutKeyframes = [],
   zoom = 1,
-  progress = 0
+  progress = 0,
+  renderMode = 'standard'
 }: TransitionWaveformDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [waveformData, setWaveformData] = useState<Float32Array | null>(null);
+  const [rgbData, setRgbData] = useState<RGBWaveformData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [containerWidth, setContainerWidth] = useState(800);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +38,7 @@ export function TransitionWaveformDisplay({
         if (mounted) {
           setIsLoading(false);
           setWaveformData(null);
+          setRgbData(null);
           setError(null);
         }
         return;
@@ -58,6 +62,12 @@ export function TransitionWaveformDisplay({
 
         if (mounted) {
           setWaveformData(peaks);
+
+          if (renderMode === 'rgb') {
+            const rgb = waveformGenerator.extractRGBBands(audioBuffer, samples);
+            setRgbData(rgb);
+          }
+
           setIsLoading(false);
         }
       } catch (error) {
@@ -74,7 +84,7 @@ export function TransitionWaveformDisplay({
     return () => {
       mounted = false;
     };
-  }, [templateAudioUrl, zoom]);
+  }, [templateAudioUrl, zoom, renderMode]);
 
   const extractPeaksFromBuffer = (
     audioBuffer: AudioBuffer,
@@ -120,6 +130,39 @@ export function TransitionWaveformDisplay({
     };
   }, []);
 
+  const computeFadeAt = (waveProgress: number) => {
+    let fadeInAmount = 1;
+    let fadeOutAmount = 1;
+
+    if (fadeInKeyframes.length >= 2) {
+      const sortedIn = [...fadeInKeyframes].sort((a, b) => a.position - b.position);
+      for (let j = 0; j < sortedIn.length - 1; j++) {
+        if (waveProgress >= sortedIn[j].position && waveProgress <= sortedIn[j + 1].position) {
+          const seg = (waveProgress - sortedIn[j].position) / (sortedIn[j + 1].position - sortedIn[j].position);
+          fadeInAmount = sortedIn[j].value + seg * (sortedIn[j + 1].value - sortedIn[j].value);
+          break;
+        }
+      }
+      if (waveProgress < sortedIn[0].position) fadeInAmount = sortedIn[0].value;
+      if (waveProgress > sortedIn[sortedIn.length - 1].position) fadeInAmount = sortedIn[sortedIn.length - 1].value;
+    }
+
+    if (fadeOutKeyframes.length >= 2) {
+      const sortedOut = [...fadeOutKeyframes].sort((a, b) => a.position - b.position);
+      for (let j = 0; j < sortedOut.length - 1; j++) {
+        if (waveProgress >= sortedOut[j].position && waveProgress <= sortedOut[j + 1].position) {
+          const seg = (waveProgress - sortedOut[j].position) / (sortedOut[j + 1].position - sortedOut[j].position);
+          fadeOutAmount = sortedOut[j].value + seg * (sortedOut[j + 1].value - sortedOut[j].value);
+          break;
+        }
+      }
+      if (waveProgress < sortedOut[0].position) fadeOutAmount = sortedOut[0].value;
+      if (waveProgress > sortedOut[sortedOut.length - 1].position) fadeOutAmount = sortedOut[sortedOut.length - 1].value;
+    }
+
+    return { fadeInAmount, fadeOutAmount, combinedFade: fadeInAmount * fadeOutAmount };
+  };
+
   useEffect(() => {
     if (!waveformData || !canvasRef.current) return;
 
@@ -134,83 +177,63 @@ export function TransitionWaveformDisplay({
 
     const barWidth = canvas.width / waveformData.length;
     const centerY = canvas.height / 2;
+    const useRGB = renderMode === 'rgb' && rgbData;
 
-    // Draw waveform with fade visualization
     for (let i = 0; i < waveformData.length; i++) {
       const x = i * barWidth;
       const waveProgress = i / waveformData.length;
+      const { fadeInAmount, fadeOutAmount, combinedFade } = computeFadeAt(waveProgress);
 
-      // Calculate fade amount at this position
-      let fadeInAmount = 1;
-      let fadeOutAmount = 1;
-
-      // Apply fade-in curve
-      if (fadeInKeyframes.length >= 2) {
-        const sortedIn = [...fadeInKeyframes].sort((a, b) => a.position - b.position);
-        for (let j = 0; j < sortedIn.length - 1; j++) {
-          if (waveProgress >= sortedIn[j].position && waveProgress <= sortedIn[j + 1].position) {
-            const segmentProgress = (waveProgress - sortedIn[j].position) / (sortedIn[j + 1].position - sortedIn[j].position);
-            fadeInAmount = sortedIn[j].value + segmentProgress * (sortedIn[j + 1].value - sortedIn[j].value);
-            break;
-          }
-        }
-        if (waveProgress < sortedIn[0].position) fadeInAmount = sortedIn[0].value;
-        if (waveProgress > sortedIn[sortedIn.length - 1].position) fadeInAmount = sortedIn[sortedIn.length - 1].value;
-      }
-
-      // Apply fade-out curve
-      if (fadeOutKeyframes.length >= 2) {
-        const sortedOut = [...fadeOutKeyframes].sort((a, b) => a.position - b.position);
-        for (let j = 0; j < sortedOut.length - 1; j++) {
-          if (waveProgress >= sortedOut[j].position && waveProgress <= sortedOut[j + 1].position) {
-            const segmentProgress = (waveProgress - sortedOut[j].position) / (sortedOut[j + 1].position - sortedOut[j].position);
-            fadeOutAmount = sortedOut[j].value + segmentProgress * (sortedOut[j + 1].value - sortedOut[j].value);
-            break;
-          }
-        }
-        if (waveProgress < sortedOut[0].position) fadeOutAmount = sortedOut[0].value;
-        if (waveProgress > sortedOut[sortedOut.length - 1].position) fadeOutAmount = sortedOut[sortedOut.length - 1].value;
-      }
-
-      // Combined fade amount (multiply both)
-      const combinedFade = fadeInAmount * fadeOutAmount;
       const peak = waveformData[i];
       const barHeight = peak * (canvas.height / 2) * 0.9 * combinedFade;
 
-      // Create gradient with fade visualization
-      const gradient = ctx.createLinearGradient(0, centerY - barHeight, 0, centerY + barHeight);
+      if (useRGB) {
+        const total = rgbData.lows[i] + rgbData.mids[i] + rgbData.highs[i];
+        let r: number, g: number, b: number;
 
-      // Color based on fade region
-      if (fadeInAmount < 1 && fadeOutAmount >= 1) {
-        // Fade in region (left side) - pink
-        gradient.addColorStop(0, `rgba(236, 72, 153, ${0.9 * fadeInAmount})`);
-        gradient.addColorStop(0.5, `rgba(236, 72, 153, ${0.7 * fadeInAmount})`);
-        gradient.addColorStop(1, `rgba(236, 72, 153, ${0.9 * fadeInAmount})`);
-      } else if (fadeOutAmount < 1 && fadeInAmount >= 1) {
-        // Fade out region (right side) - cyan
-        gradient.addColorStop(0, `rgba(6, 182, 212, ${0.9 * fadeOutAmount})`);
-        gradient.addColorStop(0.5, `rgba(6, 182, 212, ${0.7 * fadeOutAmount})`);
-        gradient.addColorStop(1, `rgba(6, 182, 212, ${0.9 * fadeOutAmount})`);
+        if (total > 0.01) {
+          const lowR = rgbData.lows[i] / total;
+          const midR = rgbData.mids[i] / total;
+          const highR = rgbData.highs[i] / total;
+          r = Math.round(lowR * 255 + midR * 40 + highR * 30);
+          g = Math.round(lowR * 40 + midR * 220 + highR * 80);
+          b = Math.round(lowR * 40 + midR * 40 + highR * 255);
+        } else {
+          r = g = b = 80;
+        }
+
+        const alpha = Math.max(0.15, combinedFade * 0.9);
+        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
       } else {
-        // Full volume region (middle) - purple
-        gradient.addColorStop(0, 'rgba(168, 85, 247, 0.9)');
-        gradient.addColorStop(0.5, 'rgba(168, 85, 247, 0.7)');
-        gradient.addColorStop(1, 'rgba(168, 85, 247, 0.9)');
+        const gradient = ctx.createLinearGradient(0, centerY - barHeight, 0, centerY + barHeight);
+
+        if (fadeInAmount < 1 && fadeOutAmount >= 1) {
+          gradient.addColorStop(0, `rgba(236, 72, 153, ${0.9 * fadeInAmount})`);
+          gradient.addColorStop(0.5, `rgba(236, 72, 153, ${0.7 * fadeInAmount})`);
+          gradient.addColorStop(1, `rgba(236, 72, 153, ${0.9 * fadeInAmount})`);
+        } else if (fadeOutAmount < 1 && fadeInAmount >= 1) {
+          gradient.addColorStop(0, `rgba(6, 182, 212, ${0.9 * fadeOutAmount})`);
+          gradient.addColorStop(0.5, `rgba(6, 182, 212, ${0.7 * fadeOutAmount})`);
+          gradient.addColorStop(1, `rgba(6, 182, 212, ${0.9 * fadeOutAmount})`);
+        } else {
+          gradient.addColorStop(0, 'rgba(168, 85, 247, 0.9)');
+          gradient.addColorStop(0.5, 'rgba(168, 85, 247, 0.7)');
+          gradient.addColorStop(1, 'rgba(168, 85, 247, 0.9)');
+        }
+
+        ctx.fillStyle = gradient;
       }
 
-      ctx.fillStyle = gradient;
       ctx.fillRect(x, centerY - barHeight, barWidth, barHeight * 2);
     }
 
-    // Draw center line
-    ctx.strokeStyle = 'rgba(168, 85, 247, 0.3)';
+    ctx.strokeStyle = useRGB ? 'rgba(100, 100, 100, 0.3)' : 'rgba(168, 85, 247, 0.3)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, centerY);
     ctx.lineTo(canvas.width, centerY);
     ctx.stroke();
 
-    // Draw playhead if playing
     if (progress > 0) {
       const playheadX = canvas.width * progress;
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
@@ -224,7 +247,7 @@ export function TransitionWaveformDisplay({
       ctx.shadowBlur = 0;
     }
 
-  }, [waveformData, height, containerWidth, zoom, fadeInKeyframes, fadeOutKeyframes, progress]);
+  }, [waveformData, rgbData, renderMode, height, containerWidth, zoom, fadeInKeyframes, fadeOutKeyframes, progress]);
 
   return (
     <div ref={containerRef} className="relative w-full" style={{ height }}>
