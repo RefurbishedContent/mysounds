@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Music, AudioWaveform, Sliders, Upload, FileAudio, Clock, TrendingUp, Zap, Activity, Play, Download, Sparkles, ArrowRight, Plus, ChevronRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { databaseService } from '../lib/database';
 import { storageService } from '../lib/storage';
 import { FeedSection } from './feed';
+import DJLaserCanvas from './DJLaserCanvas';
 
 interface HomeViewProps {
   onNavigate: (view: string) => void;
@@ -26,6 +27,12 @@ interface LibraryStats {
   hoursProduced: number;
 }
 
+const EQ_BAR_COUNT = 28;
+
+function randomEqBars(): number[] {
+  return Array.from({ length: EQ_BAR_COUNT }, () => 10 + Math.random() * 90);
+}
+
 const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
   const { user } = useAuth();
   const [stats, setStats] = useState<LibraryStats>({
@@ -35,6 +42,14 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
     totalBlends: 0,
     hoursProduced: 0,
   });
+  const [displayStats, setDisplayStats] = useState<LibraryStats>({
+    totalTracks: 0,
+    totalTransitions: 0,
+    totalMixSessions: 0,
+    totalBlends: 0,
+    hoursProduced: 0,
+  });
+  const [eqBars, setEqBars] = useState<number[]>(randomEqBars);
   const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([]);
   const [recentTracks, setRecentTracks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +59,35 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
       loadDashboardData();
     }
   }, [user]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setEqBars(randomEqBars());
+    }, 160);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (loading) return;
+    const duration = 1200;
+    const steps = 40;
+    const stepMs = duration / steps;
+    let step = 0;
+    const interval = setInterval(() => {
+      step++;
+      const p = step / steps;
+      const ease = 1 - Math.pow(1 - p, 3);
+      setDisplayStats({
+        totalTracks: Math.round(stats.totalTracks * ease),
+        totalTransitions: Math.round(stats.totalTransitions * ease),
+        totalMixSessions: Math.round(stats.totalMixSessions * ease),
+        totalBlends: Math.round(stats.totalBlends * ease),
+        hoursProduced: Math.round(stats.hoursProduced * ease * 10) / 10,
+      });
+      if (step >= steps) clearInterval(interval);
+    }, stepMs);
+    return () => clearInterval(interval);
+  }, [loading, stats]);
 
   const loadDashboardData = async () => {
     try {
@@ -128,7 +172,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
       id: 'upload',
       icon: Upload,
       title: 'Upload Tracks',
-      description: `${stats.totalTracks} tracks in library`,
+      description: `${displayStats.totalTracks} tracks in library`,
       gradient: 'from-purple-500 to-pink-600',
       action: () => onNavigate('library'),
     },
@@ -157,28 +201,27 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
     <div className="h-full overflow-y-auto bg-gray-900">
       <div className="max-w-7xl mx-auto p-4 space-y-4">
         {/* Hero Section */}
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-gray-800 via-gray-800 to-gray-900 border border-gray-700 p-4">
-          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-blue-500/10 to-purple-500/10" />
-          <div className="absolute inset-0 opacity-30">
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzMzMyIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-20" />
-          </div>
+        <div className="relative overflow-hidden rounded-xl bg-gray-950 border border-cyan-500/25 min-h-[180px] shadow-2xl shadow-cyan-500/10" style={{ isolation: 'isolate' }}>
+          <DJLaserCanvas />
 
-          <div className="relative z-10">
+          <div className="absolute inset-0 pointer-events-none z-[1]" style={{ background: 'radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(0,0,0,0.5) 100%)' }} />
+
+          <div className="relative z-10 p-4">
             <div className="flex items-start justify-between mb-3">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <h1 className="text-xl font-bold text-white">
+                  <h1 className="text-xl font-bold text-white" style={{ textShadow: '0 0 20px rgba(0,245,255,0.5), 0 0 40px rgba(0,245,255,0.2)' }}>
                     {getGreeting()}, {user?.name}
                   </h1>
                   <span className="px-2 py-0.5 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full text-xs font-semibold text-white uppercase tracking-wide shadow-lg shadow-cyan-500/30">
                     {user?.plan}
                   </span>
                 </div>
-                <p className="text-sm text-gray-400">Ready to create something incredible?</p>
+                <p className="text-sm text-gray-300">Ready to create something incredible?</p>
               </div>
               <button
                 onClick={onCreateNew}
-                className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white text-sm rounded-lg font-semibold transition-all duration-200 shadow-lg shadow-cyan-500/30 hover:shadow-xl hover:shadow-cyan-500/50 flex items-center gap-2"
+                className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white text-sm rounded-lg font-semibold transition-all duration-200 shadow-lg shadow-cyan-500/40 hover:shadow-xl hover:shadow-cyan-500/60 flex items-center gap-2"
               >
                 <Plus size={16} />
                 Create New
@@ -187,50 +230,72 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
 
             {/* Quick Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-3 border border-gray-700/50">
+              <div className="stat-card-cyan bg-gray-900/70 backdrop-blur-sm rounded-lg p-3 border border-cyan-500/20">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-cyan-500/20 rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 bg-cyan-500/25 rounded-full flex items-center justify-center shadow-inner shadow-cyan-500/20">
                     <Music size={16} className="text-cyan-400" />
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-white">{stats.totalTracks}</p>
+                    <p className="text-lg font-bold text-white">{displayStats.totalTracks}</p>
                     <p className="text-xs text-gray-400">Tracks</p>
                   </div>
                 </div>
               </div>
-              <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-3 border border-gray-700/50">
+              <div className="stat-card-blue bg-gray-900/70 backdrop-blur-sm rounded-lg p-3 border border-blue-500/20">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 bg-blue-500/25 rounded-full flex items-center justify-center shadow-inner shadow-blue-500/20">
                     <AudioWaveform size={16} className="text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-white">{stats.totalTransitions}</p>
+                    <p className="text-lg font-bold text-white">{displayStats.totalTransitions}</p>
                     <p className="text-xs text-gray-400">Mash Ups</p>
                   </div>
                 </div>
               </div>
-              <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-3 border border-gray-700/50">
+              <div className="stat-card-teal bg-gray-900/70 backdrop-blur-sm rounded-lg p-3 border border-teal-500/20">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                    <Clock size={16} className="text-purple-400" />
+                  <div className="w-8 h-8 bg-teal-500/25 rounded-full flex items-center justify-center shadow-inner shadow-teal-500/20">
+                    <Clock size={16} className="text-teal-400" />
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-white">{stats.hoursProduced.toFixed(1)}</p>
+                    <p className="text-lg font-bold text-white">{displayStats.hoursProduced.toFixed(1)}</p>
                     <p className="text-xs text-gray-400">Hours Mixed</p>
                   </div>
                 </div>
               </div>
-              <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-3 border border-gray-700/50">
+              <div className="stat-card-pink bg-gray-900/70 backdrop-blur-sm rounded-lg p-3 border border-pink-500/20">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-pink-500/20 rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 bg-pink-500/25 rounded-full flex items-center justify-center shadow-inner shadow-pink-500/20">
                     <Sparkles size={16} className="text-pink-400" />
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-white">{stats.totalBlends}</p>
+                    <p className="text-lg font-bold text-white">{displayStats.totalBlends}</p>
                     <p className="text-xs text-gray-400">Total Mash Ups</p>
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Equalizer Bars */}
+            <div className="flex items-end gap-px mt-3 h-6 opacity-50">
+              {eqBars.map((height, i) => {
+                const pct = i / (EQ_BAR_COUNT - 1);
+                const r = Math.round(0 + pct * 255);
+                const g = Math.round(245 - pct * 200);
+                const b = Math.round(255 - pct * 153);
+                return (
+                  <div
+                    key={i}
+                    className="flex-1 rounded-t-sm"
+                    style={{
+                      height: `${height}%`,
+                      background: `rgb(${r},${g},${b})`,
+                      transition: 'height 160ms ease',
+                      minWidth: 0,
+                    }}
+                  />
+                );
+              })}
             </div>
           </div>
         </div>
@@ -318,7 +383,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
               <div className="bg-gray-750 rounded-lg p-3">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs text-gray-400">Mash Ups Created</span>
-                  <span className="text-sm font-bold text-white">{stats.totalTransitions}</span>
+                  <span className="text-sm font-bold text-white">{displayStats.totalTransitions}</span>
                 </div>
                 <div className="w-full bg-gray-700 rounded-full h-1.5">
                   <div className="bg-gradient-to-r from-cyan-500 to-blue-500 h-1.5 rounded-full" style={{ width: '75%' }} />
@@ -327,7 +392,7 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
               <div className="bg-gray-750 rounded-lg p-3">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs text-gray-400">Tracks Uploaded</span>
-                  <span className="text-sm font-bold text-white">{stats.totalTracks}</span>
+                  <span className="text-sm font-bold text-white">{displayStats.totalTracks}</span>
                 </div>
                 <div className="w-full bg-gray-700 rounded-full h-1.5">
                   <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-1.5 rounded-full" style={{ width: '60%' }} />

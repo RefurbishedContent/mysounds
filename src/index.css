@@ -473,3 +473,43 @@
     0 0 30px rgba(34, 211, 238, 0.15),
     inset 0 0 20px rgba(255, 255, 255, 0.03);
 }
+
+@keyframes stat-glow-cyan {
+  0%, 100% { box-shadow: 0 0 0px transparent; }
+  50%       { box-shadow: 0 0 14px rgba(0,245,255,0.35), inset 0 0 8px rgba(0,245,255,0.08); }
+}
+
+@keyframes stat-glow-blue {
+  0%, 100% { box-shadow: 0 0 0px transparent; }
+  50%       { box-shadow: 0 0 14px rgba(26,110,255,0.35), inset 0 0 8px rgba(26,110,255,0.08); }
+}
+
+@keyframes stat-glow-teal {
+  0%, 100% { box-shadow: 0 0 0px transparent; }
+  50%       { box-shadow: 0 0 14px rgba(20,184,166,0.35), inset 0 0 8px rgba(20,184,166,0.08); }
+}
+
+@keyframes stat-glow-pink {
+  0%, 100% { box-shadow: 0 0 0px transparent; }
+  50%       { box-shadow: 0 0 14px rgba(236,72,153,0.35), inset 0 0 8px rgba(236,72,153,0.08); }
+}
+
+.stat-card-cyan {
+  animation: stat-glow-cyan 2.8s ease-in-out infinite;
+  animation-delay: 0ms;
+}
+
+.stat-card-blue {
+  animation: stat-glow-blue 2.8s ease-in-out infinite;
+  animation-delay: 350ms;
+}
+
+.stat-card-teal {
+  animation: stat-glow-teal 2.8s ease-in-out infinite;
+  animation-delay: 700ms;
+}
+
+.stat-card-pink {
+  animation: stat-glow-pink 2.8s ease-in-out infinite;
+  animation-delay: 1050ms;
+}
