@@ -49,7 +49,7 @@ type CreatorStep =
 const STEP_LABELS: { step: CreatorStep; label: string }[] = [
   { step: 'select-songs', label: 'Songs' },
   { step: 'set-transition-points', label: 'Clip Points' },
-  { step: 'set-templates', label: 'Templates' },
+  { step: 'set-templates', label: 'Mash Up' },
   { step: 'confirm', label: 'Confirm' },
 ];
 
@@ -671,7 +671,7 @@ const TransitionPointsStep: React.FC<TransitionPointsStepProps> = ({
           className="w-full max-w-md px-8 py-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-3 shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40"
         >
           <span className="text-lg">
-            {saving ? 'Creating...' : 'Set Templates'}
+            {saving ? 'Creating...' : 'Set Transition Effects'}
           </span>
           <ChevronRight size={24} />
         </button>
