@@ -1,5 +1,5 @@
 import React from 'react';
-import { Scissors, Sparkles, ChevronDown, ArrowDown } from 'lucide-react';
+import { Scissors, Sparkles, ChevronDown, ArrowDown, Upload } from 'lucide-react';
 import { SONG_LETTERS, SONG_COLORS } from './constants';
 
 interface TransitionConnectorProps {
@@ -8,6 +8,7 @@ interface TransitionConnectorProps {
   isConfigured: boolean;
   isDirectCut: boolean;
   effectName: string | null;
+  isCustomUpload?: boolean;
   onClick: () => void;
   isMobile: boolean;
 }
@@ -18,6 +19,7 @@ export const TransitionConnector: React.FC<TransitionConnectorProps> = ({
   isConfigured,
   isDirectCut,
   effectName,
+  isCustomUpload,
   onClick,
   isMobile,
 }) => {
@@ -34,7 +36,9 @@ export const TransitionConnector: React.FC<TransitionConnectorProps> = ({
         onClick={onClick}
         className={`relative z-10 flex items-center gap-2 px-4 py-2 rounded-full border transition-all duration-200 ${
           isConfigured
-            ? 'bg-gradient-to-r from-teal-500/10 to-cyan-500/10 border-teal-500/30 hover:border-teal-400/50 shadow-lg shadow-teal-500/10'
+            ? isCustomUpload
+              ? 'bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/30 hover:border-amber-400/50 shadow-lg shadow-amber-500/10'
+              : 'bg-gradient-to-r from-teal-500/10 to-cyan-500/10 border-teal-500/30 hover:border-teal-400/50 shadow-lg shadow-teal-500/10'
             : 'bg-gray-800/80 border-gray-600/50 hover:border-gray-500 hover:bg-gray-800'
         }`}
       >
@@ -56,6 +60,13 @@ export const TransitionConnector: React.FC<TransitionConnectorProps> = ({
               <>
                 <Scissors size={12} className="text-teal-400" />
                 <span className="text-xs font-medium text-teal-400">Direct Cut</span>
+              </>
+            ) : isCustomUpload ? (
+              <>
+                <Upload size={12} className="text-amber-400" />
+                <span className="text-xs font-medium text-amber-400 max-w-[100px] truncate">
+                  {effectName}
+                </span>
               </>
             ) : (
               <>

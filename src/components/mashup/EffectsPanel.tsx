@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Scissors, Zap, Clock, Timer, LayoutGrid, Check,
-  Play, Pause, X, Sparkles
+  Play, Pause, X, Sparkles, Upload, Loader2, AlertCircle
 } from 'lucide-react';
 import * as Tone from 'tone';
 import { TemplateData } from '../../lib/database';
 import { UploadResult } from '../../lib/storage';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 import TemplateGallery from '../TemplateGallery';
 import { WaveformDisplay } from '../WaveformDisplay';
 import { WaveformModeToggle } from '../WaveformModeToggle';
@@ -38,6 +40,53 @@ interface EffectsPanelProps {
   isMobile: boolean;
 }
 
+const ALLOWED_AUDIO_TYPES = [
+  'audio/mpeg', 'audio/wav', 'audio/flac', 'audio/mp4', 'audio/aac', 'audio/x-m4a'
+];
+const MAX_UPLOAD_SIZE = 50 * 1024 * 1024;
+
+const detectAudioDuration = (file: File): Promise<number> => {
+  return new Promise((resolve) => {
+    const audio = new Audio();
+    const url = URL.createObjectURL(file);
+    audio.preload = 'metadata';
+    audio.addEventListener('loadedmetadata', () => {
+      const dur = audio.duration;
+      URL.revokeObjectURL(url);
+      resolve(isFinite(dur) && dur > 0 ? dur : 10);
+    });
+    audio.addEventListener('error', () => {
+      URL.revokeObjectURL(url);
+      resolve(10);
+    });
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+      resolve(isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 10);
+    }, 5000);
+    audio.src = url;
+  });
+};
+
+const buildCustomTemplate = (name: string, url: string, duration: number): TemplateData => ({
+  id: `custom-upload-${Date.now()}`,
+  name,
+  description: 'Custom uploaded transition audio',
+  category: 'custom-upload',
+  thumbnailUrl: '',
+  duration: Math.round(duration),
+  difficulty: 'beginner',
+  isPopular: false,
+  isPremium: false,
+  author: 'You',
+  downloads: 0,
+  rating: 0,
+  templateData: {
+    previewUrl: url,
+    audioFormat: 'audio/mpeg',
+    transitionType: 'custom-upload',
+  },
+});
+
 export const EffectsPanel: React.FC<EffectsPanelProps> = ({
   isExpanded,
   songA,
@@ -50,10 +99,14 @@ export const EffectsPanel: React.FC<EffectsPanelProps> = ({
   onClearTemplate,
   isMobile,
 }) => {
+  const { user } = useAuth();
   const [durationSize, setDurationSize] = useState<DurationSize>(
     getDurationSizeFromValue(transitionDuration)
   );
   const [showLibrary, setShowLibrary] = useState(!directCut);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isExpanded && !directCut) {
@@ -73,32 +126,86 @@ export const EffectsPanel: React.FC<EffectsPanelProps> = ({
   const handleDirectCut = () => {
     onDirectCutToggle(true);
     setShowLibrary(false);
+    setUploadError('');
   };
 
   const handleBrowseEffects = () => {
     onDirectCutToggle(false);
     setShowLibrary(true);
+    setUploadError('');
   };
 
   const handleChangeEffect = () => {
     setShowLibrary(true);
   };
 
+  const handleUploadClick = () => {
+    setUploadError('');
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (fileInputRef.current) fileInputRef.current.value = '';
+
+    if (!ALLOWED_AUDIO_TYPES.includes(file.type)) {
+      setUploadError('Unsupported format. Use MP3, WAV, FLAC, M4A, or AAC.');
+      return;
+    }
+    if (file.size > MAX_UPLOAD_SIZE) {
+      setUploadError(`File too large (${Math.round(file.size / 1024 / 1024)}MB). Max 50MB.`);
+      return;
+    }
+
+    setUploading(true);
+    setUploadError('');
+
+    try {
+      const duration = await detectAudioDuration(file);
+      const ext = file.name.split('.').pop() || 'mp3';
+      const storagePath = `${user.id}/transitions/${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`;
+
+      const { error: storageErr } = await supabase.storage
+        .from('audio-uploads')
+        .upload(storagePath, file, { cacheControl: '3600', upsert: false });
+
+      if (storageErr) throw new Error(storageErr.message);
+
+      const { data: urlData } = supabase.storage
+        .from('audio-uploads')
+        .getPublicUrl(storagePath);
+
+      const displayName = file.name.replace(/\.[^/.]+$/, '');
+      const customTemplate = buildCustomTemplate(displayName, urlData.publicUrl, duration);
+      onTemplateSelect(customTemplate);
+      setShowLibrary(false);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (!isExpanded) return null;
+
+  const isCustomUpload = selectedTemplate?.category === 'custom-upload';
 
   return (
     <div className="overflow-hidden transition-all duration-300 ease-in-out">
       <div className="px-4 pb-4 pt-0">
         <div className="bg-gray-900/60 rounded-xl border border-gray-700/50 overflow-hidden">
           <div className="p-3 border-b border-gray-700/30">
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
               <button
                 onClick={handleDirectCut}
+                disabled={uploading}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 border-dashed transition-all font-medium text-sm ${
                   directCut
                     ? 'border-teal-500 bg-teal-500/10 text-teal-400'
                     : 'border-gray-600 bg-gray-800/50 text-gray-400 hover:border-gray-500 hover:text-gray-300'
-                }`}
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 <Scissors size={16} />
                 <span>Direct Cut</span>
@@ -107,17 +214,51 @@ export const EffectsPanel: React.FC<EffectsPanelProps> = ({
 
               <button
                 onClick={handleBrowseEffects}
+                disabled={uploading}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all font-medium text-sm ${
-                  !directCut && (showLibrary || selectedTemplate)
+                  !directCut && (showLibrary || selectedTemplate) && !isCustomUpload
                     ? 'bg-gradient-to-r from-cyan-600 to-teal-600 text-white shadow-lg shadow-cyan-500/30'
                     : 'bg-gradient-to-r from-cyan-600/80 to-teal-600/80 text-white hover:from-cyan-600 hover:to-teal-600 hover:shadow-lg hover:shadow-cyan-500/40'
-                }`}
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 <Sparkles size={16} />
                 <span>Browse Effects</span>
-                {!directCut && selectedTemplate && <Check size={14} className="ml-1" />}
+                {!directCut && selectedTemplate && !isCustomUpload && <Check size={14} className="ml-1" />}
               </button>
+
+              <button
+                onClick={handleUploadClick}
+                disabled={uploading}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all font-medium text-sm ${
+                  isCustomUpload && !directCut
+                    ? 'border-amber-500 bg-amber-500/10 text-amber-400'
+                    : 'border-gray-600 bg-gray-800/50 text-gray-400 hover:border-amber-500/60 hover:text-amber-300 hover:bg-amber-500/5'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {uploading ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Upload size={16} />
+                )}
+                <span>{uploading ? 'Uploading...' : 'Upload File'}</span>
+                {isCustomUpload && !directCut && <Check size={14} className="ml-1" />}
+              </button>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="audio/mpeg,audio/wav,audio/flac,audio/mp4,audio/aac,audio/x-m4a"
+                className="hidden"
+                onChange={handleFileSelected}
+              />
             </div>
+
+            {uploadError && (
+              <div className="flex items-center gap-2 p-2 mb-2 rounded-lg bg-red-900/30 border border-red-800/50 text-xs text-red-300">
+                <AlertCircle size={14} className="flex-shrink-0" />
+                <span>{uploadError}</span>
+              </div>
+            )}
 
             {directCut && !showLibrary && (
               <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700/30 text-center">
@@ -194,6 +335,7 @@ const SelectedTemplateCard: React.FC<{
   onClear: () => void;
   onChangeEffect: () => void;
 }> = ({ template, onClear, onChangeEffect }) => {
+  const isCustom = template.category === 'custom-upload';
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(0);
   const [actualDuration, setActualDuration] = useState<number | null>(null);
@@ -328,15 +470,15 @@ const SelectedTemplateCard: React.FC<{
   };
 
   return (
-    <div className="bg-gray-800/50 rounded-xl border border-cyan-500/30 overflow-hidden" style={{ boxShadow: '0 0 15px rgba(6,182,212,0.08)' }}>
-      <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-cyan-500/10 to-teal-500/10 border-b border-cyan-500/20">
+    <div className={`bg-gray-800/50 rounded-xl border overflow-hidden ${isCustom ? 'border-amber-500/30' : 'border-cyan-500/30'}`} style={{ boxShadow: isCustom ? '0 0 15px rgba(245,158,11,0.08)' : '0 0 15px rgba(6,182,212,0.08)' }}>
+      <div className={`flex items-center justify-between px-3 py-2 border-b ${isCustom ? 'bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/20' : 'bg-gradient-to-r from-cyan-500/10 to-teal-500/10 border-cyan-500/20'}`}>
         <div className="flex items-center gap-2.5">
-          <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-lg shadow-cyan-500/30">
-            <Check className="w-3 h-3 text-white" />
+          <div className={`w-6 h-6 rounded-lg flex items-center justify-center shadow-lg ${isCustom ? 'bg-gradient-to-br from-amber-500 to-orange-500 shadow-amber-500/30' : 'bg-gradient-to-br from-cyan-500 to-teal-500 shadow-cyan-500/30'}`}>
+            {isCustom ? <Upload className="w-3 h-3 text-white" /> : <Check className="w-3 h-3 text-white" />}
           </div>
           <div>
             <p className="text-sm font-semibold text-white">{template.name}</p>
-            <p className="text-[10px] text-cyan-400/80">{template.duration}s effect</p>
+            <p className={`text-[10px] ${isCustom ? 'text-amber-400/80' : 'text-cyan-400/80'}`}>{template.duration}s {isCustom ? 'custom audio' : 'effect'}</p>
           </div>
         </div>
         <div className="flex items-center gap-1">

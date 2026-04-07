@@ -266,6 +266,7 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
                 isConfigured={isConfigured}
                 isDirectCut={pair.directCut}
                 effectName={pair.selectedTemplate?.name || null}
+                isCustomUpload={pair.selectedTemplate?.category === 'custom-upload'}
                 onClick={() => handleToggleExpand(pairIndex)}
                 isMobile={isMobile}
               />
