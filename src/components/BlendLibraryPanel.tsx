@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Folder, FolderOpen, ChevronRight, ChevronDown, Star, Plus,
-  MoreVertical, Edit2, Trash2, Search, X, Grid, Box
-} from 'lucide-react';
+import { Folder, FolderOpen, ChevronRight, ChevronDown, Star, Plus, MoreVertical, CreditCard as Edit2, Trash2, Search, X, Grid2x2 as Grid, Box } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { BlendData } from '../lib/blendExportService';
@@ -223,7 +220,7 @@ export const BlendLibraryPanel: React.FC<BlendLibraryPanelProps> = ({
         </div>
 
         {/* Tree Structure */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 space-y-1">
           {/* Favorites */}
           <div>
             <button
@@ -352,7 +349,7 @@ export const BlendLibraryPanel: React.FC<BlendLibraryPanelProps> = ({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4">
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>

@@ -39,7 +39,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onShowTutorial }) => {
 
   return (
     <div className="h-full flex flex-col bg-gray-900">
-      <div className="flex-1 overflow-y-auto pb-20">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden pb-20">
         <div className="bg-gradient-to-br from-cyan-500/10 via-blue-500/10 to-purple-600/10 p-4 border-b border-gray-700">
           <div className="flex items-center space-x-3 mb-3">
             <div className="w-14 h-14 bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/30">

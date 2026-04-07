@@ -317,7 +317,7 @@ const RenderDialog: React.FC<RenderDialogProps> = ({ projectId, projectName, onC
 
               {/* Processing Logs */}
               {currentJob && currentJob.processingLogs.length > 0 && (
-                <div className="bg-gray-900/50 rounded-lg p-4 max-h-32 overflow-y-auto">
+                <div className="bg-gray-900/50 rounded-lg p-4 max-h-32 overflow-y-auto overflow-x-hidden">
                   <h4 className="text-sm font-medium text-gray-300 mb-2">Processing Log</h4>
                   <div className="space-y-1">
                     {currentJob.processingLogs.slice(-5).map((log, index) => (

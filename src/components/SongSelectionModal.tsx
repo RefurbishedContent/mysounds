@@ -105,7 +105,7 @@ export const SongSelectionModal: React.FC<SongSelectionModalProps> = ({
       className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onClick={handleBackdropClick}
     >
-      <div className="bg-gray-900 rounded-2xl border border-gray-700 w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl">
+      <div className="bg-gray-900 rounded-2xl border border-gray-700 w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
           <div>
@@ -213,7 +213,7 @@ export const SongSelectionModal: React.FC<SongSelectionModalProps> = ({
         </div>
 
         {/* Songs Grid */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-4">
           {songs.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center py-12">
               <Music size={48} className="text-gray-600 mb-4" />
@@ -251,7 +251,7 @@ export const SongSelectionModal: React.FC<SongSelectionModalProps> = ({
                     onClick={() => handleSongClick(song)}
                     disabled={isOtherSlot}
                     className={`
-                      bg-gray-800 rounded-lg p-3 text-left transition-all duration-200 group
+                      min-w-0 bg-gray-800 rounded-lg p-3 text-left transition-all duration-200 group
                       ${isOtherSlot
                         ? 'opacity-50 cursor-not-allowed'
                         : isSelected

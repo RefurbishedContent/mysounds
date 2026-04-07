@@ -138,7 +138,7 @@ const MixerView: React.FC<MixerViewProps> = ({ onCreateNew, onOpenSession }) => 
           </div>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
             {mixSessions.map((session) => (
               <button

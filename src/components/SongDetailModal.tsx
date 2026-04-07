@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Music, X, Play, Pause, Zap, Clock, FileAudio, TrendingUp, BarChart3, Gauge, Sparkles, Activity, ChevronDown, ChevronUp, Hash, Headphones, Mic, Waves, RefreshCw, CheckCircle, AlertCircle, Loader, Radio, Key, Disc, Volume2, Edit3, Save } from 'lucide-react';
+import { Music, X, Play, Pause, Zap, Clock, FileAudio, TrendingUp, BarChart3, Gauge, Sparkles, Activity, ChevronDown, ChevronUp, Hash, Headphones, Mic, Waves, RefreshCw, CheckCircle, AlertCircle, Loader, Radio, Key, Disc, Volume2, CreditCard as Edit3, Save } from 'lucide-react';
 import { UploadResult } from '../lib/storage';
 import { audioPlayer } from '../lib/audioPlayer';
 import { songAnalyzer } from '../lib/songAnalyzer';
@@ -133,7 +133,7 @@ const SongDetailModal: React.FC<SongDetailModalProps> = ({ song, onClose, onCrea
   const analysisProgress = currentSong.status === 'processing' ? 50 : 0;
 
   return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[70] flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[70] flex items-center justify-center p-4 animate-fadeIn overflow-y-auto overflow-x-hidden">
       <div className="relative max-w-4xl w-full my-8">
         <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-600/20 rounded-2xl blur-2xl"></div>
 
@@ -147,7 +147,7 @@ const SongDetailModal: React.FC<SongDetailModalProps> = ({ song, onClose, onCrea
             <X size={18} className="text-gray-400 group-hover:text-cyan-400 transition-colors" />
           </button>
 
-          <div className="relative p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+          <div className="relative p-6 space-y-6 max-h-[80vh] overflow-y-auto overflow-x-hidden">
             <div className="flex items-start space-x-4">
               <div className="relative flex-shrink-0">
                 <div className="w-24 h-24 rounded-xl bg-gradient-to-br from-cyan-600/30 via-blue-600/30 to-purple-600/30 flex items-center justify-center border border-cyan-500/30 shadow-lg shadow-cyan-500/20">

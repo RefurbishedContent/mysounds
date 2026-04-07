@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Trash2, Music, Search, Filter, Clock, Sparkles, Plus, Edit, Layers } from 'lucide-react';
+import { Trash2, Music, Search, Filter, Clock, Sparkles, Plus, CreditCard as Edit, Layers } from 'lucide-react';
 import { transitionsService, TransitionData } from '../lib/transitionsService';
 import { useAuth } from '../contexts/AuthContext';
 import MashUpEditStageModal from './mashup/MashUpEditStageModal';
@@ -194,7 +194,7 @@ const TransitionsList: React.FC<TransitionsListProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-center space-y-4">
