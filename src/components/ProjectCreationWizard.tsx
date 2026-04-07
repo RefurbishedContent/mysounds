@@ -2,48 +2,36 @@ import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useProjectWizard } from '../hooks/useProjectWizard';
 import { useAuth } from '../contexts/AuthContext';
-import { transitionsService } from '../lib/transitionsService';
 import { mixerService } from '../lib/mixerService';
 import { formatThemeForStorage } from '../lib/themeUtils';
 import WizardProgress from './wizard/WizardProgress';
-import WizardStep1ProjectType from './wizard/WizardStep1ProjectType';
 import WizardStep2ContentSelection from './wizard/WizardStep2ContentSelection';
 import WizardStep3Configuration from './wizard/WizardStep3Configuration';
 import WizardLoadingState from './wizard/WizardLoadingState';
-import { UploadResult } from '../lib/storage';
 
 interface ProjectCreationWizardProps {
   onComplete: (projectType: 'transition' | 'mixer', projectData: any) => void;
   onCancel: () => void;
-  tutorialMode?: boolean;
+  initialProjectType?: 'mixer';
 }
 
-const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ onComplete, onCancel, tutorialMode = false }) => {
+const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ onComplete, onCancel, initialProjectType }) => {
   const { user } = useAuth();
   const wizard = useProjectWizard();
-  const [tutorialSongsSelected, setTutorialSongsSelected] = React.useState(false);
 
   const steps = [
-    { number: 1 as const, label: 'Project Type' },
-    { number: 2 as const, label: 'Select Content' },
-    { number: 3 as const, label: 'Configure' }
+    { number: 2 as const, label: 'Select Mash Ups', displayNumber: 1 },
+    { number: 3 as const, label: 'Configure', displayNumber: 2 }
   ];
 
-  const handleProjectTypeSelect = (type: 'transition' | 'mixer') => {
-    if (type === 'transition' && !tutorialMode) {
-      onComplete('transition', { redirectToCreateTransition: true });
-    } else {
-      wizard.setProjectType(type);
+  useEffect(() => {
+    if (initialProjectType) {
+      wizard.setProjectType(initialProjectType);
     }
-  };
+  }, []);
 
   const handleCreateProject = async () => {
     if (!user || !wizard.projectType) return;
-
-    if (tutorialMode) {
-      onComplete('transition', {});
-      return;
-    }
 
     wizard.setIsCreating(true);
     wizard.goToStep(4);
@@ -51,64 +39,29 @@ const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ onComplet
     try {
       await new Promise(resolve => setTimeout(resolve, 3000));
 
-      if (wizard.projectType === 'transition') {
-        const songA = wizard.selectedSongs[0];
-        const songB = wizard.selectedSongs[1];
+      const themeMetadata = formatThemeForStorage(wizard.mixerTheme);
 
-        if (!songA || !songB) {
-          throw new Error('Both songs must be selected');
-        }
+      const mixSession = await mixerService.createMixSession(user.id, {
+        name: wizard.projectName,
+        autoCrossfadeDuration: wizard.crossfadeDuration,
+        normalizeVolume: true,
+        masterGain: 0
+      });
 
-        const transitionData = {
-          name: wizard.projectName,
-          songAId: songA.id,
-          songBId: songB.id,
-          templateId: wizard.useAITemplate ? null : (wizard.selectedTemplate?.id || null),
-          transitionDuration: wizard.transitionDuration,
-          transitionStartPoint: wizard.transitionStartPoint,
-          songAEndTime: wizard.transitionStartPoint,
-          songBStartTime: 0,
-          songAMarkerPoint: wizard.transitionStartPoint,
-          songBMarkerPoint: 0,
-          metadata: {
-            useAITemplate: wizard.useAITemplate,
-            compatibility: calculateCompatibility(songA, songB)
-          }
-        };
+      await mixerService.updateMixSession(mixSession.id, {
+        metadata: themeMetadata
+      });
 
-        const transition = await transitionsService.createTransition(user.id, transitionData);
-
-        onComplete('transition', {
-          transitionId: transition.id,
-          songA,
-          songB,
-          template: wizard.selectedTemplate
+      for (let i = 0; i < wizard.selectedBlends.length; i++) {
+        const blend = wizard.selectedBlends[i];
+        await mixerService.addBlendToMix(mixSession.id, {
+          blendId: blend.id,
+          position: i,
+          crossfadeType: 'beat-matched'
         });
-      } else if (wizard.projectType === 'mixer') {
-        const themeMetadata = formatThemeForStorage(wizard.mixerTheme);
-
-        const mixSession = await mixerService.createMixSession(user.id, {
-          name: wizard.projectName,
-          autoCrossfadeDuration: wizard.crossfadeDuration,
-          normalizeVolume: true,
-          masterGain: 0
-        });
-
-        await mixerService.updateMixSession(mixSession.id, {
-          metadata: themeMetadata
-        });
-
-        for (let i = 0; i < wizard.selectedBlends.length; i++) {
-          const blend = wizard.selectedBlends[i];
-          await mixerService.addBlendToMix(mixSession.id, {
-            blendId: blend.id,
-            position: i,
-            crossfadeType: 'beat-matched'
-          });
-        }
-
-        onComplete('mixer', { mixSessionId: mixSession.id });
       }
+
+      onComplete('mixer', { mixSessionId: mixSession.id });
     } catch (error) {
       console.error('Failed to create project:', error);
       wizard.setError('Failed to create project. Please try again.');
@@ -117,23 +70,8 @@ const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ onComplet
     }
   };
 
-  const calculateCompatibility = (songA: UploadResult, songB: UploadResult) => {
-    const analysisA = songA.analysis || {};
-    const analysisB = songB.analysis || {};
-
-    const bpmA = analysisA.bpm || 0;
-    const bpmB = analysisB.bpm || 0;
-    const bpmDiff = bpmA && bpmB ? Math.abs(bpmA - bpmB) / Math.max(bpmA, bpmB) * 100 : 0;
-
-    return {
-      bpmDiff,
-      keyMatch: analysisA.key === analysisB.key,
-      energyDiff: Math.abs((analysisA.energy || 0) - (analysisB.energy || 0))
-    };
-  };
-
   const handleCancel = () => {
-    if (wizard.currentStep > 1) {
+    if (wizard.currentStep > 2) {
       const confirmed = window.confirm('Are you sure you want to exit? Your progress will be lost.');
       if (confirmed) {
         wizard.resetWizard();
@@ -175,10 +113,6 @@ const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ onComplet
         </div>
       )}
 
-      {wizard.currentStep === 1 && (
-        <WizardStep1ProjectType onSelectType={handleProjectTypeSelect} />
-      )}
-
       {wizard.currentStep === 2 && wizard.projectType && (
         <WizardStep2ContentSelection
           projectType={wizard.projectType}
@@ -189,9 +123,8 @@ const ProjectCreationWizard: React.FC<ProjectCreationWizardProps> = ({ onComplet
           onClearSong={wizard.clearSongSlot}
           onClearBlend={wizard.removeBlend}
           onNext={wizard.nextStep}
-          onBack={wizard.previousStep}
+          onBack={onCancel}
           canProceed={wizard.canProceedFromStep(2)}
-          tutorialMode={tutorialMode}
         />
       )}
 

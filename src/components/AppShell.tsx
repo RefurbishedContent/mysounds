@@ -69,6 +69,7 @@ const AppShell: React.FC = () => {
   const [editingPairConfigs, setEditingPairConfigs] = useState<TransitionPairConfig[] | undefined>();
   const [editingMashUpName, setEditingMashUpName] = useState<string | undefined>();
   const [editingInitialStep, setEditingInitialStep] = useState<string | undefined>();
+  const [wizardInitialProjectType, setWizardInitialProjectType] = useState<'mixer' | undefined>();
 
   const navigateTo = (view: AppView) => {
     if (view !== 'library' && view !== 'files') {
@@ -78,6 +79,14 @@ const AppShell: React.FC = () => {
   };
 
   const handleCreateNew = () => {
+    setTransitionSongA(undefined);
+    setTransitionSongB(undefined);
+    setEditingTransitionId(undefined);
+    setCurrentView('create-transition');
+  };
+
+  const handleCreateNewMix = () => {
+    setWizardInitialProjectType('mixer');
     setCurrentView('project-wizard');
   };
 
@@ -184,7 +193,7 @@ const AppShell: React.FC = () => {
     setEditingPairConfigs(undefined);
     setEditingMashUpName(undefined);
     setEditingInitialStep(undefined);
-    setCurrentView('recent-projects');
+    setCurrentView('transitions');
   };
 
   const handleCreateTransitionWithSong = (song: UploadResult) => {
@@ -257,7 +266,10 @@ const AppShell: React.FC = () => {
 
     switch (view) {
       case 'create-new':
-        navigateTo('project-wizard');
+        setTransitionSongA(undefined);
+        setTransitionSongB(undefined);
+        setEditingTransitionId(undefined);
+        navigateTo('create-transition');
         break;
       case 'labs':
         navigateTo('transitions');
@@ -306,22 +318,15 @@ const AppShell: React.FC = () => {
   };
 
   const handleWizardComplete = (projectType: 'transition' | 'mixer', projectData: any) => {
+    setWizardInitialProjectType(undefined);
+
     if (onboarding.tutorialMode) {
       onboarding.endTutorial();
       setCurrentView('library');
       return;
     }
 
-    if (projectType === 'transition') {
-      if (projectData.redirectToCreateTransition) {
-        setCurrentView('create-transition');
-      } else {
-        setTransitionSongA(projectData.songA);
-        setTransitionSongB(projectData.songB);
-        setEditingTransitionId(projectData.transitionId);
-        setCurrentView('transition-editor');
-      }
-    } else if (projectType === 'mixer') {
+    if (projectType === 'mixer') {
       setActiveMixSessionId(projectData.mixSessionId);
       setCurrentView('mixer-editor');
     }
@@ -331,7 +336,9 @@ const AppShell: React.FC = () => {
     if (onboarding.tutorialMode) {
       onboarding.endTutorial();
     }
-    setCurrentView('library');
+    const returnView = wizardInitialProjectType === 'mixer' ? 'mixer' : 'transitions';
+    setWizardInitialProjectType(undefined);
+    setCurrentView(returnView);
   };
 
   // Sync mobile nav view with current view
@@ -411,16 +418,32 @@ const AppShell: React.FC = () => {
         );
       case 'create-transition':
         return (
-          <TransitionCreator
-            onBack={handleBackToTransitions}
-            onSave={handleTransitionSaved}
-            initialSongA={transitionSongA}
-            initialSongB={transitionSongB}
-            editingTransitionId={editingTransitionId}
-            initialPairConfigs={editingPairConfigs}
-            initialMashUpName={editingMashUpName}
-            initialStep={editingInitialStep}
-          />
+          <>
+            <TransitionCreator
+              onBack={handleBackToTransitions}
+              onSave={handleTransitionSaved}
+              initialSongA={transitionSongA}
+              initialSongB={transitionSongB}
+              editingTransitionId={editingTransitionId}
+              initialPairConfigs={editingPairConfigs}
+              initialMashUpName={editingMashUpName}
+              initialStep={editingInitialStep}
+            />
+            {onboarding.tutorialMode && (
+              <NewProjectTutorialOverlay
+                currentStep={onboarding.tutorialStep}
+                onAdvance={onboarding.advanceTutorialStep}
+                onComplete={() => {
+                  onboarding.endTutorial();
+                  setCurrentView('library');
+                }}
+                onSkip={() => {
+                  onboarding.endTutorial();
+                  setCurrentView('library');
+                }}
+              />
+            )}
+          </>
         );
       case 'transition-editor':
         return editingTransitionId ? (
@@ -476,7 +499,7 @@ const AppShell: React.FC = () => {
       case 'mixer':
         return (
           <MixerView
-            onCreateNew={handleCreateNew}
+            onCreateNew={handleCreateNewMix}
             onOpenSession={(sessionId) => {
               setActiveMixSessionId(sessionId);
               setCurrentView('mixer-editor');
@@ -497,45 +520,20 @@ const AppShell: React.FC = () => {
           <ProfileView
             onShowTutorial={() => {
               onboarding.startTutorial();
-              setCurrentView('project-wizard');
+              setTransitionSongA(undefined);
+              setTransitionSongB(undefined);
+              setEditingTransitionId(undefined);
+              setCurrentView('create-transition');
             }}
           />
         );
       case 'project-wizard':
         return (
-          <>
-            <ProjectCreationWizard
-              onComplete={handleWizardComplete}
-              onCancel={handleWizardCancel}
-              tutorialMode={onboarding.tutorialMode}
-            />
-            {onboarding.tutorialMode && (
-              <NewProjectTutorialOverlay
-                currentStep={onboarding.tutorialStep}
-                onAdvance={() => {
-                  const currentStep = onboarding.tutorialStep;
-                  onboarding.advanceTutorialStep();
-
-                  if (currentStep === 2) {
-                    setTimeout(() => {
-                      const transitionButton = document.querySelector('[data-tutorial="transition-project"]') as HTMLButtonElement;
-                      if (transitionButton) {
-                        transitionButton.click();
-                      }
-                    }, 100);
-                  }
-                }}
-                onComplete={() => {
-                  onboarding.endTutorial();
-                  setCurrentView('library');
-                }}
-                onSkip={() => {
-                  onboarding.endTutorial();
-                  setCurrentView('library');
-                }}
-              />
-            )}
-          </>
+          <ProjectCreationWizard
+            onComplete={handleWizardComplete}
+            onCancel={handleWizardCancel}
+            initialProjectType={wizardInitialProjectType}
+          />
         );
       default:
         return (
@@ -782,7 +780,10 @@ const AppShell: React.FC = () => {
               <button
                 onClick={() => {
                   onboarding.startTutorial();
-                  setCurrentView('project-wizard');
+                  setTransitionSongA(undefined);
+                  setTransitionSongB(undefined);
+                  setEditingTransitionId(undefined);
+                  setCurrentView('create-transition');
                   setShowUserMenu(false);
                   setIsMobileSidebarOpen(false);
                 }}

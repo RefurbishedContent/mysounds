@@ -37,15 +37,6 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     action: 'Click "+Create New" to continue'
   },
   {
-    id: 'project-type',
-    title: 'Choose Project Type',
-    description: 'Select "Mash Up Project" to create a seamless mash up between two songs. Our AI will analyze and mash them up perfectly.',
-    target: '[data-tutorial="transition-project"]',
-    position: 'bottom',
-    icon: Music,
-    action: 'Select "Mash Up Project"'
-  },
-  {
     id: 'song-selection',
     title: 'Select Your Songs',
     description: 'This is the song selection interface. We\'ve pre-selected two compatible demo tracks: "Summer Beats" (Song A) and "Midnight Groove" (Song B). Notice the Match Quality indicator showing how well these tracks work together based on BPM, key, and energy analysis. The AI has automatically calculated a compatibility score to help you create the perfect mash up.',

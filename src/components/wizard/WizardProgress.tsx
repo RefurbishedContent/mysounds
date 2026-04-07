@@ -4,7 +4,7 @@ import { WizardStep } from '../../hooks/useProjectWizard';
 
 interface WizardProgressProps {
   currentStep: WizardStep;
-  steps: { number: WizardStep; label: string }[];
+  steps: { number: WizardStep; label: string; displayNumber?: number }[];
 }
 
 const WizardProgress: React.FC<WizardProgressProps> = ({ currentStep, steps }) => {
@@ -34,7 +34,7 @@ const WizardProgress: React.FC<WizardProgressProps> = ({ currentStep, steps }) =
                     {isCompleted ? (
                       <Check size={14} className="animate-in fade-in zoom-in" />
                     ) : (
-                      step.number
+                      step.displayNumber ?? step.number
                     )}
                   </div>
                   <span

@@ -191,7 +191,7 @@ export const useProjectWizard = () => {
 
   const previousStep = useCallback(() => {
     setState(prev => {
-      const prevStep = Math.max(1, prev.currentStep - 1) as WizardStep;
+      const prevStep = Math.max(2, prev.currentStep - 1) as WizardStep;
       return { ...prev, currentStep: prevStep, error: null };
     });
   }, []);
@@ -210,8 +210,6 @@ export const useProjectWizard = () => {
 
   const canProceedFromStep = useCallback((step: WizardStep): boolean => {
     switch (step) {
-      case 1:
-        return state.projectType !== null;
       case 2:
         if (state.projectType === 'transition') {
           return state.selectedSongs.length === 2;
