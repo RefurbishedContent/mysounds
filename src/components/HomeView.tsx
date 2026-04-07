@@ -26,12 +26,6 @@ interface LibraryStats {
   hoursProduced: number;
 }
 
-const EQ_BAR_COUNT = 28;
-
-function randomEqBars(): number[] {
-  return Array.from({ length: EQ_BAR_COUNT }, () => 10 + Math.random() * 90);
-}
-
 const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
   const { user } = useAuth();
   const [stats, setStats] = useState<LibraryStats>({
@@ -48,7 +42,6 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
     totalBlends: 0,
     hoursProduced: 0,
   });
-  const [eqBars, setEqBars] = useState<number[]>(randomEqBars);
   const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([]);
   const [recentTracks, setRecentTracks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,12 +52,6 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
     }
   }, [user]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setEqBars(randomEqBars());
-    }, 160);
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     if (loading) return;
@@ -269,27 +256,6 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
             </div>
           </div>
 
-          <div className="flex items-end gap-px mt-3 h-5 opacity-40">
-            {eqBars.map((height, i) => {
-              const pct = i / (EQ_BAR_COUNT - 1);
-              const r = Math.round(0 + pct * 255);
-              const g = Math.round(245 - pct * 200);
-              const b = Math.round(255 - pct * 153);
-              return (
-                <div
-                  key={i}
-                  className="flex-1 rounded-t-sm"
-                  style={{
-                    height: `${height}%`,
-                    background: `rgb(${r},${g},${b})`,
-                    transition: 'height 160ms ease',
-                    minWidth: 0,
-                    opacity: 0.6,
-                  }}
-                />
-              );
-            })}
-          </div>
         </div>
 
         {/* Quick Actions */}
