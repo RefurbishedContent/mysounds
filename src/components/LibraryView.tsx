@@ -494,7 +494,7 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong, o
 
       {/* Upload Dialog */}
       {showUploader && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[80] flex items-center justify-center p-4">
           <div className="bg-gray-800 rounded-2xl border border-gray-600 shadow-2xl sm:max-w-lg w-full max-h-[75vh] overflow-y-auto">
             <div className="sticky top-0 bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between z-10">
               <h2 className="text-lg font-bold text-white">Upload Music</h2>

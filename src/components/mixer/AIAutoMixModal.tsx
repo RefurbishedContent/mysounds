@@ -96,7 +96,7 @@ export const AIAutoMixModal: React.FC<AIAutoMixModalProps> = ({
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[80]"
         onClick={onClose}
       />
       <div

@@ -429,7 +429,7 @@ const BlenderProcessingScreen: React.FC<BlenderProcessingScreenProps> = ({
       </div>
 
       {showCancelConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[80] p-4">
           <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 max-w-sm w-full">
             <h3 className="text-lg font-bold text-white mb-2">Cancel Mash Up?</h3>
             <p className="text-gray-400 text-sm mb-6">

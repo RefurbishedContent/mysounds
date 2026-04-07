@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Plus, Trash2, Edit3, Target } from 'lucide-react';
+import { Plus, Trash2, CreditCard as Edit3, Target } from 'lucide-react';
 import { MultiTrackEngine, CuePoint } from '../lib/audio/MultiTrackEngine';
 
 interface CueSystemProps {
@@ -222,7 +222,7 @@ export function CueSystem({ engine, currentTime }: CueSystemProps) {
       </div>
 
       {showAddDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80]">
           <div className="bg-gray-800 rounded-lg p-6 w-96 border border-gray-700">
             <h3 className="text-lg font-semibold mb-4">Add Cue Point</h3>
 

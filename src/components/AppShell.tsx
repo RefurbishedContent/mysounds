@@ -831,7 +831,7 @@ const AppShell: React.FC = () => {
       {/* Global Search Overlay */}
       {showSearchOverlay && (
         <div
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start justify-center pt-20 px-4"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[80] flex items-start justify-center pt-20 px-4"
           onClick={() => setShowSearchOverlay(false)}
         >
           <div

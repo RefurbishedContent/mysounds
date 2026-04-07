@@ -102,7 +102,7 @@ export const SongSelectionModal: React.FC<SongSelectionModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[80] p-4"
       onClick={handleBackdropClick}
     >
       <div className="bg-gray-900 rounded-2xl border border-gray-700 w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">

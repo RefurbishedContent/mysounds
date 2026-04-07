@@ -97,7 +97,7 @@ const AuthGateway: React.FC<AuthGatewayProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
       <div className="glass-surface rounded-2xl max-w-md w-full p-8 animate-fade-in">
         {/* Header */}
         <div className="text-center space-y-4 mb-8">

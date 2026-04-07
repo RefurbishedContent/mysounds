@@ -87,7 +87,7 @@ const UpsellDialog: React.FC<UpsellDialogProps> = ({ onClose, trigger, featureNa
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
       <div className="glass-surface rounded-2xl max-w-4xl w-full p-8 animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">

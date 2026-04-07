@@ -174,7 +174,7 @@ const MainContent: React.FC = () => {
 
       {/* Sample Dialog */}
       {showDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-[80]">
           <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 border border-gray-700">
             <h3 className="text-lg font-semibold text-white mb-4">Save Project</h3>
             <p className="text-gray-400 mb-6">

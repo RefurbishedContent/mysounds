@@ -29,7 +29,7 @@ const MashUpCompletionStep: React.FC<MashUpCompletionStepProps> = ({
   const totalDuration = blends.reduce((sum, b) => sum + b.duration, 0);
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-start justify-center z-50 p-3 pt-6 md:p-4 md:pt-12 overflow-y-auto">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-start justify-center z-[80] p-3 pt-6 md:p-4 md:pt-12 overflow-y-auto">
       {showCelebration && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="relative">

@@ -437,7 +437,7 @@ export const BlendLibraryPanel: React.FC<BlendLibraryPanelProps> = ({
 
       {/* New Folder Dialog */}
       {showNewFolderDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[80]">
           <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 w-96">
             <h3 className="text-lg font-bold text-white mb-4">Create New Folder</h3>
             <input
