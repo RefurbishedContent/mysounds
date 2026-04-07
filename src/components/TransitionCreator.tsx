@@ -17,7 +17,6 @@ import {
   SONG_LETTERS,
   SONG_COLORS,
   MIN_CLIP_DURATION,
-  MAX_CLIP_DURATION,
   DEFAULT_TRANSITION_DURATION,
   formatTime,
   generateMashUpName,
@@ -467,12 +466,6 @@ function buildValidationWarnings(
       warnings.push({
         type: 'error',
         message: `Song ${letter} clip is too short (${formatTime(clipDuration)}). Minimum is ${MIN_CLIP_DURATION}s.`,
-      });
-    }
-    if (clipDuration > MAX_CLIP_DURATION) {
-      warnings.push({
-        type: 'warning',
-        message: `Song ${letter} clip is long (${formatTime(clipDuration)}). Consider keeping it under ${MAX_CLIP_DURATION}s.`,
       });
     }
   });
