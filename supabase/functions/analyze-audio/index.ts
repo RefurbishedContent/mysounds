@@ -1,10 +1,21 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 interface AudioAnalysisRequest {
-  uploadId: string;
+  trackId?: string;
+  uploadId?: string;
   audioUrl: string;
   jobId?: string;
   comprehensive?: boolean;
+}
+
+function log(level: string, requestId: string, message: string, data?: unknown) {
+  console.log(JSON.stringify({
+    timestamp: new Date().toISOString(),
+    level,
+    requestId,
+    message,
+    ...(data !== undefined ? { data } : {}),
+  }));
 }
 
 interface AudioAnalysisResult {
@@ -54,80 +65,81 @@ const supabase = createClient(
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    });
+    return new Response(null, { status: 200, headers: corsHeaders });
   }
 
-  try {
-    const { uploadId, audioUrl, jobId, comprehensive }: AudioAnalysisRequest = await req.json();
+  const requestId = req.headers.get('X-Request-ID') ?? crypto.randomUUID();
 
-    if (jobId) {
-      await updateJobProgress(jobId, 10, 'processing');
-    }
+  try {
+    const body: AudioAnalysisRequest = await req.json();
+    const { audioUrl, jobId, comprehensive } = body;
+    const recordId = body.trackId ?? body.uploadId ?? '';
+    const table = body.trackId ? 'tracks' : 'uploads';
+
+    log('info', requestId, 'Analysis started', { recordId, table });
+
+    if (jobId) await updateJobProgress(jobId, 10, 'processing');
 
     const audioResponse = await fetch(audioUrl);
     if (!audioResponse.ok) {
-      throw new Error('Failed to fetch audio file');
+      throw new Error(`Failed to fetch audio file: ${audioResponse.status}`);
     }
 
-    if (jobId) {
-      await updateJobProgress(jobId, 30, 'processing');
+    const contentType = audioResponse.headers.get('content-type') ?? '';
+    const supportedTypes = [
+      'audio/mpeg', 'audio/wav', 'audio/flac', 'audio/mp4', 'audio/aac',
+      'audio/x-m4a', 'audio/ogg', 'audio/x-aiff', 'audio/aiff',
+    ];
+
+    if (contentType && !supportedTypes.some((t) => contentType.includes(t.split('/')[1]))) {
+      log('warn', requestId, 'Unexpected content-type, proceeding anyway', { contentType });
     }
+
+    if (jobId) await updateJobProgress(jobId, 30, 'processing');
 
     const audioBuffer = await audioResponse.arrayBuffer();
+    log('info', requestId, 'Audio fetched', { bytes: audioBuffer.byteLength });
 
-    if (jobId) {
-      await updateJobProgress(jobId, 50, 'processing');
-    }
+    if (jobId) await updateJobProgress(jobId, 50, 'processing');
 
     const analysisResult = await analyzeAudio(audioBuffer, comprehensive || false);
 
-    if (jobId) {
-      await updateJobProgress(jobId, 90, 'processing');
+    if (jobId) await updateJobProgress(jobId, 90, 'processing');
+
+    const updatePayload: Record<string, unknown> = {
+      analysis: analysisResult,
+      status: 'ready',
+      last_analyzed_at: new Date().toISOString(),
+    };
+
+    if (table === 'tracks') {
+      updatePayload.duration_ms = Math.round((analysisResult.duration ?? 0) * 1000);
     }
 
     const { error: updateError } = await supabase
-      .from('uploads')
-      .update({
-        analysis: analysisResult,
-        status: 'ready'
-      })
-      .eq('id', uploadId);
+      .from(table)
+      .update(updatePayload)
+      .eq('id', recordId);
 
     if (updateError) {
-      throw new Error(`Failed to update upload: ${updateError.message}`);
+      throw new Error(`Failed to update ${table}: ${updateError.message}`);
     }
 
-    if (jobId) {
-      await updateJobProgress(jobId, 100, 'completed');
-    }
+    if (jobId) await updateJobProgress(jobId, 100, 'completed');
+
+    log('info', requestId, 'Analysis complete', { recordId });
 
     return new Response(
       JSON.stringify({ success: true, analysis: analysisResult }),
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders,
-        },
-      }
+      { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     );
 
   } catch (error) {
-    console.error('Analysis error:', error);
+    log('error', requestId, 'Analysis failed', { error: error instanceof Error ? error.message : String(error) });
 
     return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Analysis failed'
-      }),
-      {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders,
-        },
-      }
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Analysis failed' }),
+      { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     );
   }
 });

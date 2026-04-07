@@ -1,470 +1,418 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Upload, Music, X, AlertCircle, CheckCircle, Clock, Zap, Plus } from 'lucide-react';
-import { storageService, UploadResult } from '../lib/storage';
+import { Music, X, AlertCircle, CheckCircle, Clock, Zap, Plus, Tag, CreditCard as Edit2 } from 'lucide-react';
+import * as mm from 'music-metadata-browser';
+import { storageService } from '../lib/storage';
+import type { Track } from '../types/track';
 import { useAuth } from '../contexts/AuthContext';
 import { analyticsService, activityLogger, trackUploadSuccess } from '../lib/analytics';
 
 interface AudioUploaderProps {
-  onTracksReady: (trackA: UploadResult, trackB: UploadResult) => void;
+  onTracksReady: (trackA: Track, trackB: Track) => void;
 }
 
-interface UploadStatus {
-  status: 'uploading' | 'processing' | 'ready' | 'error';
-  analysis?: any;
+interface PendingFile {
+  file: File;
+  slot: 'A' | 'B';
+  title: string;
+  artist: string;
+  album: string;
+}
+
+interface SlotStatus {
+  status: 'idle' | 'extracting' | 'confirming' | 'uploading' | 'processing' | 'ready' | 'error';
+  track?: Track;
+}
+
+const SUPPORTED_FORMATS = ['.mp3', '.wav', '.flac', '.m4a', '.aac', '.ogg', '.aiff', '.aif'];
+
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function formatDuration(ms: number): string {
+  const totalSec = Math.floor(ms / 1000);
+  const mins = Math.floor(totalSec / 60);
+  const secs = totalSec % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+function stripExtension(name: string): string {
+  return name.replace(/\.[^/.]+$/, '');
 }
 
 const AudioUploader: React.FC<AudioUploaderProps> = ({ onTracksReady }) => {
   const { user } = useAuth();
-  const [trackA, setTrackA] = useState<UploadResult | null>(null);
-  const [trackB, setTrackB] = useState<UploadResult | null>(null);
-  const [trackAStatus, setTrackAStatus] = useState<UploadStatus>({ status: 'ready' });
-  const [trackBStatus, setTrackBStatus] = useState<UploadStatus>({ status: 'ready' });
+
+  const [slotA, setSlotA] = useState<SlotStatus>({ status: 'idle' });
+  const [slotB, setSlotB] = useState<SlotStatus>({ status: 'idle' });
+  const [pending, setPending] = useState<PendingFile | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState<{ trackA: boolean; trackB: boolean }>({
-    trackA: false,
-    trackB: false
-  });
+  const [uploadProgress, setUploadProgress] = useState<{ A: number; B: number }>({ A: 0, B: 0 });
 
-  const trackAInputRef = useRef<HTMLInputElement>(null);
-  const trackBInputRef = useRef<HTMLInputElement>(null);
+  const inputARef = useRef<HTMLInputElement>(null);
+  const inputBRef = useRef<HTMLInputElement>(null);
 
-  // Supported audio formats
-  const SUPPORTED_FORMATS = ['.mp3', '.wav', '.flac', '.m4a', '.aac'];
-  const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
-
-  const validateFile = (file: File): string | null => {
-    // Check file type
-    const extension = '.' + file.name.split('.').pop()?.toLowerCase();
-    if (!SUPPORTED_FORMATS.includes(extension)) {
-      return `Unsupported format. Please use: ${SUPPORTED_FORMATS.join(', ')}`;
-    }
-
-    // Check file size
-    if (file.size > MAX_FILE_SIZE) {
-      return 'File too large. Maximum size is 100MB.';
-    }
-
-    return null;
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const formatDuration = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // Subscribe to analysis updates
-  const subscribeToAnalysis = useCallback((uploadId: string, track: 'A' | 'B') => {
-    const subscription = storageService.subscribeToAnalysisUpdates(
-      uploadId,
-      (status, analysis) => {
-        const updateStatus = { status, analysis };
-        if (track === 'A') {
-          setTrackAStatus(updateStatus);
-        } else {
-          setTrackBStatus(updateStatus);
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
+  const setSlot = useCallback((slot: 'A' | 'B', update: Partial<SlotStatus>) => {
+    if (slot === 'A') setSlotA(prev => ({ ...prev, ...update }));
+    else setSlotB(prev => ({ ...prev, ...update }));
   }, []);
 
-  const processFile = async (file: File, track: 'A' | 'B') => {
-    if (!user) {
-      setError('You must be signed in to upload files');
-      return;
-    }
-
-    const validationError = validateFile(file);
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
-    setError(null);
-    setLoading(prev => ({ ...prev, [`track${track}`]: true }));
+  const handleFileSelected = useCallback(async (file: File, slot: 'A' | 'B') => {
+    if (!user) { setError('You must be signed in to upload files'); return; }
 
     try {
-      const uploadResult = await storageService.uploadAudioFile(
+      storageService.validateFile(file);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Invalid file');
+      return;
+    }
+
+    setError(null);
+    setSlot(slot, { status: 'extracting' });
+
+    let title = stripExtension(file.name);
+    let artist = '';
+    let album = '';
+
+    try {
+      const meta = await mm.parseBlob(file, { skipPostHeaders: true });
+      title = meta.common.title ?? title;
+      artist = meta.common.artist ?? meta.common.albumartist ?? '';
+      album = meta.common.album ?? '';
+    } catch {
+      // ID3 extraction failed — defaults stay as-is
+    }
+
+    setSlot(slot, { status: 'confirming' });
+    setPending({ file, slot, title, artist, album });
+  }, [user, setSlot]);
+
+  const confirmUpload = useCallback(async () => {
+    if (!pending || !user) return;
+    const { file, slot, title, artist, album } = pending;
+
+    setPending(null);
+    setSlot(slot, { status: 'uploading' });
+
+    try {
+      const track = await storageService.uploadTrack(
         file,
         user.id,
-        (progress) => {
-          console.log(`Upload progress: ${progress}%`);
-        }
+        { title, artist, album },
+        (p) => setUploadProgress(prev => ({ ...prev, [slot]: p }))
       );
 
-      if (track === 'A') {
-        setTrackA(uploadResult);
-        setTrackAStatus({ status: 'processing' });
-        subscribeToAnalysis(uploadResult.id, 'A');
-      } else {
-        setTrackB(uploadResult);
-        setTrackBStatus({ status: 'processing' });
-        subscribeToAnalysis(uploadResult.id, 'B');
-      }
+      setSlot(slot, { status: 'processing', track });
 
-      // Check if both tracks are ready
-      const otherTrack = track === 'A' ? trackB : trackA;
-      if (otherTrack) {
-        // Validate track compatibility
-        const currentDuration = uploadResult.metadata.duration || 0;
-        const otherDuration = otherTrack.metadata.duration || 0;
-        
-        if (Math.abs(currentDuration - otherDuration) > 300) {
-          setError(`Warning: Track duration difference is ${Math.abs(currentDuration - otherDuration)}s. Consider using tracks with similar lengths for better mixing.`);
+      const sub = storageService.subscribeToTrackUpdates(track.id, (status) => {
+        if (status === 'ready') {
+          const ready = { ...track, status: 'ready' as const };
+          setSlot(slot, { status: 'ready', track: ready });
+          sub.unsubscribe();
+
+          setSlotA(currentA => {
+            setSlotB(currentB => {
+              const a = slot === 'A' ? ready : currentA.track;
+              const b = slot === 'B' ? ready : currentB.track;
+              if (a && b) onTracksReady(a, b);
+              return currentB;
+            });
+            return currentA;
+          });
+        } else if (status === 'failed') {
+          setSlot(slot, { status: 'error', track });
+          sub.unsubscribe();
         }
+      });
 
-        onTracksReady(
-          track === 'A' ? uploadResult : otherTrack,
-          track === 'B' ? uploadResult : otherTrack
-        );
-      
-        // Track upload success
-        trackUploadSuccess(
-          user.id, 
-          uploadResult.metadata.filename, 
-          uploadResult.metadata.duration || 0
-        );
-        
-        // Log upload completion
-        await activityLogger.logUpload('completed', uploadResult.id, user.id, {
-          filename: uploadResult.metadata.filename,
-          size: uploadResult.metadata.size,
-          duration: uploadResult.metadata.duration,
-          track: track,
-          mimeType: uploadResult.metadata.mimeType
-        });
-      }
+      await activityLogger.logUpload('completed', track.id, user.id, {
+        filename: track.originalName,
+        size: track.size,
+        duration: track.durationMs / 1000,
+        track: slot,
+        mimeType: track.mimeType,
+      });
+      trackUploadSuccess(user.id, track.originalName, track.durationMs / 1000);
     } catch (err) {
-      let errorMessage = err instanceof Error ? err.message : 'Failed to upload audio file';
-      
-      // Show more helpful error message for missing bucket
-      if (err instanceof Error && err.message.includes('Storage bucket')) {
-        errorMessage = `Storage setup required. Please ensure the 'audio-uploads' bucket exists in your Supabase project.`;
-      }
-      
-      setError(errorMessage);
-      
-      // Track upload failure
-      if (user) {
-        analyticsService.trackError(
-          err instanceof Error ? err : new Error('Upload failed'),
-          'file_upload',
-          {
-            filename: file.name,
-            size: file.size,
-            track: track
-          },
-          user.id
-        );
-      }
-    } finally {
-      setLoading(prev => ({ ...prev, [`track${track}`]: false }));
+      setSlot(slot, { status: 'error' });
+      setError(err instanceof Error ? err.message : 'Upload failed');
+      analyticsService.trackError(
+        err instanceof Error ? err : new Error('Upload failed'),
+        'file_upload',
+        { filename: file.name, size: file.size, track: slot },
+        user.id
+      );
     }
-  };
+  }, [pending, user, setSlot, onTracksReady]);
 
-  const handleFileInput = (track: 'A' | 'B') => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
+  const cancelPending = useCallback(() => {
+    if (!pending) return;
+    setSlot(pending.slot, { status: 'idle' });
+    setPending(null);
+  }, [pending, setSlot]);
 
-    processFile(files[0], track);
-    e.target.value = '';
-  };
-
-  const removeTrack = (track: 'A' | 'B') => {
-    const currentTrack = track === 'A' ? trackA : trackB;
-    
-    // Clean up upload if it exists
-    if (currentTrack && user) {
-      storageService.deleteUpload(currentTrack.id, user.id).catch(console.error);
+  const removeSlot = useCallback((slot: 'A' | 'B') => {
+    const current = slot === 'A' ? slotA : slotB;
+    if (current.track && user) {
+      storageService.deleteTrackAndAllAssets(current.track.id, user.id).catch(() => {});
     }
-    
-    if (track === 'A') {
-      setTrackA(null);
-      setTrackAStatus({ status: 'ready' });
-    } else {
-      setTrackB(null);
-      setTrackBStatus({ status: 'ready' });
-    }
+    setSlot(slot, { status: 'idle', track: undefined });
     setError(null);
-  };
+  }, [slotA, slotB, setSlot, user]);
 
-  const getTrackUploadState = (track: UploadResult | null, status: UploadStatus, isLoading: boolean) => {
-    if (isLoading) {
-      return {
-        bgColor: 'bg-blue-900/30',
-        borderColor: 'border-blue-500',
-        icon: <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />,
-        title: 'Uploading...',
-        subtitle: 'Please wait',
-        showRemove: false
-      };
-    }
-
-    if (track && status.status === 'ready') {
-      return {
-        bgColor: 'bg-green-900/30',
-        borderColor: 'border-green-500',
-        icon: <CheckCircle size={24} className="text-green-500" />,
-        title: track.metadata.filename,
-        subtitle: `${formatFileSize(track.metadata.size)} • ${track.metadata.duration ? formatDuration(track.metadata.duration) : 'Ready'}`,
-        showRemove: true
-      };
-    }
-
-    if (track && status.status === 'processing') {
-      return {
-        bgColor: 'bg-yellow-900/30',
-        borderColor: 'border-yellow-500',
-        icon: <Clock size={24} className="text-yellow-500 animate-pulse" />,
-        title: track.metadata.filename,
-        subtitle: 'Analyzing audio...',
-        showRemove: true
-      };
-    }
-
-    if (track && status.status === 'error') {
-      return {
-        bgColor: 'bg-red-900/30',
-        borderColor: 'border-red-500',
-        icon: <AlertCircle size={24} className="text-red-500" />,
-        title: 'Upload failed',
-        subtitle: 'Click to retry',
-        showRemove: true
-      };
-    }
-
-    return {
-      bgColor: 'bg-gray-800/50',
-      borderColor: 'border-gray-600 hover:border-purple-500',
-      icon: <Plus size={24} className="text-gray-400" />,
-      title: 'Upload Track',
-      subtitle: 'Click to select audio file',
-      showRemove: false
-    };
-  };
-
-  const bothTracksReady = trackA && trackB && trackAStatus.status === 'ready' && trackBStatus.status === 'ready';
+  const bothReady = slotA.status === 'ready' && slotB.status === 'ready';
 
   return (
     <div className="space-y-6 py-4">
-      {/* Header */}
       <div className="text-center space-y-3">
         <h2 className="text-3xl font-bold text-white">Upload Your Tracks</h2>
-        <p className="text-gray-400">
-          Upload two songs to create your professional DJ mix
-        </p>
+        <p className="text-gray-400">Upload two songs to create your professional DJ mix</p>
         <p className="text-sm text-gray-500">
-          Supports: {SUPPORTED_FORMATS.join(', ')} • Max 100MB each
+          Supports: {SUPPORTED_FORMATS.join(', ')} &bull; Max 200MB each
         </p>
       </div>
 
-      {/* Upload Boxes */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Track A Upload Box */}
-        <div className="space-y-3">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">A</span>
-            </div>
-            <h3 className="text-lg font-semibold text-white">Track A</h3>
-            {trackA && (
-              <span className="text-xs text-gray-400">({formatDuration(trackA.metadata.duration || 0)})</span>
-            )}
-          </div>
-          
-          <div className="relative">
-            <input
-              ref={trackAInputRef}
-              type="file"
-              accept={SUPPORTED_FORMATS.join(',')}
-              onChange={handleFileInput('A')}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              disabled={loading.trackA}
-            />
-            
-            {(() => {
-              const state = getTrackUploadState(trackA, trackAStatus, loading.trackA);
-              return (
-                <div 
-                  className={`
-                    relative w-full h-32 rounded-lg border-2 border-dashed transition-all duration-200 cursor-pointer
-                    flex flex-col items-center justify-center space-y-3 p-6
-                    ${state.bgColor} ${state.borderColor}
-                    ${!trackA && !loading.trackA ? 'hover:border-purple-400 hover:bg-purple-900/20' : ''}
-                  `}
-                  onClick={() => !trackA && !loading.trackA && trackAInputRef.current?.click()}
+        {(['A', 'B'] as const).map((slot) => {
+          const s = slot === 'A' ? slotA : slotB;
+          const inputRef = slot === 'A' ? inputARef : inputBRef;
+          const accentFrom = slot === 'A' ? 'from-blue-600 to-cyan-600' : 'from-orange-600 to-red-600';
+          const isIdle = s.status === 'idle';
+          const isUploading = s.status === 'uploading';
+          const isProcessing = s.status === 'processing';
+          const isReady = s.status === 'ready';
+          const isError = s.status === 'error';
+          const isBusy = s.status === 'extracting' || s.status === 'confirming';
+
+          let borderColor = 'border-gray-600 hover:border-cyan-500';
+          let bgColor = 'bg-gray-800/50 hover:bg-cyan-900/10';
+          if (isReady) { borderColor = 'border-green-500'; bgColor = 'bg-green-900/20'; }
+          else if (isProcessing) { borderColor = 'border-yellow-500'; bgColor = 'bg-yellow-900/20'; }
+          else if (isUploading || isBusy) { borderColor = 'border-cyan-500'; bgColor = 'bg-cyan-900/20'; }
+          else if (isError) { borderColor = 'border-red-500'; bgColor = 'bg-red-900/20'; }
+
+          return (
+            <div key={slot} className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 bg-gradient-to-r ${accentFrom} rounded-lg flex items-center justify-center`}>
+                  <span className="text-white font-bold text-sm">{slot}</span>
+                </div>
+                <h3 className="text-lg font-semibold text-white">Track {slot}</h3>
+                {s.track?.durationMs ? (
+                  <span className="text-xs text-gray-400">({formatDuration(s.track.durationMs)})</span>
+                ) : null}
+              </div>
+
+              <div className="relative">
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept={SUPPORTED_FORMATS.join(',')}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleFileSelected(f, slot);
+                    e.target.value = '';
+                  }}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  disabled={!isIdle}
+                />
+
+                <div
+                  className={`relative w-full h-32 rounded-xl border-2 border-dashed transition-all duration-200 flex flex-col items-center justify-center gap-2 p-4 ${borderColor} ${bgColor} ${isIdle ? 'cursor-pointer' : 'cursor-default'}`}
+                  onClick={() => isIdle && inputRef.current?.click()}
                 >
-                  {state.icon}
-                  <div className="text-center">
-                    <p className="text-white font-medium text-xs truncate max-w-full">
-                      {state.title}
-                    </p>
-                    <p className="text-gray-400 text-xs">
-                      {state.subtitle}
-                    </p>
-                  </div>
-                  
-                  {state.showRemove && (
+                  {isIdle && (
+                    <>
+                      <Plus size={24} className="text-gray-400" />
+                      <div className="text-center">
+                        <p className="text-white text-sm font-medium">Upload Track {slot}</p>
+                        <p className="text-gray-400 text-xs">Click to select audio file</p>
+                      </div>
+                    </>
+                  )}
+
+                  {isBusy && (
+                    <>
+                      <Tag size={22} className="text-cyan-400 animate-pulse" />
+                      <p className="text-cyan-300 text-sm font-medium">Reading file tags...</p>
+                    </>
+                  )}
+
+                  {isUploading && (
+                    <>
+                      <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+                      <p className="text-cyan-300 text-sm font-medium">
+                        Uploading... {uploadProgress[slot]}%
+                      </p>
+                      <div className="w-full bg-gray-700 rounded-full h-1">
+                        <div
+                          className="bg-cyan-500 h-1 rounded-full transition-all duration-300"
+                          style={{ width: `${uploadProgress[slot]}%` }}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {isProcessing && s.track && (
+                    <>
+                      <Clock size={22} className="text-yellow-400 animate-pulse" />
+                      <div className="text-center">
+                        <p className="text-white text-xs font-medium truncate max-w-[180px]">
+                          {s.track.title || s.track.originalName}
+                        </p>
+                        <p className="text-yellow-300 text-xs">Analyzing audio...</p>
+                      </div>
+                    </>
+                  )}
+
+                  {isReady && s.track && (
+                    <>
+                      <CheckCircle size={22} className="text-green-500" />
+                      <div className="text-center">
+                        <p className="text-white text-xs font-medium truncate max-w-[180px]">
+                          {s.track.title || s.track.originalName}
+                        </p>
+                        <p className="text-gray-400 text-xs">
+                          {s.track.artist && <span>{s.track.artist} &bull; </span>}
+                          {formatFileSize(s.track.size)} &bull; {formatDuration(s.track.durationMs)}
+                        </p>
+                      </div>
+                    </>
+                  )}
+
+                  {isError && (
+                    <>
+                      <AlertCircle size={22} className="text-red-500" />
+                      <p className="text-red-300 text-sm">Upload failed — click X to retry</p>
+                    </>
+                  )}
+
+                  {!isIdle && (
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeTrack('A');
-                      }}
-                      className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-all duration-200"
+                      onClick={(e) => { e.stopPropagation(); removeSlot(slot); }}
+                      className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-all"
                     >
-                      <X size={16} />
+                      <X size={15} />
                     </button>
                   )}
                 </div>
-              );
-            })()}
-          </div>
-        </div>
-
-        {/* Track B Upload Box */}
-        <div className="space-y-3">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-orange-600 to-red-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">B</span>
+              </div>
             </div>
-            <h3 className="text-lg font-semibold text-white">Track B</h3>
-            {trackB && (
-              <span className="text-xs text-gray-400">({formatDuration(trackB.metadata.duration || 0)})</span>
-            )}
-          </div>
-          
-          <div className="relative">
-            <input
-              ref={trackBInputRef}
-              type="file"
-              accept={SUPPORTED_FORMATS.join(',')}
-              onChange={handleFileInput('B')}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              disabled={loading.trackB}
-            />
-            
-            {(() => {
-              const state = getTrackUploadState(trackB, trackBStatus, loading.trackB);
-              return (
-                <div 
-                  className={`
-                    relative w-full h-32 rounded-lg border-2 border-dashed transition-all duration-200 cursor-pointer
-                    flex flex-col items-center justify-center space-y-3 p-6
-                    ${state.bgColor} ${state.borderColor}
-                    ${!trackB && !loading.trackB ? 'hover:border-purple-400 hover:bg-purple-900/20' : ''}
-                  `}
-                  onClick={() => !trackB && !loading.trackB && trackBInputRef.current?.click()}
-                >
-                  {state.icon}
-                  <div className="text-center">
-                    <p className="text-white font-medium text-xs truncate max-w-full">
-                      {state.title}
-                    </p>
-                    <p className="text-gray-400 text-xs">
-                      {state.subtitle}
-                    </p>
-                  </div>
-                  
-                  {state.showRemove && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeTrack('B');
-                      }}
-                      className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-all duration-200"
-                    >
-                      <X size={16} />
-                    </button>
-                  )}
+          );
+        })}
+      </div>
+
+      {pending && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div
+            className="w-full max-w-md rounded-2xl border border-gray-700 shadow-2xl p-6 space-y-5"
+            style={{ background: 'var(--bg-secondary)' }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+                  <Edit2 size={16} className="text-cyan-400" />
                 </div>
-              );
-            })()}
-          </div>
-        </div>
-      </div>
+                <div>
+                  <h3 className="text-white font-semibold text-sm">Confirm Track Info</h3>
+                  <p className="text-gray-400 text-xs">Auto-filled from file tags — edit if needed</p>
+                </div>
+              </div>
+              <button
+                onClick={cancelPending}
+                className="p-1.5 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
 
-      {/* Progress Indicator */}
-      <div className="flex items-center justify-center space-x-3">
-        <div className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${
-          trackA && trackAStatus.status === 'ready' ? 'bg-green-900/30 text-green-300' : 'bg-gray-800/50 text-gray-400'
-        }`}>
-          {trackA && trackAStatus.status === 'ready' ? (
-            <CheckCircle size={16} />
-          ) : (
-            <div className="w-4 h-4 border-2 border-gray-500 rounded-full" />
-          )}
-          <span className="text-sm font-medium">Track A</span>
-        </div>
-        
-        <div className={`w-6 h-0.5 rounded-full ${
-          trackA && trackB && trackAStatus.status === 'ready' && trackBStatus.status === 'ready'
-            ? 'bg-green-500'
-            : 'bg-gray-600'
-        }`} />
-        
-        <div className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${
-          trackB && trackBStatus.status === 'ready' ? 'bg-green-900/30 text-green-300' : 'bg-gray-800/50 text-gray-400'
-        }`}>
-          {trackB && trackBStatus.status === 'ready' ? (
-            <CheckCircle size={16} />
-          ) : (
-            <div className="w-4 h-4 border-2 border-gray-500 rounded-full" />
-          )}
-          <span className="text-sm font-medium">Track B</span>
-        </div>
-      </div>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-800/60">
+              <Music size={18} className="text-gray-400 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-white text-sm truncate">{pending.file.name}</p>
+                <p className="text-gray-500 text-xs">{formatFileSize(pending.file.size)}</p>
+              </div>
+            </div>
 
-      {/* Error Message */}
-      {error && (
-        <div className="flex items-start space-x-3 p-4 bg-red-900/30 border border-red-700 rounded-lg text-red-300">
-          <AlertCircle size={20} className="flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-medium mb-1">Upload Error</p>
-            <p className="text-sm whitespace-pre-line">{error}</p>
+            <div className="space-y-3">
+              {([
+                { label: 'Title', key: 'title' as const, placeholder: 'Track title' },
+                { label: 'Artist', key: 'artist' as const, placeholder: 'Artist name' },
+                { label: 'Album', key: 'album' as const, placeholder: 'Album name (optional)' },
+              ]).map(({ label, key, placeholder }) => (
+                <div key={key}>
+                  <label className="block text-xs font-medium text-gray-400 mb-1">{label}</label>
+                  <input
+                    type="text"
+                    value={pending[key]}
+                    onChange={(e) =>
+                      setPending(prev => prev ? { ...prev, [key]: e.target.value } : prev)
+                    }
+                    placeholder={placeholder}
+                    className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-cyan-500 transition-colors"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={cancelPending}
+                className="flex-1 py-2.5 rounded-xl border border-gray-600 text-gray-300 text-sm font-medium hover:bg-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmUpload}
+                className="flex-1 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-semibold transition-colors"
+              >
+                Upload Track
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Success Message & Next Step */}
-      {bothTracksReady && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-center p-4 bg-green-900/30 border border-green-500 rounded-lg">
-            <div className="text-center space-y-3">
-              <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center mx-auto">
-                <CheckCircle size={20} className="text-white" />
+      <div className="flex items-center justify-center gap-3">
+        {(['A', 'B'] as const).map((slot, i) => {
+          const s = slot === 'A' ? slotA : slotB;
+          const ready = s.status === 'ready';
+          return (
+            <React.Fragment key={slot}>
+              {i === 1 && (
+                <div className={`w-6 h-0.5 rounded-full ${bothReady ? 'bg-green-500' : 'bg-gray-600'}`} />
+              )}
+              <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${ready ? 'bg-green-900/30 text-green-300' : 'bg-gray-800/50 text-gray-400'}`}>
+                {ready
+                  ? <CheckCircle size={15} />
+                  : <div className="w-4 h-4 border-2 border-gray-500 rounded-full" />}
+                <span className="text-sm font-medium">Track {slot}</span>
               </div>
-              <div>
-                <h3 className="font-semibold text-green-300 mb-1">
-                  Both tracks uploaded successfully!
-                </h3>
-                <p className="text-green-200 text-sm">
-                  Ready to start mixing • Duration: A={formatDuration(trackA?.metadata.duration || 0)}, B={formatDuration(trackB?.metadata.duration || 0)}
-                </p>
-              </div>
-            </div>
-          </div>
+            </React.Fragment>
+          );
+        })}
+      </div>
 
-          {/* Instructions for next step */}
-          <div className="text-center space-y-3">
-            <div className="flex items-center justify-center space-x-2 text-purple-400">
-              <Zap size={16} />
-              <span className="font-medium">Ready to mix!</span>
-            </div>
-            <p className="text-gray-300 text-sm">
-              Your tracks are now loaded. Browse templates and drag them onto the timeline to create professional transitions.
-            </p>
+      {error && (
+        <div className="flex items-start gap-3 p-4 bg-red-900/30 border border-red-700 rounded-xl text-red-300">
+          <AlertCircle size={18} className="flex-shrink-0 mt-0.5" />
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
+
+      {bothReady && slotA.track && slotB.track && (
+        <div className="p-4 rounded-xl bg-green-900/20 border border-green-600 text-center space-y-2">
+          <CheckCircle size={22} className="text-green-400 mx-auto" />
+          <p className="text-green-300 font-semibold">Both tracks ready!</p>
+          <p className="text-green-200 text-sm">
+            A: {formatDuration(slotA.track.durationMs)} &bull; B: {formatDuration(slotB.track.durationMs)}
+          </p>
+          <div className="flex items-center justify-center gap-2 text-cyan-400 text-sm">
+            <Zap size={14} /> <span>Ready to mix</span>
           </div>
         </div>
       )}

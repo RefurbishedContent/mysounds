@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Toaster } from 'sonner';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AuthGateway from './components/AuthGateway';
 import AuthPage from './components/AuthPage';
@@ -72,6 +73,13 @@ function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
+        <Toaster
+          position="bottom-right"
+          theme="dark"
+          toastOptions={{
+            duration: 4000,
+          }}
+        />
         <AppContent />
       </AuthProvider>
     </ErrorBoundary>

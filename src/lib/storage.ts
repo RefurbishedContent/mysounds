@@ -1,5 +1,9 @@
 import { supabase } from './supabase';
+import { config } from './config';
 import { activityLogger } from './analytics';
+import type { Track, TrackAnalysis, TrackUploadOptions } from '../types/track';
+
+export type { Track, TrackAnalysis };
 
 export interface UploadResult {
   id: string;
@@ -9,7 +13,7 @@ export interface UploadResult {
   mimeType: string;
   size: number;
   status: 'uploading' | 'processing' | 'ready' | 'error';
-  analysis?: AudioAnalysis;
+  analysis?: TrackAnalysis;
   manualGenre?: string;
   genreConfidence?: number;
   lastAnalyzedAt?: string;
@@ -18,495 +22,353 @@ export interface UploadResult {
     size: number;
     mimeType: string;
     duration?: number;
-    analysis?: AudioAnalysis;
+    analysis?: TrackAnalysis;
     artist?: string;
     title?: string;
     album?: string;
   };
 }
 
-export interface AudioAnalysis {
-  duration: number;
-  bpm?: number;
-  key?: string;
-  energy?: number;
-  danceability?: number;
-  valence?: number;
-  loudness?: number;
-  spectrogramUrl?: string;
-  waveformData?: number[];
-  genre?: string;
-  genreConfidence?: number;
-  subGenres?: string[];
-  moodTags?: string[];
-  hasVocals?: boolean;
-  vocalPercentage?: number;
-  brightness?: number;
-  warmth?: number;
-  dynamicRangeDb?: number;
-  beatConfidence?: number;
-  keyConfidence?: number;
-  introDuration?: number;
-  outroDuration?: number;
-  harmonicComplexity?: number;
-  rhythmicComplexity?: number;
-  tempoStability?: number;
-  analyzedAt?: string;
-  analyzerVersion?: string;
-  beatGrid?: number[];
-  downbeats?: number[];
+export interface AudioAnalysis extends TrackAnalysis {}
+
+export function trackToUploadResult(track: Track): UploadResult {
+  return {
+    id: track.id,
+    url: track.url,
+    path: track.storagePath,
+    originalName: track.originalName,
+    mimeType: track.mimeType,
+    size: track.size,
+    status:
+      track.status === 'failed' ? 'error'
+      : track.status === 'pending' ? 'processing'
+      : (track.status as UploadResult['status']),
+    analysis: track.analysis,
+    manualGenre: track.manualGenre,
+    genreConfidence: track.genreConfidence,
+    lastAnalyzedAt: track.lastAnalyzedAt,
+    metadata: {
+      filename: track.originalName,
+      size: track.size,
+      mimeType: track.mimeType,
+      duration: track.durationMs ? track.durationMs / 1000 : undefined,
+      analysis: track.analysis,
+      artist: track.artist,
+      title: track.title,
+      album: track.album,
+    },
+  };
 }
 
 class StorageService {
-  private readonly BUCKET_NAME = 'audio-uploads';
-  private readonly MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
-  private readonly ALLOWED_TYPES = [
-    'audio/mpeg',
-    'audio/wav', 
-    'audio/flac',
-    'audio/mp4',
-    'audio/aac',
-    'audio/x-m4a'
-  ];
+  private readonly BUCKET = config.storage.audioBucket;
+  private readonly MAX_SIZE = config.storage.maxFileSizeBytes;
+  private readonly ALLOWED_TYPES = config.storage.allowedMimeTypes;
 
-  /**
-   * Upload an audio file to Supabase storage
-   */
+  async uploadTrack(
+    file: File,
+    userId: string,
+    options: TrackUploadOptions = {},
+    onProgress?: (progress: number) => void
+  ): Promise<Track> {
+    this.validateFile(file);
+
+    const trackId = crypto.randomUUID();
+    const ext = file.name.split('.').pop() ?? 'audio';
+    const storagePath = `tracks/${userId}/${trackId}/original.${ext}`;
+
+    onProgress?.(5);
+
+    const { error: uploadError } = await supabase.storage
+      .from(this.BUCKET)
+      .upload(storagePath, file, { cacheControl: '3600', upsert: false });
+
+    if (uploadError) {
+      if (uploadError.message.includes('Bucket not found')) {
+        throw new Error(
+          `Storage bucket '${this.BUCKET}' not found. Please create it in Supabase Storage.`
+        );
+      }
+      throw new Error(`Upload failed: ${uploadError.message}`);
+    }
+
+    onProgress?.(40);
+
+    const { data: urlData } = supabase.storage
+      .from(this.BUCKET)
+      .getPublicUrl(storagePath);
+
+    const analysis = await this.extractClientDuration(file);
+
+    onProgress?.(60);
+
+    const { data: record, error: dbError } = await supabase
+      .from('tracks')
+      .insert({
+        id: trackId,
+        user_id: userId,
+        title: options.title ?? stripExtension(file.name),
+        artist: options.artist ?? '',
+        album: options.album ?? '',
+        original_name: file.name,
+        filename: storagePath,
+        storage_path: storagePath,
+        mime_type: file.type,
+        size: file.size,
+        url: urlData.publicUrl,
+        status: 'processing',
+        duration_ms: analysis.durationMs,
+        metadata: options.year ? { year: options.year } : {},
+      })
+      .select()
+      .single();
+
+    if (dbError) {
+      await supabase.storage.from(this.BUCKET).remove([storagePath]);
+      throw new Error(`Database error: ${dbError.message}`);
+    }
+
+    this.triggerAnalysis(record.id, urlData.publicUrl);
+
+    await activityLogger.logUpload('started', record.id, userId, {
+      filename: file.name,
+      size: file.size,
+      mimeType: file.type,
+    });
+
+    onProgress?.(80);
+
+    return this.mapRow(record);
+  }
+
+  async getTrack(trackId: string): Promise<Track | null> {
+    const { data, error } = await supabase
+      .from('tracks')
+      .select('*')
+      .eq('id', trackId)
+      .maybeSingle();
+
+    if (error || !data) return null;
+    return this.mapRow(data);
+  }
+
+  async getUserTracks(userId: string): Promise<Track[]> {
+    const { data, error } = await supabase
+      .from('tracks')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error(`Failed to fetch tracks: ${error.message}`);
+    return (data ?? []).map(this.mapRow);
+  }
+
+  async updateTrackMetadata(
+    trackId: string,
+    userId: string,
+    fields: Partial<Pick<Track, 'title' | 'artist' | 'album' | 'manualGenre'>>
+  ): Promise<void> {
+    const update: Record<string, unknown> = {};
+    if (fields.title !== undefined) update.title = fields.title;
+    if (fields.artist !== undefined) update.artist = fields.artist;
+    if (fields.album !== undefined) update.album = fields.album;
+    if (fields.manualGenre !== undefined) update.manual_genre = fields.manualGenre;
+    update.updated_at = new Date().toISOString();
+
+    const { error } = await supabase
+      .from('tracks')
+      .update(update)
+      .eq('id', trackId)
+      .eq('user_id', userId);
+
+    if (error) throw new Error(`Failed to update track: ${error.message}`);
+  }
+
+  async deleteTrackAndAllAssets(trackId: string, userId: string): Promise<void> {
+    const { data: track, error: fetchError } = await supabase
+      .from('tracks')
+      .select('storage_path, user_id')
+      .eq('id', trackId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (fetchError || !track) throw new Error('Track not found');
+
+    const directory = `tracks/${userId}/${trackId}`;
+    const { data: files } = await supabase.storage
+      .from(this.BUCKET)
+      .list(directory);
+
+    if (files && files.length > 0) {
+      const paths = files.map((f) => `${directory}/${f.name}`);
+      await supabase.storage.from(this.BUCKET).remove(paths);
+    }
+
+    const { error: dbError } = await supabase
+      .from('tracks')
+      .delete()
+      .eq('id', trackId)
+      .eq('user_id', userId);
+
+    if (dbError) throw new Error(`Failed to delete track record: ${dbError.message}`);
+  }
+
+  subscribeToTrackUpdates(
+    trackId: string,
+    callback: (status: string, analysis?: TrackAnalysis) => void
+  ) {
+    return supabase
+      .channel(`track-${trackId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'tracks', filter: `id=eq.${trackId}` },
+        (payload) => callback(payload.new.status, payload.new.analysis)
+      )
+      .subscribe();
+  }
+
+  async refreshUrl(trackId: string): Promise<string | null> {
+    const { data, error } = await supabase
+      .from('tracks')
+      .select('storage_path')
+      .eq('id', trackId)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    const { data: urlData } = await supabase.storage
+      .from(this.BUCKET)
+      .createSignedUrl(data.storage_path, 3600);
+
+    return urlData?.signedUrl ?? null;
+  }
+
+  private async triggerAnalysis(trackId: string, audioUrl: string): Promise<void> {
+    try {
+      const requestId = crypto.randomUUID();
+      await fetch(`${config.functions.baseUrl}/analyze-audio`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${config.supabase.anonKey}`,
+          'Content-Type': 'application/json',
+          'X-Request-ID': requestId,
+        },
+        body: JSON.stringify({ trackId, audioUrl }),
+      });
+    } catch {
+      // fire and forget — analysis failure does not block the upload
+    }
+  }
+
+  private async extractClientDuration(file: File): Promise<{ durationMs: number }> {
+    return new Promise((resolve) => {
+      const audio = new Audio();
+      const url = URL.createObjectURL(file);
+      const cleanup = () => URL.revokeObjectURL(url);
+      const done = (ms: number) => { cleanup(); resolve({ durationMs: ms }); };
+
+      audio.preload = 'metadata';
+      audio.addEventListener('loadedmetadata', () => {
+        if (isFinite(audio.duration) && audio.duration > 0) {
+          done(Math.round(audio.duration * 1000));
+        }
+      });
+      audio.addEventListener('durationchange', () => {
+        if (isFinite(audio.duration) && audio.duration > 0) {
+          done(Math.round(audio.duration * 1000));
+        }
+      });
+      audio.addEventListener('error', () => done(0));
+      setTimeout(() => {
+        if (isFinite(audio.duration) && audio.duration > 0) {
+          done(Math.round(audio.duration * 1000));
+        } else {
+          done(0);
+        }
+      }, 5000);
+      audio.src = url;
+    });
+  }
+
+  validateFile(file: File): void {
+    if (!this.ALLOWED_TYPES.includes(file.type as typeof this.ALLOWED_TYPES[number])) {
+      throw new Error(
+        `Unsupported file type: ${file.type}. Supported types: MP3, WAV, FLAC, AAC, M4A, OGG, AIFF.`
+      );
+    }
+    if (file.size > this.MAX_SIZE) {
+      throw new Error(
+        `File too large: ${Math.round(file.size / 1024 / 1024)}MB (max: 200MB)`
+      );
+    }
+    if (file.size === 0) throw new Error('File is empty');
+  }
+
   async uploadAudioFile(
     file: File,
     userId: string,
     onProgress?: (progress: number) => void
   ): Promise<UploadResult> {
-    // Validate file
-    this.validateFile(file);
-
-    // Check for existing upload with same name and size
-    const { data: existingUpload } = await supabase
-      .from('uploads')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('original_name', file.name)
-      .eq('size', file.size)
-      .maybeSingle();
-
-    // If exact match found, return existing upload instead of creating duplicate
-    if (existingUpload) {
-      return {
-        id: existingUpload.id,
-        url: existingUpload.url,
-        path: existingUpload.filename,
-        originalName: existingUpload.original_name,
-        mimeType: existingUpload.mime_type || 'audio/mpeg',
-        size: existingUpload.size,
-        status: existingUpload.status || 'ready',
-        analysis: existingUpload.analysis,
-        manualGenre: existingUpload.manual_genre,
-        genreConfidence: existingUpload.genre_confidence,
-        lastAnalyzedAt: existingUpload.last_analyzed_at,
-        metadata: {
-          filename: existingUpload.original_name,
-          size: existingUpload.size,
-          mimeType: existingUpload.mime_type || 'audio/mpeg',
-          duration: existingUpload.analysis?.duration,
-          analysis: existingUpload.analysis,
-          artist: existingUpload.metadata?.artist,
-          title: existingUpload.metadata?.title,
-          album: existingUpload.metadata?.album
-        }
-      };
-    }
-
-    // Generate unique filename
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-
-    try {
-      // Upload to Supabase storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from(this.BUCKET_NAME)
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (uploadError) {
-        if (uploadError.message.includes('Bucket not found')) {
-          throw new Error(`Storage bucket '${this.BUCKET_NAME}' not found. Please create this bucket in your Supabase project's Storage section before uploading files.`);
-        }
-        throw new Error(`Upload failed: ${uploadError.message}`);
-      }
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from(this.BUCKET_NAME)
-        .getPublicUrl(fileName);
-
-      // Analyze audio file
-      const analysis = await this.analyzeAudioFile(file);
-
-      // Create upload record in database
-      const { data: uploadRecord, error: dbError } = await supabase
-        .from('uploads')
-        .insert({
-          user_id: userId,
-          filename: fileName,
-          original_name: file.name,
-          mime_type: file.type,
-          size: file.size,
-          url: urlData.publicUrl,
-          status: 'processing',
-          analysis: analysis
-        })
-        .select()
-        .single();
-
-      if (dbError) {
-        // Clean up uploaded file if database insert fails
-        await supabase.storage.from(this.BUCKET_NAME).remove([fileName]);
-        throw new Error(`Database error: ${dbError.message}`);
-      }
-
-      // Trigger background analysis
-      this.triggerBackgroundAnalysis(uploadRecord.id, urlData.publicUrl);
-
-      // Log upload start
-      await activityLogger.logUpload('started', uploadRecord.id, userId, {
-        filename: file.name,
-        size: file.size,
-        mimeType: file.type
-      });
-
-      return {
-        id: uploadRecord.id,
-        url: urlData.publicUrl,
-        path: fileName,
-        originalName: file.name,
-        mimeType: file.type,
-        size: file.size,
-        status: 'processing',
-        analysis: analysis,
-        metadata: {
-          filename: file.name,
-          size: file.size,
-          mimeType: file.type,
-          duration: analysis.duration,
-          analysis: analysis
-        }
-      };
-
-    } catch (error) {
-      console.error('Upload error:', error);
-      throw error;
-    }
+    const track = await this.uploadTrack(file, userId, {}, onProgress);
+    return trackToUploadResult(track);
   }
 
-  /**
-   * Trigger background audio analysis
-   */
-  private async triggerBackgroundAnalysis(uploadId: string, audioUrl: string): Promise<void> {
-    try {
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-audio`;
-      
-      const headers = {
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        'Content-Type': 'application/json',
-      };
-
-      // Fire and forget - don't wait for analysis to complete
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          uploadId,
-          audioUrl
-        })
-      });
-      
-      if (response.ok) {
-        // Log successful analysis trigger
-        await activityLogger.logActivity('upload_analysis_started', {
-          uploadId,
-          audioUrl
-        });
-      }
-      
-    } catch (error) {
-      console.error('Failed to trigger background analysis:', error);
-    }
-  }
-
-  /**
-   * Get upload by ID with fresh URL
-   */
   async getUpload(uploadId: string): Promise<UploadResult | null> {
-    const { data, error } = await supabase
-      .from('uploads')
-      .select('*')
-      .eq('id', uploadId)
-      .single();
-
-    if (error || !data) {
-      return null;
-    }
-
-    // Generate fresh signed URL for security
-    const { data: urlData } = await supabase.storage
-      .from(this.BUCKET_NAME)
-      .createSignedUrl(data.filename, 3600); // 1 hour expiry
-
-    return {
-      id: data.id,
-      url: urlData?.signedUrl || data.url,
-      path: data.filename,
-      originalName: data.original_name,
-      mimeType: data.mime_type || 'audio/mpeg',
-      size: data.size,
-      status: data.status || 'ready',
-      analysis: data.analysis,
-      metadata: {
-        filename: data.original_name,
-        size: data.size,
-        mimeType: data.mime_type || 'audio/mpeg',
-        duration: data.analysis?.duration,
-        analysis: data.analysis
-      }
-    };
+    const track = await this.getTrack(uploadId);
+    return track ? trackToUploadResult(track) : null;
   }
 
-  /**
-   * Get user's uploads
-   */
   async getUserUploads(userId: string): Promise<UploadResult[]> {
-    console.log('[StorageService] getUserUploads called for userId:', userId);
-
-    const { data: session } = await supabase.auth.getSession();
-    console.log('[StorageService] Current session:', {
-      hasSession: !!session.session,
-      sessionUserId: session.session?.user?.id,
-      requestedUserId: userId,
-      match: session.session?.user?.id === userId
-    });
-
-    const { data, error } = await supabase
-      .from('uploads')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    console.log('[StorageService] Query result:', {
-      error: error?.message,
-      dataLength: data?.length,
-      data: data
-    });
-
-    if (error) {
-      console.error('[StorageService] Query error:', error);
-      throw new Error(`Failed to fetch uploads: ${error.message}`);
-    }
-
-    const results = data.map(upload => ({
-      id: upload.id,
-      url: upload.url,
-      path: upload.filename,
-      originalName: upload.original_name,
-      mimeType: upload.mime_type || 'audio/mpeg',
-      size: upload.size,
-      status: upload.status || 'ready',
-      analysis: upload.analysis,
-      manualGenre: upload.manual_genre,
-      genreConfidence: upload.genre_confidence,
-      lastAnalyzedAt: upload.last_analyzed_at,
-      metadata: {
-        filename: upload.original_name,
-        size: upload.size,
-        mimeType: upload.mime_type || 'audio/mpeg',
-        duration: upload.analysis?.duration,
-        analysis: upload.analysis,
-        artist: upload.metadata?.artist,
-        title: upload.metadata?.title,
-        album: upload.metadata?.album
-      }
-    }));
-
-    console.log('[StorageService] Returning', results.length, 'uploads');
-    return results;
+    const tracks = await this.getUserTracks(userId);
+    return tracks.map(trackToUploadResult);
   }
 
-  /**
-   * Get upload analysis status
-   */
-  async getUploadAnalysis(uploadId: string): Promise<{
-    status: 'uploading' | 'processing' | 'ready' | 'error';
-    analysis?: any;
-  } | null> {
-    const { data, error } = await supabase
-      .from('uploads')
-      .select('status, analysis')
-      .eq('id', uploadId)
-      .single();
+  async listUserUploads(userId: string): Promise<UploadResult[]> {
+    return this.getUserUploads(userId);
+  }
 
-    if (error || !data) {
-      return null;
-    }
+  async deleteUpload(uploadId: string, userId: string): Promise<void> {
+    return this.deleteTrackAndAllAssets(uploadId, userId);
+  }
 
+  subscribeToAnalysisUpdates(
+    trackId: string,
+    callback: (status: string, analysis?: TrackAnalysis) => void
+  ) {
+    return this.subscribeToTrackUpdates(trackId, callback);
+  }
+
+  private mapRow(row: Record<string, unknown>): Track {
     return {
-      status: data.status,
-      analysis: data.analysis
+      id: row.id as string,
+      userId: row.user_id as string,
+      title: (row.title as string) ?? '',
+      artist: (row.artist as string) ?? '',
+      album: (row.album as string) ?? '',
+      originalName: row.original_name as string,
+      filename: row.filename as string,
+      storagePath: (row.storage_path as string) ?? '',
+      mimeType: (row.mime_type as string) ?? 'audio/mpeg',
+      size: row.size as number,
+      url: row.url as string,
+      status: (row.status as Track['status']) ?? 'ready',
+      durationMs: (row.duration_ms as number) ?? 0,
+      sampleRate: (row.sample_rate as number) ?? 44100,
+      bitDepth: (row.bit_depth as number) ?? 16,
+      channels: (row.channels as number) ?? 2,
+      analysis: row.analysis as TrackAnalysis | undefined,
+      manualGenre: row.manual_genre as string | undefined,
+      genreConfidence: row.genre_confidence as number | undefined,
+      metadata: row.metadata as Track['metadata'],
+      lastAnalyzedAt: row.last_analyzed_at as string | undefined,
+      createdAt: row.created_at as string,
+      updatedAt: row.updated_at as string,
     };
   }
+}
 
-  /**
-   * Subscribe to upload analysis updates
-   */
-  subscribeToAnalysisUpdates(
-    uploadId: string, 
-    callback: (status: string, analysis?: any) => void
-  ) {
-    return supabase
-      .channel(`upload-${uploadId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'uploads',
-          filter: `id=eq.${uploadId}`
-        },
-        (payload) => {
-          callback(payload.new.status, payload.new.analysis);
-        }
-      )
-      .subscribe();
-  }
-
-  /**
-   * Delete upload and file
-   */
-  async deleteUpload(uploadId: string, userId: string): Promise<void> {
-    // Get upload record
-    const { data: upload, error: fetchError } = await supabase
-      .from('uploads')
-      .select('filename')
-      .eq('id', uploadId)
-      .eq('user_id', userId)
-      .single();
-
-    if (fetchError || !upload) {
-      throw new Error('Upload not found');
-    }
-
-    // Delete from storage
-    const { error: storageError } = await supabase.storage
-      .from(this.BUCKET_NAME)
-      .remove([upload.filename]);
-
-    if (storageError) {
-      console.warn('Failed to delete file from storage:', storageError);
-    }
-
-    // Delete from database
-    const { error: dbError } = await supabase
-      .from('uploads')
-      .delete()
-      .eq('id', uploadId)
-      .eq('user_id', userId);
-
-    if (dbError) {
-      throw new Error(`Failed to delete upload record: ${dbError.message}`);
-    }
-  }
-
-  /**
-   * Validate file before upload
-   */
-  private validateFile(file: File): void {
-    if (!this.ALLOWED_TYPES.includes(file.type)) {
-      throw new Error(`Unsupported file type: ${file.type}`);
-    }
-
-    if (file.size > this.MAX_FILE_SIZE) {
-      throw new Error(`File too large: ${Math.round(file.size / 1024 / 1024)}MB (max: 100MB)`);
-    }
-
-    if (file.size === 0) {
-      throw new Error('File is empty');
-    }
-  }
-
-  /**
-   * Analyze audio file for metadata
-   */
-  private async analyzeAudioFile(file: File): Promise<AudioAnalysis> {
-    return new Promise((resolve) => {
-      const audio = new Audio();
-      const url = URL.createObjectURL(file);
-
-      const cleanup = () => {
-        URL.revokeObjectURL(url);
-      };
-
-      audio.preload = 'metadata';
-
-      audio.addEventListener('loadedmetadata', () => {
-        const duration = audio.duration;
-
-        if (!duration || !isFinite(duration) || duration === 0) {
-          audio.addEventListener('durationchange', () => {
-            if (isFinite(audio.duration) && audio.duration > 0) {
-              cleanup();
-              resolve({ duration: audio.duration });
-            }
-          });
-          return;
-        }
-
-        const analysis: AudioAnalysis = {
-          duration: duration
-        };
-
-        cleanup();
-        resolve(analysis);
-      });
-
-      audio.addEventListener('error', () => {
-        cleanup();
-        resolve({ duration: 0 });
-      });
-
-      setTimeout(() => {
-        if (isFinite(audio.duration) && audio.duration > 0) {
-          cleanup();
-          resolve({ duration: audio.duration });
-        } else {
-          cleanup();
-          resolve({ duration: 0 });
-        }
-      }, 5000);
-
-      audio.src = url;
-    });
-  }
-
-  /**
-   * Refresh expired URL
-   */
-  async refreshUrl(uploadId: string): Promise<string | null> {
-    const { data, error } = await supabase
-      .from('uploads')
-      .select('filename')
-      .eq('id', uploadId)
-      .single();
-
-    if (error || !data) {
-      return null;
-    }
-
-    const { data: urlData } = await supabase.storage
-      .from(this.BUCKET_NAME)
-      .createSignedUrl(data.filename, 3600);
-
-    return urlData?.signedUrl || null;
-  }
+function stripExtension(filename: string): string {
+  return filename.replace(/\.[^/.]+$/, '');
 }
 
 export const storageService = new StorageService();

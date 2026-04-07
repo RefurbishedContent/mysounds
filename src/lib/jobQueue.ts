@@ -1,50 +1,87 @@
 import { supabase } from './supabase';
+import { config } from './config';
 
-export interface JobQueueConfig {
-  maxRetries: number;
-  retryDelay: number;
-  priority: 'low' | 'normal' | 'high';
-}
+export type JobPriority = 'low' | 'normal' | 'high';
+export type JobStatus = 'queued' | 'processing' | 'completed' | 'failed';
 
-export interface RenderJob {
+export interface BaseJob {
   id: string;
-  projectId: string;
   userId: string;
-  format: 'mp3' | 'wav' | 'flac';
-  quality: 'draft' | 'standard' | 'high' | 'lossless';
-  status: 'queued' | 'processing' | 'completed' | 'failed';
+  status: JobStatus;
   progress: number;
   retryCount: number;
   priority: number;
+  errorMessage?: string;
   createdAt: string;
   startedAt?: string;
   completedAt?: string;
-  errorMessage?: string;
 }
 
-class JobQueueManager {
-  private static instance: JobQueueManager;
+export interface RenderJob extends BaseJob {
+  type: 'render-audio';
+  projectId: string;
+  format: 'mp3' | 'wav' | 'flac';
+  quality: 'draft' | 'standard' | 'high' | 'lossless';
+}
+
+export interface JobTypeDefinition<TJob extends BaseJob> {
+  table: string;
+  functionSlug: string;
+  maxRetries: number;
+  buildPayload: (job: TJob) => Record<string, unknown>;
+  mapRow: (row: Record<string, unknown>) => TJob;
+}
+
+const RENDER_JOB_DEF: JobTypeDefinition<RenderJob> = {
+  table: 'render_jobs',
+  functionSlug: 'render-audio',
+  maxRetries: 3,
+  buildPayload: (job) => ({
+    jobId: job.id,
+    projectId: job.projectId,
+    userId: job.userId,
+    format: job.format,
+    quality: job.quality,
+  }),
+  mapRow: (row) => ({
+    type: 'render-audio',
+    id: row.id as string,
+    userId: row.user_id as string,
+    projectId: row.project_id as string,
+    format: row.format as RenderJob['format'],
+    quality: row.quality as RenderJob['quality'],
+    status: row.status as JobStatus,
+    progress: (row.progress as number) ?? 0,
+    retryCount: (row.retry_count as number) ?? 0,
+    priority: (row.priority as number) ?? 5,
+    errorMessage: row.error_message as string | undefined,
+    createdAt: row.created_at as string,
+    startedAt: row.started_at as string | undefined,
+    completedAt: row.completed_at as string | undefined,
+  }),
+};
+
+class GenericJobQueueManager {
+  private static instance: GenericJobQueueManager;
   private processingJobs: Set<string> = new Set();
   private maxConcurrentJobs = 3;
 
   private constructor() {}
 
-  static getInstance(): JobQueueManager {
-    if (!JobQueueManager.instance) {
-      JobQueueManager.instance = new JobQueueManager();
+  static getInstance(): GenericJobQueueManager {
+    if (!GenericJobQueueManager.instance) {
+      GenericJobQueueManager.instance = new GenericJobQueueManager();
     }
-    return JobQueueManager.instance;
+    return GenericJobQueueManager.instance;
   }
 
-  async createJob(
+  async createRenderJob(
     projectId: string,
     userId: string,
-    format: 'mp3' | 'wav' | 'flac',
-    quality: 'draft' | 'standard' | 'high' | 'lossless',
-    config?: Partial<JobQueueConfig>
+    format: RenderJob['format'],
+    quality: RenderJob['quality'],
+    priority: JobPriority = 'normal'
   ): Promise<string> {
-    const priority = this.getPriorityValue(config?.priority || 'normal');
-
     const { data, error } = await supabase
       .from('render_jobs')
       .insert({
@@ -55,205 +92,135 @@ class JobQueueManager {
         status: 'queued',
         progress: 0,
         retry_count: 0,
-        priority,
-        processing_logs: []
+        priority: this.priorityValue(priority),
+        processing_logs: [],
       })
       .select()
       .single();
 
-    if (error) {
-      throw new Error(`Failed to create job: ${error.message}`);
-    }
-
+    if (error) throw new Error(`Failed to create job: ${error.message}`);
     return data.id;
   }
 
-  private getPriorityValue(priority: 'low' | 'normal' | 'high'): number {
-    switch (priority) {
-      case 'high':
-        return 10;
-      case 'normal':
-        return 5;
-      case 'low':
-        return 1;
-      default:
-        return 5;
-    }
-  }
-
-  async startJob(jobId: string): Promise<void> {
-    if (this.processingJobs.has(jobId)) {
-      throw new Error('Job already processing');
-    }
-
+  async startJob<TJob extends BaseJob>(
+    jobId: string,
+    def: JobTypeDefinition<TJob>
+  ): Promise<void> {
+    if (this.processingJobs.has(jobId)) throw new Error('Job already processing');
     if (this.processingJobs.size >= this.maxConcurrentJobs) {
       throw new Error('Maximum concurrent jobs reached');
     }
 
     this.processingJobs.add(jobId);
 
-    const { data: job, error } = await supabase
-      .from('render_jobs')
+    const { data: row, error } = await supabase
+      .from(def.table)
       .select('*')
       .eq('id', jobId)
       .single();
 
-    if (error || !job) {
+    if (error || !row) {
       this.processingJobs.delete(jobId);
       throw new Error('Job not found');
     }
 
+    const job = def.mapRow(row as Record<string, unknown>);
+
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/render-audio`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-          },
-          body: JSON.stringify({
-            jobId: job.id,
-            projectId: job.project_id,
-            userId: job.user_id,
-            format: job.format,
-            quality: job.quality
-          })
-        }
-      );
+      const response = await fetch(`${config.functions.baseUrl}/${def.functionSlug}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${config.supabase.anonKey}`,
+          'X-Request-ID': crypto.randomUUID(),
+        },
+        body: JSON.stringify(def.buildPayload(job)),
+      });
 
       if (!response.ok) {
-        throw new Error(`Render request failed: ${response.statusText}`);
+        throw new Error(`Request failed: ${response.statusText}`);
       }
-    } catch (error) {
-      await this.handleJobFailure(jobId, error);
+    } catch (err) {
+      await this.handleFailure(jobId, def, err);
     } finally {
       this.processingJobs.delete(jobId);
     }
   }
 
-  async handleJobFailure(jobId: string, error: any): Promise<void> {
-    const { data: job } = await supabase
-      .from('render_jobs')
+  async startRenderJob(jobId: string): Promise<void> {
+    return this.startJob(jobId, RENDER_JOB_DEF);
+  }
+
+  private async handleFailure<TJob extends BaseJob>(
+    jobId: string,
+    def: JobTypeDefinition<TJob>,
+    error: unknown
+  ): Promise<void> {
+    const message = error instanceof Error ? error.message : String(error);
+
+    const { data: row } = await supabase
+      .from(def.table)
       .select('retry_count')
       .eq('id', jobId)
       .single();
 
-    const maxRetries = 3;
-    const retryCount = (job?.retry_count || 0) + 1;
+    const retryCount = ((row?.retry_count as number) ?? 0) + 1;
 
-    if (retryCount < maxRetries) {
+    if (retryCount < def.maxRetries) {
       await supabase
-        .from('render_jobs')
-        .update({
-          status: 'queued',
-          retry_count: retryCount,
-          error_message: error.message,
-          updated_at: new Date().toISOString()
-        })
+        .from(def.table)
+        .update({ status: 'queued', retry_count: retryCount, error_message: message, updated_at: new Date().toISOString() })
         .eq('id', jobId);
 
       const delay = Math.min(1000 * Math.pow(2, retryCount), 30000);
-      setTimeout(() => this.startJob(jobId), delay);
+      setTimeout(() => this.startJob(jobId, def), delay);
     } else {
       await supabase
-        .from('render_jobs')
-        .update({
-          status: 'failed',
-          error_message: `Max retries exceeded: ${error.message}`,
-          updated_at: new Date().toISOString()
-        })
+        .from(def.table)
+        .update({ status: 'failed', error_message: `Max retries exceeded: ${message}`, updated_at: new Date().toISOString() })
         .eq('id', jobId);
+
+      await this.sendToDeadLetter(jobId, def.table, { jobId, table: def.table }, message, retryCount);
     }
   }
 
-  async getJobStatus(jobId: string): Promise<RenderJob | null> {
+  private async sendToDeadLetter(
+    originalJobId: string,
+    jobType: string,
+    payload: Record<string, unknown>,
+    errorMessage: string,
+    retryCount: number
+  ): Promise<void> {
+    try {
+      await supabase.from('dead_letter_jobs').insert({
+        original_job_id: originalJobId,
+        job_type: jobType,
+        payload,
+        error_message: errorMessage,
+        retry_count: retryCount,
+      });
+    } catch {
+      // dead letter logging must never throw
+    }
+  }
+
+  async getRenderJobStatus(jobId: string): Promise<RenderJob | null> {
     const { data, error } = await supabase
       .from('render_jobs')
       .select('*')
       .eq('id', jobId)
-      .single();
+      .maybeSingle();
 
-    if (error) {
-      return null;
-    }
-
-    return {
-      id: data.id,
-      projectId: data.project_id,
-      userId: data.user_id,
-      format: data.format,
-      quality: data.quality,
-      status: data.status,
-      progress: data.progress,
-      retryCount: data.retry_count,
-      priority: data.priority,
-      createdAt: data.created_at,
-      startedAt: data.started_at,
-      completedAt: data.completed_at,
-      errorMessage: data.error_message
-    };
+    if (error || !data) return null;
+    return RENDER_JOB_DEF.mapRow(data as Record<string, unknown>);
   }
 
-  async cancelJob(jobId: string): Promise<void> {
+  async cancelJob(jobId: string, table = 'render_jobs'): Promise<void> {
     this.processingJobs.delete(jobId);
-
     await supabase
-      .from('render_jobs')
-      .update({
-        status: 'failed',
-        error_message: 'Cancelled by user',
-        updated_at: new Date().toISOString()
-      })
+      .from(table)
+      .update({ status: 'failed', error_message: 'Cancelled by user', updated_at: new Date().toISOString() })
       .eq('id', jobId);
-  }
-
-  async getQueuedJobs(userId: string): Promise<RenderJob[]> {
-    const { data, error } = await supabase
-      .from('render_jobs')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('status', 'queued')
-      .order('priority', { ascending: false })
-      .order('created_at', { ascending: true });
-
-    if (error) {
-      return [];
-    }
-
-    return data.map(job => ({
-      id: job.id,
-      projectId: job.project_id,
-      userId: job.user_id,
-      format: job.format,
-      quality: job.quality,
-      status: job.status,
-      progress: job.progress,
-      retryCount: job.retry_count,
-      priority: job.priority,
-      createdAt: job.created_at,
-      startedAt: job.started_at,
-      completedAt: job.completed_at,
-      errorMessage: job.error_message
-    }));
-  }
-
-  async processNextJob(): Promise<void> {
-    if (this.processingJobs.size >= this.maxConcurrentJobs) {
-      return;
-    }
-
-    const { data: jobs } = await supabase
-      .from('render_jobs')
-      .select('*')
-      .eq('status', 'queued')
-      .order('priority', { ascending: false })
-      .order('created_at', { ascending: true })
-      .limit(1);
-
-    if (jobs && jobs.length > 0) {
-      await this.startJob(jobs[0].id);
-    }
   }
 
   subscribeToJob(jobId: string, callback: (job: RenderJob) => void): () => void {
@@ -261,36 +228,12 @@ class JobQueueManager {
       .channel(`job:${jobId}`)
       .on(
         'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'render_jobs',
-          filter: `id=eq.${jobId}`
-        },
-        (payload) => {
-          const job = payload.new as any;
-          callback({
-            id: job.id,
-            projectId: job.project_id,
-            userId: job.user_id,
-            format: job.format,
-            quality: job.quality,
-            status: job.status,
-            progress: job.progress,
-            retryCount: job.retry_count,
-            priority: job.priority,
-            createdAt: job.created_at,
-            startedAt: job.started_at,
-            completedAt: job.completed_at,
-            errorMessage: job.error_message
-          });
-        }
+        { event: 'UPDATE', schema: 'public', table: 'render_jobs', filter: `id=eq.${jobId}` },
+        (payload) => callback(RENDER_JOB_DEF.mapRow(payload.new as Record<string, unknown>))
       )
       .subscribe();
 
-    return () => {
-      channel.unsubscribe();
-    };
+    return () => channel.unsubscribe();
   }
 
   getProcessingCount(): number {
@@ -300,6 +243,12 @@ class JobQueueManager {
   setMaxConcurrentJobs(max: number): void {
     this.maxConcurrentJobs = Math.max(1, Math.min(10, max));
   }
+
+  private priorityValue(p: JobPriority): number {
+    return p === 'high' ? 10 : p === 'low' ? 1 : 5;
+  }
 }
 
-export const jobQueue = JobQueueManager.getInstance();
+export const jobQueue = GenericJobQueueManager.getInstance();
+
+export type { JobTypeDefinition };
