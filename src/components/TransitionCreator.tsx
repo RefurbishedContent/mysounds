@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { storageService, UploadResult } from '../lib/storage';
 import { transitionsService } from '../lib/transitionsService';
 import { BlendData } from '../lib/blendExportService';
+import { getUserMashupCounter, incrementMashupCounter } from '../lib/supabase';
 import { AudioScrubber } from './AudioScrubber';
 import DJCrowdCanvas from './DJCrowdCanvas';
 import MashUpSongSelector from './mashup/MashUpSongSelector';
@@ -19,7 +20,6 @@ import {
   MIN_CLIP_DURATION,
   DEFAULT_TRANSITION_DURATION,
   formatTime,
-  generateMashUpName,
 } from './mashup/constants';
 
 interface TransitionCreatorProps {
@@ -108,10 +108,12 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
 
   const [pairConfigs, setPairConfigs] = useState<TransitionPairConfig[]>(initialPairConfigs || []);
   const [completedBlends, setCompletedBlends] = useState<BlendData[]>([]);
+  const [mashupNumber, setMashupNumber] = useState<number>(1);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const mashUpName = customName.trim() || (selectedSongs.length > 0 ? generateMashUpName(selectedSongs) : '');
+  const defaultMashUpName = `Mash Up #${mashupNumber}`;
+  const mashUpName = customName.trim() || defaultMashUpName;
 
   useEffect(() => {
     if (scrollContainerRef.current) {
@@ -122,6 +124,14 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
   useEffect(() => {
     loadData();
   }, [user]);
+
+  useEffect(() => {
+    if (user?.id) {
+      getUserMashupCounter(user.id).then(counter => {
+        setMashupNumber(counter);
+      });
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     if (currentStep !== 'set-transition-points' || selectedSongs.length === 0) return;
@@ -412,8 +422,6 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
             selectedSongs={selectedSongs}
             clipMarkers={clipMarkers}
             songDurations={songDurations}
-            customName={customName}
-            onCustomNameChange={setCustomName}
             onUpdateClipMarker={updateClipMarker}
             validationWarnings={validationWarnings}
             hasErrors={hasErrors}
@@ -435,10 +443,15 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
           <MashUpConfirmationStep
             pairs={pairConfigs}
             mashUpName={mashUpName}
-            defaultName={generateMashUpName(selectedSongs)}
+            defaultName={defaultMashUpName}
             customName={customName}
             onCustomNameChange={setCustomName}
-            onConfirm={() => setCurrentStep('processing')}
+            onConfirm={async () => {
+              if (user?.id) {
+                await incrementMashupCounter(user.id);
+              }
+              setCurrentStep('processing');
+            }}
             onBack={() => setCurrentStep('set-templates')}
           />
         )}
@@ -480,8 +493,6 @@ interface TransitionPointsStepProps {
   selectedSongs: UploadResult[];
   clipMarkers: ClipMarker[];
   songDurations: number[];
-  customName: string;
-  onCustomNameChange: (name: string) => void;
   onUpdateClipMarker: (index: number, field: 'start' | 'end', value: number) => void;
   validationWarnings: ValidationWarning[];
   hasErrors: boolean;
@@ -493,16 +504,12 @@ const TransitionPointsStep: React.FC<TransitionPointsStepProps> = ({
   selectedSongs,
   clipMarkers,
   songDurations,
-  customName,
-  onCustomNameChange,
   onUpdateClipMarker,
   validationWarnings,
   hasErrors,
   saving,
   onSave,
 }) => {
-  const defaultName = generateMashUpName(selectedSongs);
-
   return (
     <div className="relative min-h-full" data-tutorial="transition-points-interface">
       <DJCrowdCanvas />

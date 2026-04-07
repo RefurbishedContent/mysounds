@@ -64,6 +64,7 @@ export interface Database {
           name: string;
           avatar_url: string | null;
           plan: 'free' | 'pro' | 'premium' | 'admin';
+          mashup_counter: number;
           created_at: string;
           updated_at: string;
         };
@@ -73,6 +74,7 @@ export interface Database {
           name: string;
           avatar_url?: string | null;
           plan?: 'free' | 'pro' | 'premium' | 'admin';
+          mashup_counter?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -82,6 +84,7 @@ export interface Database {
           name?: string;
           avatar_url?: string | null;
           plan?: 'free' | 'pro' | 'premium' | 'admin';
+          mashup_counter?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -305,4 +308,35 @@ export interface Database {
       };
     };
   };
+}
+
+export async function getUserMashupCounter(userId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('mashup_counter')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching mashup counter:', error);
+    return 1;
+  }
+
+  return data?.mashup_counter ?? 1;
+}
+
+export async function incrementMashupCounter(userId: string): Promise<number> {
+  const currentCounter = await getUserMashupCounter(userId);
+  const newCounter = currentCounter + 1;
+
+  const { error } = await supabase
+    .from('users')
+    .update({ mashup_counter: newCounter })
+    .eq('id', userId);
+
+  if (error) {
+    console.error('Error incrementing mashup counter:', error);
+  }
+
+  return newCounter;
 }
