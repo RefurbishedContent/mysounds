@@ -9,6 +9,9 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 interface MashUpConfirmationStepProps {
   pairs: TransitionPairConfig[];
   mashUpName: string;
+  defaultName: string;
+  customName: string;
+  onCustomNameChange: (name: string) => void;
   onConfirm: () => void;
   onBack: () => void;
 }
@@ -16,6 +19,9 @@ interface MashUpConfirmationStepProps {
 const MashUpConfirmationStep: React.FC<MashUpConfirmationStepProps> = ({
   pairs,
   mashUpName,
+  defaultName,
+  customName,
+  onCustomNameChange,
   onConfirm,
   onBack,
 }) => {
@@ -29,10 +35,31 @@ const MashUpConfirmationStep: React.FC<MashUpConfirmationStepProps> = ({
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
       <div className="text-center mb-2">
         <h2 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-bold text-white mb-1`}>
-          {mashUpName}
+          Confirm Mash Up
         </h2>
         <p className="text-sm text-gray-400">
           Review your mash up configuration before processing
+        </p>
+      </div>
+
+      <div className="bg-gray-800/60 border border-gray-700/50 rounded-xl p-4">
+        <label className="block text-sm font-medium text-gray-300 mb-2 text-left">
+          Mash Up Name (Optional)
+        </label>
+        <input
+          type="text"
+          placeholder={defaultName}
+          value={customName}
+          onChange={(e) => onCustomNameChange(e.target.value)}
+          maxLength={60}
+          className="w-full px-4 py-2.5 bg-gray-900/70 border border-gray-600/60 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+        />
+        <p className="text-xs text-gray-500 mt-1.5 text-left">
+          {customName.length > 0 ? (
+            <>Custom: <span className="text-cyan-400 font-medium">{customName}</span> ({customName.length}/60)</>
+          ) : (
+            <>Default: <span className="text-gray-400 font-medium">{defaultName}</span></>
+          )}
         </p>
       </div>
 

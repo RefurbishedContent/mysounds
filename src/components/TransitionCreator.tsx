@@ -435,6 +435,9 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
           <MashUpConfirmationStep
             pairs={pairConfigs}
             mashUpName={mashUpName}
+            defaultName={generateMashUpName(selectedSongs)}
+            customName={customName}
+            onCustomNameChange={setCustomName}
             onConfirm={() => setCurrentStep('processing')}
             onBack={() => setCurrentStep('set-templates')}
           />
@@ -505,29 +508,8 @@ const TransitionPointsStep: React.FC<TransitionPointsStepProps> = ({
       <DJCrowdCanvas />
       <div className="relative z-10 max-w-3xl mx-auto px-4 py-6 space-y-6">
       <div className="text-center mb-4">
-        <h2 className="text-2xl font-bold text-white mb-2">Set Clip Points</h2>
+        <h2 className="text-2xl font-bold text-white mb-2">Set Start & End Points</h2>
         <p className="text-gray-400 mb-4">Drag markers to control each song's start and end</p>
-
-        <div className="max-w-md mx-auto">
-          <label className="block text-sm font-medium text-gray-300 mb-2 text-left">
-            Mash Up Name (Optional)
-          </label>
-          <input
-            type="text"
-            placeholder={defaultName}
-            value={customName}
-            onChange={(e) => onCustomNameChange(e.target.value)}
-            maxLength={60}
-            className="w-full px-4 py-2.5 bg-gray-800/70 backdrop-blur-sm border border-gray-600/60 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
-          />
-          <p className="text-xs text-gray-500 mt-1.5 text-left">
-            {customName.length > 0 ? (
-              <>Custom: <span className="text-cyan-400 font-medium">{customName}</span> ({customName.length}/60)</>
-            ) : (
-              <>Default: <span className="text-gray-400 font-medium">{defaultName}</span></>
-            )}
-          </p>
-        </div>
       </div>
 
       <div className="space-y-4">
