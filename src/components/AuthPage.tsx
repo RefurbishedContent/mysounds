@@ -369,9 +369,15 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthenticated }) => {
               </p>
             </div>
           </div>
-          <p className="text-xs text-center" style={{ color: 'var(--text-tertiary)' }}>
-            Didn't receive the email? Check your spam folder or try again.
-          </p>
+          <div className="space-y-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+            <p className="font-medium text-gray-400">If you don't see the email:</p>
+            <ul className="space-y-1.5 pl-4 list-disc">
+              <li>Check your spam/junk folder</li>
+              <li>Look for an email from <span className="text-gray-300">noreply@mail.app.supabase.io</span></li>
+              <li>Wait a few minutes -- delivery can take up to 5 minutes</li>
+              <li>Supabase limits reset emails to 3 per hour</li>
+            </ul>
+          </div>
           <button
             type="button"
             onClick={() => setResetEmailSent(false)}
