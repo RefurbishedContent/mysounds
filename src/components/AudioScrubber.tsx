@@ -71,6 +71,8 @@ export function AudioScrubber({
   const isHoldPlayingRef = useRef(false);
   const pointerDownXRef = useRef<number>(0);
   const isDraggingRef = useRef(false);
+  const resumePlaybackTimeoutRef = useRef<number | null>(null);
+  const lastMoveTimeRef = useRef<number>(0);
 
   markersRef.current = markers;
   durationRef.current = duration;
@@ -414,53 +416,74 @@ export function AudioScrubber({
     stopMarkerPreview();
   }, [stopMarkerPreview]);
 
+  const startContinuousPlayback = useCallback(async () => {
+    if (!playerRef.current?.loaded) return;
+
+    try {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      playerRef.current.stop();
+      await Tone.start();
+
+      const currentPos = playbackTimeRef.current;
+      pauseTimeRef.current = currentPos;
+      startTimeRef.current = Tone.now();
+      playerRef.current.start(Tone.now(), currentPos);
+      isHoldPlayingRef.current = true;
+      setIsPlaying(true);
+    } catch {}
+  }, []);
+
   const handlePlayheadPointerDown = useCallback(async (e: React.PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
     hasInteractedRef.current = true;
     isScrubbingRef.current = true;
-    isHoldPlayingRef.current = true;
     isDraggingRef.current = false;
     pointerDownXRef.current = e.clientX;
+    lastMoveTimeRef.current = 0;
     setIsScrubbing(true);
+
+    if (resumePlaybackTimeoutRef.current) {
+      clearTimeout(resumePlaybackTimeoutRef.current);
+      resumePlaybackTimeoutRef.current = null;
+    }
 
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
 
-    if (playerRef.current?.loaded) {
-      try {
-        if (animationFrameRef.current) {
-          cancelAnimationFrame(animationFrameRef.current);
-        }
-        playerRef.current.stop();
-        await Tone.start();
-
-        const currentPos = playbackTimeRef.current;
-        pauseTimeRef.current = currentPos;
-        startTimeRef.current = Tone.now();
-        playerRef.current.start(Tone.now(), currentPos);
-        setIsPlaying(true);
-      } catch {}
-    }
-  }, []);
+    await startContinuousPlayback();
+  }, [startContinuousPlayback]);
 
   const handlePlayheadPointerMove = useCallback((e: React.PointerEvent) => {
     if (!isScrubbingRef.current) return;
     e.preventDefault();
 
     const DRAG_THRESHOLD = 5;
+    const RESUME_DELAY_MS = 150;
     const movedDistance = Math.abs(e.clientX - pointerDownXRef.current);
+
+    if (resumePlaybackTimeoutRef.current) {
+      clearTimeout(resumePlaybackTimeoutRef.current);
+      resumePlaybackTimeoutRef.current = null;
+    }
 
     if (!isDraggingRef.current && movedDistance > DRAG_THRESHOLD) {
       isDraggingRef.current = true;
-      isHoldPlayingRef.current = false;
+    }
 
+    if (!isDraggingRef.current) return;
+
+    if (isHoldPlayingRef.current) {
+      isHoldPlayingRef.current = false;
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
       setIsPlaying(false);
     }
 
-    if (!isDraggingRef.current) return;
+    lastMoveTimeRef.current = Date.now();
+    pointerDownXRef.current = e.clientX;
 
     let newTime = calcTimeFromPointer(e.clientX);
 
@@ -487,10 +510,21 @@ export function AudioScrubber({
         playerRef.current.stop(Tone.now() + 0.1);
       } catch {}
     }
-  }, [calcTimeFromPointer, snapEnabled]);
+
+    resumePlaybackTimeoutRef.current = window.setTimeout(() => {
+      if (isScrubbingRef.current && !isHoldPlayingRef.current) {
+        startContinuousPlayback();
+      }
+    }, RESUME_DELAY_MS);
+  }, [calcTimeFromPointer, snapEnabled, startContinuousPlayback]);
 
   const handlePlayheadPointerUp = useCallback((e: React.PointerEvent) => {
     if (!isScrubbingRef.current) return;
+
+    if (resumePlaybackTimeoutRef.current) {
+      clearTimeout(resumePlaybackTimeoutRef.current);
+      resumePlaybackTimeoutRef.current = null;
+    }
 
     const wasHoldPlaying = isHoldPlayingRef.current;
 
@@ -516,6 +550,11 @@ export function AudioScrubber({
   }, []);
 
   const handlePlayheadLostCapture = useCallback(() => {
+    if (resumePlaybackTimeoutRef.current) {
+      clearTimeout(resumePlaybackTimeoutRef.current);
+      resumePlaybackTimeoutRef.current = null;
+    }
+
     isScrubbingRef.current = false;
     isHoldPlayingRef.current = false;
     isDraggingRef.current = false;
