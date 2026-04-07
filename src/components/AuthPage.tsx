@@ -56,7 +56,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthenticated }) => {
       }
       onAuthenticated();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Authentication failed');
+      const message = err instanceof Error ? err.message : 'Authentication failed';
+      if (!isSignUp && message.toLowerCase().includes('invalid login credentials')) {
+        setError('Incorrect email or password. If you don\'t have an account, click "Sign up" below.');
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
