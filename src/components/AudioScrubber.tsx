@@ -3,7 +3,7 @@ import * as Tone from 'tone';
 import { WaveformDisplay } from './WaveformDisplay';
 import { WaveformModeToggle } from './WaveformModeToggle';
 import { WaveformZoomControls } from './WaveformZoomControls';
-import { Play, Pause, MapPin } from 'lucide-react';
+import { Play, Pause, MapPin, Magnet } from 'lucide-react';
 
 export interface AudioMarker {
   id: string;
@@ -53,6 +53,8 @@ export function AudioScrubber({
   const [previewingMarkerId, setPreviewingMarkerId] = useState<string | null>(null);
   const [waveformMode, setWaveformMode] = useState<'standard' | 'rgb'>('standard');
   const [zoom, setZoom] = useState(1);
+  const [snapEnabled, setSnapEnabled] = useState(true);
+  const [snappedToMarker, setSnappedToMarker] = useState<AudioMarker | null>(null);
   const playerRef = useRef<Tone.Player | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
@@ -431,7 +433,21 @@ export function AudioScrubber({
     if (!isScrubbingRef.current) return;
     e.preventDefault();
 
-    const newTime = calcTimeFromPointer(e.clientX);
+    let newTime = calcTimeFromPointer(e.clientX);
+
+    let foundSnappedMarker: AudioMarker | null = null;
+    if (snapEnabled && markersRef.current.length > 0) {
+      for (const marker of markersRef.current) {
+        const distanceToMarker = Math.abs(newTime - marker.time);
+        if (distanceToMarker <= SNAP_THRESHOLD_SECONDS) {
+          newTime = marker.time;
+          foundSnappedMarker = marker;
+          break;
+        }
+      }
+    }
+    setSnappedToMarker(foundSnappedMarker);
+
     setPlaybackTime(newTime);
     pauseTimeRef.current = newTime;
 
@@ -442,12 +458,13 @@ export function AudioScrubber({
         playerRef.current.stop(Tone.now() + 0.1);
       } catch {}
     }
-  }, [calcTimeFromPointer]);
+  }, [calcTimeFromPointer, snapEnabled]);
 
   const handlePlayheadPointerUp = useCallback((e: React.PointerEvent) => {
     if (!isScrubbingRef.current) return;
     isScrubbingRef.current = false;
     setIsScrubbing(false);
+    setSnappedToMarker(null);
     (e.target as HTMLElement).releasePointerCapture(e.pointerId);
 
     if (playerRef.current?.loaded) {
@@ -458,6 +475,7 @@ export function AudioScrubber({
   const handlePlayheadLostCapture = useCallback(() => {
     isScrubbingRef.current = false;
     setIsScrubbing(false);
+    setSnappedToMarker(null);
     if (playerRef.current?.loaded) {
       try { playerRef.current.stop(); } catch {}
     }
@@ -475,6 +493,24 @@ export function AudioScrubber({
       wrapper.scrollLeft = playheadX - viewportWidth * 0.3;
     }
   });
+
+  useEffect(() => {
+    if (!snapEnabled || isScrubbing || markers.length === 0) {
+      if (!isScrubbing) setSnappedToMarker(null);
+      return;
+    }
+
+    const PASSIVE_SNAP_THRESHOLD = 0.05;
+    let foundMarker: AudioMarker | null = null;
+    for (const marker of markers) {
+      const distance = Math.abs(playbackTime - marker.time);
+      if (distance <= PASSIVE_SNAP_THRESHOLD) {
+        foundMarker = marker;
+        break;
+      }
+    }
+    setSnappedToMarker(foundMarker);
+  }, [playbackTime, markers, snapEnabled, isScrubbing]);
 
   const progress = duration > 0 ? playbackTime / duration : 0;
 
@@ -511,6 +547,19 @@ export function AudioScrubber({
             mode={waveformMode}
             onToggle={() => setWaveformMode(m => m === 'standard' ? 'rgb' : 'standard')}
           />
+          <button
+            onClick={() => setSnapEnabled(!snapEnabled)}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium transition-all ${
+              snapEnabled
+                ? 'bg-green-600/20 text-green-400 border border-green-500/40 hover:bg-green-600/30'
+                : 'bg-gray-700/50 text-gray-400 border border-gray-600/40 hover:bg-gray-600/50'
+            }`}
+            title={snapEnabled ? 'Disable snap to markers' : 'Enable snap to markers'}
+          >
+            <Magnet className="w-3.5 h-3.5" />
+            <span>Snap</span>
+            <span className={`w-1.5 h-1.5 rounded-full ${snapEnabled ? 'bg-green-400' : 'bg-gray-500'}`} />
+          </button>
           <div className="flex items-center space-x-2">
             <div className="w-px h-6 bg-white" style={{ boxShadow: '0 0 6px rgba(255, 255, 255, 0.5)' }}></div>
             <span className="text-xs text-gray-300">Playhead</span>
@@ -625,21 +674,32 @@ export function AudioScrubber({
           <div
             className="absolute -top-1 -bottom-1 left-1/2 -translate-x-1/2"
             style={{
-              width: isScrubbing ? '3px' : isSnapping ? '3px' : '1.5px',
-              backgroundColor: 'rgba(255, 255, 255, 1)',
-              boxShadow: isScrubbing || isSnapping
-                ? '0 0 12px rgba(255, 255, 255, 0.9), 0 0 24px rgba(255, 255, 255, 0.6)'
-                : '0 0 6px rgba(255, 255, 255, 0.5), 0 0 12px rgba(255, 255, 255, 0.3)',
+              width: isScrubbing ? '3px' : isSnapping ? '3px' : snappedToMarker ? '4px' : '1.5px',
+              backgroundColor: snappedToMarker ? snappedToMarker.color : 'rgba(255, 255, 255, 1)',
+              boxShadow: snappedToMarker
+                ? `0 0 20px ${snappedToMarker.color}, 0 0 40px ${snappedToMarker.color}80, 0 0 60px ${snappedToMarker.color}40`
+                : isScrubbing || isSnapping
+                  ? '0 0 12px rgba(255, 255, 255, 0.9), 0 0 24px rgba(255, 255, 255, 0.6)'
+                  : '0 0 6px rgba(255, 255, 255, 0.5), 0 0 12px rgba(255, 255, 255, 0.3)',
               pointerEvents: 'none',
-              transition: 'width 75ms, box-shadow 75ms',
+              transition: 'width 75ms, box-shadow 150ms, background-color 150ms',
             }}
           />
-          {isScrubbing && (
+          {isScrubbing && !snappedToMarker && (
             <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-white text-gray-900 text-[10px] px-2 py-0.5 rounded font-bold whitespace-nowrap pointer-events-none shadow-lg">
               {formatTime(playbackTime)}
             </div>
           )}
-          {isSnapping && !isScrubbing && (
+          {snappedToMarker && (
+            <div
+              className="absolute -top-8 left-1/2 -translate-x-1/2 text-white text-[10px] px-2 py-1 rounded-full font-bold whitespace-nowrap pointer-events-none shadow-lg flex items-center gap-1.5 animate-pulse"
+              style={{ backgroundColor: snappedToMarker.color }}
+            >
+              <Magnet className="w-3 h-3" />
+              <span>Snapped</span>
+            </div>
+          )}
+          {isSnapping && !isScrubbing && !snappedToMarker && (
             <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-white text-gray-900 text-xs px-2 py-0.5 rounded font-medium whitespace-nowrap pointer-events-none">
               Snap
             </div>
