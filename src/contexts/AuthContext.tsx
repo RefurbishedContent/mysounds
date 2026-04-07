@@ -7,6 +7,10 @@ interface AuthContextType extends AuthState {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signOut: () => void;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
+  passwordRecovery: boolean;
+  clearPasswordRecovery: () => void;
   credits: UserCredits | null;
   refreshCredits: () => Promise<void>;
 }
@@ -28,6 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading: true,
   });
   const [credits, setCredits] = useState<UserCredits | null>(null);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
   const lastUserIdRef = useRef<string | null>(null);
   const currentUserIdRef = useRef<string | null>(null);
 
@@ -279,8 +284,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             loading: false,
           });
           setCredits(null);
+        } else if (event === 'PASSWORD_RECOVERY') {
+          console.log('Password recovery event detected');
+          setPasswordRecovery(true);
         }
-        // Ignore other events (USER_UPDATED, PASSWORD_RECOVERY, etc.) to prevent unnecessary resets
       }
     );
 
@@ -343,6 +350,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: window.location.origin,
+    });
+    if (error) {
+      throw new Error(error.message);
+    }
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      throw new Error(error.message);
+    }
+    setPasswordRecovery(false);
+  };
+
+  const clearPasswordRecovery = () => {
+    setPasswordRecovery(false);
+  };
+
   const signOut = async () => {
     console.log('Signing out...');
     try {
@@ -359,6 +387,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       signIn,
       signUp,
       signOut,
+      resetPassword,
+      updatePassword,
+      passwordRecovery,
+      clearPasswordRecovery,
       credits,
       refreshCredits,
     }}>
