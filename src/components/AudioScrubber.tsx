@@ -68,6 +68,9 @@ export function AudioScrubber({
   const hasInteractedRef = useRef(false);
   const previewSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const previewingMarkerRef = useRef<string | null>(null);
+  const isHoldPlayingRef = useRef(false);
+  const pointerDownXRef = useRef<number>(0);
+  const isDraggingRef = useRef(false);
 
   markersRef.current = markers;
   durationRef.current = duration;
@@ -411,27 +414,53 @@ export function AudioScrubber({
     stopMarkerPreview();
   }, [stopMarkerPreview]);
 
-  const handlePlayheadPointerDown = useCallback((e: React.PointerEvent) => {
+  const handlePlayheadPointerDown = useCallback(async (e: React.PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
     hasInteractedRef.current = true;
     isScrubbingRef.current = true;
+    isHoldPlayingRef.current = true;
+    isDraggingRef.current = false;
+    pointerDownXRef.current = e.clientX;
     setIsScrubbing(true);
 
-    if (isPlaying && playerRef.current) {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      try { playerRef.current.stop(); } catch {}
-      setIsPlaying(false);
-    }
-
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, [isPlaying]);
+
+    if (playerRef.current?.loaded) {
+      try {
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+        }
+        playerRef.current.stop();
+        await Tone.start();
+
+        const currentPos = playbackTimeRef.current;
+        pauseTimeRef.current = currentPos;
+        startTimeRef.current = Tone.now();
+        playerRef.current.start(Tone.now(), currentPos);
+        setIsPlaying(true);
+      } catch {}
+    }
+  }, []);
 
   const handlePlayheadPointerMove = useCallback((e: React.PointerEvent) => {
     if (!isScrubbingRef.current) return;
     e.preventDefault();
+
+    const DRAG_THRESHOLD = 5;
+    const movedDistance = Math.abs(e.clientX - pointerDownXRef.current);
+
+    if (!isDraggingRef.current && movedDistance > DRAG_THRESHOLD) {
+      isDraggingRef.current = true;
+      isHoldPlayingRef.current = false;
+
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      setIsPlaying(false);
+    }
+
+    if (!isDraggingRef.current) return;
 
     let newTime = calcTimeFromPointer(e.clientX);
 
@@ -462,23 +491,45 @@ export function AudioScrubber({
 
   const handlePlayheadPointerUp = useCallback((e: React.PointerEvent) => {
     if (!isScrubbingRef.current) return;
+
+    const wasHoldPlaying = isHoldPlayingRef.current;
+
     isScrubbingRef.current = false;
+    isHoldPlayingRef.current = false;
+    isDraggingRef.current = false;
     setIsScrubbing(false);
     setSnappedToMarker(null);
     (e.target as HTMLElement).releasePointerCapture(e.pointerId);
 
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+
+    if (wasHoldPlaying) {
+      pauseTimeRef.current = playbackTimeRef.current;
+    }
+
     if (playerRef.current?.loaded) {
       try { playerRef.current.stop(); } catch {}
     }
+    setIsPlaying(false);
   }, []);
 
   const handlePlayheadLostCapture = useCallback(() => {
     isScrubbingRef.current = false;
+    isHoldPlayingRef.current = false;
+    isDraggingRef.current = false;
     setIsScrubbing(false);
     setSnappedToMarker(null);
+
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+
     if (playerRef.current?.loaded) {
       try { playerRef.current.stop(); } catch {}
     }
+    setIsPlaying(false);
   }, []);
 
   useEffect(() => {
