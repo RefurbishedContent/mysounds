@@ -252,3 +252,117 @@ class GenericJobQueueManager {
 export const jobQueue = GenericJobQueueManager.getInstance();
 
 export type { JobTypeDefinition };
+
+// ============================================================
+// STEM ANALYSIS JOB
+// ============================================================
+
+export interface StemAnalysisJob extends BaseJob {
+  type: 'stem-analysis';
+  trackId: string;
+  stemIds: string[];
+}
+
+export const STEM_ANALYSIS_JOB_DEF: JobTypeDefinition<StemAnalysisJob> = {
+  table: 'stem_separation_jobs',
+  functionSlug: 'analyze-stems',
+  maxRetries: 2,
+  buildPayload: (job) => ({
+    jobId: job.id,
+    trackId: job.trackId,
+    userId: job.userId,
+    stemIds: job.stemIds,
+  }),
+  mapRow: (row) => ({
+    type: 'stem-analysis',
+    id: row.id as string,
+    userId: row.user_id as string,
+    trackId: row.track_id as string,
+    stemIds: (row.stem_ids as string[]) ?? [],
+    status: row.status as JobStatus,
+    progress: (row.progress as number) ?? 0,
+    retryCount: (row.retry_count as number) ?? 0,
+    priority: (row.priority as number) ?? 5,
+    errorMessage: row.error_message as string | undefined,
+    createdAt: row.created_at as string,
+    startedAt: row.started_at as string | undefined,
+    completedAt: row.completed_at as string | undefined,
+  }),
+};
+
+// ============================================================
+// COMPATIBILITY COMPUTATION JOB
+// ============================================================
+
+export interface CompatibilityJob extends BaseJob {
+  type: 'compatibility-computation';
+  trackAId: string;
+  trackBId: string;
+}
+
+export const COMPATIBILITY_JOB_DEF: JobTypeDefinition<CompatibilityJob> = {
+  table: 'stem_separation_jobs',
+  functionSlug: 'analyze-mix',
+  maxRetries: 2,
+  buildPayload: (job) => ({
+    jobId: job.id,
+    trackAId: job.trackAId,
+    trackBId: job.trackBId,
+    userId: job.userId,
+  }),
+  mapRow: (row) => ({
+    type: 'compatibility-computation',
+    id: row.id as string,
+    userId: row.user_id as string,
+    trackAId: row.track_a_id as string,
+    trackBId: row.track_b_id as string,
+    status: row.status as JobStatus,
+    progress: (row.progress as number) ?? 0,
+    retryCount: (row.retry_count as number) ?? 0,
+    priority: (row.priority as number) ?? 5,
+    errorMessage: row.error_message as string | undefined,
+    createdAt: row.created_at as string,
+    startedAt: row.started_at as string | undefined,
+    completedAt: row.completed_at as string | undefined,
+  }),
+};
+
+// ============================================================
+// MIX PLAN GENERATION JOB
+// ============================================================
+
+export interface MixPlanJob extends BaseJob {
+  type: 'mix-plan-generation';
+  trackAId: string;
+  trackBId: string;
+  planId: string;
+}
+
+export const MIX_PLAN_JOB_DEF: JobTypeDefinition<MixPlanJob> = {
+  table: 'stem_separation_jobs',
+  functionSlug: 'execute-mix',
+  maxRetries: 2,
+  buildPayload: (job) => ({
+    jobId: job.id,
+    trackAId: job.trackAId,
+    trackBId: job.trackBId,
+    planId: job.planId,
+    userId: job.userId,
+  }),
+  mapRow: (row) => ({
+    type: 'mix-plan-generation',
+    id: row.id as string,
+    userId: row.user_id as string,
+    trackAId: row.track_a_id as string,
+    trackBId: row.track_b_id as string,
+    planId: row.plan_id as string,
+    status: row.status as JobStatus,
+    progress: (row.progress as number) ?? 0,
+    retryCount: (row.retry_count as number) ?? 0,
+    priority: (row.priority as number) ?? 5,
+    errorMessage: row.error_message as string | undefined,
+    createdAt: row.created_at as string,
+    startedAt: row.started_at as string | undefined,
+    completedAt: row.completed_at as string | undefined,
+  }),
+};
