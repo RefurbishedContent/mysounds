@@ -8,9 +8,9 @@ const GalaxyBackground: React.FC<Props> = () => {
   return (
     <div
       style={{
-        position: 'absolute',
+        position: 'fixed',
         inset: 0,
-        zIndex: 0,
+        zIndex: 1,
         pointerEvents: 'none',
         overflow: 'hidden',
       }}
