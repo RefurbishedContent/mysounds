@@ -551,12 +551,7 @@ const AppShell: React.FC = () => {
   };
 
   return (
-    <div className="h-screen bg-[#050510] flex flex-col overflow-hidden relative" style={{ isolation: 'isolate' }}>
-      {currentView === 'home' && (
-        <GalaxyBackground
-          sidebarWidth={isMobile ? 0 : isSidebarCollapsed ? 56 : 224}
-        />
-      )}
+    <div className="h-screen bg-[#050510] flex flex-col overflow-hidden relative">
 
       {/* Top Bar - Hidden on Mobile */}
       <div className={`bg-gray-800/90 backdrop-blur-sm border-b border-gray-700/60 px-3 sm:px-4 py-1.5 flex-shrink-0 z-[60] relative ${isMobile ? 'hidden' : ''}`}>
@@ -814,7 +809,20 @@ const AppShell: React.FC = () => {
 
         {/* Main Content */}
         <div className="flex-1 w-full flex flex-col min-w-0 relative">
-          <div className={`flex-1 overflow-y-auto overflow-x-hidden main-content-scroll ${isMobile ? 'pb-20' : ''}`} style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div
+            className={`flex-1 overflow-y-auto overflow-x-hidden main-content-scroll ${isMobile ? 'pb-20' : ''}`}
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              ...(currentView === 'home' ? {
+                backgroundImage: 'linear-gradient(to bottom, rgba(5,5,16,0.4) 0%, rgba(5,5,16,0.5) 50%, rgba(5,5,16,0.75) 100%), url(/DJ_background.png)',
+                backgroundSize: 'cover, cover',
+                backgroundPosition: 'center, center top',
+                backgroundRepeat: 'no-repeat, no-repeat',
+                backgroundAttachment: 'fixed, fixed',
+                backgroundColor: '#050510',
+              } : {}),
+            }}
+          >
             {renderContent()}
           </div>
         </div>
