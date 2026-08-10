@@ -1,7 +1,7 @@
 import React from 'react';
-import { Plus, FlaskConical, Music, FileAudio, User } from 'lucide-react';
+import { Plus, FlaskConical, Music, FileAudio, User, Home } from 'lucide-react';
 
-export type MobileNavView = 'create-new' | 'labs' | 'library' | 'templates' | 'profile';
+export type MobileNavView = 'home' | 'create-new' | 'labs' | 'library' | 'templates' | 'profile';
 
 interface MobileBottomNavProps {
   currentView: MobileNavView;
@@ -10,10 +10,10 @@ interface MobileBottomNavProps {
 
 const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ currentView, onNavigate }) => {
   const navItems = [
+    { id: 'home' as MobileNavView, icon: Home, label: 'Home' },
     { id: 'library' as MobileNavView, icon: Music, label: 'Library' },
-    { id: 'labs' as MobileNavView, icon: FlaskConical, label: 'Labs' },
     { id: 'create-new' as MobileNavView, icon: Plus, label: 'Create', isCreateButton: true },
-    { id: 'templates' as MobileNavView, icon: FileAudio, label: 'Templates' },
+    { id: 'labs' as MobileNavView, icon: FlaskConical, label: 'Labs' },
     { id: 'profile' as MobileNavView, icon: User, label: 'Profile' },
   ];
 

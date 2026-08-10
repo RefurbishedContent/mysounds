@@ -51,8 +51,8 @@ const AppShell: React.FC = () => {
   const { user, signOut } = useAuth();
   const onboarding = useOnboarding();
   const isMobile = useIsMobile();
-  const [currentView, setCurrentView] = useState<AppView>(isMobile ? 'transitions' : 'home');
-  const [mobileNavView, setMobileNavView] = useState<MobileNavView>(isMobile ? 'labs' : 'library');
+  const [currentView, setCurrentView] = useState<AppView>(isMobile ? 'home' : 'home');
+  const [mobileNavView, setMobileNavView] = useState<MobileNavView>(isMobile ? 'home' : 'library');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateData | undefined>();
@@ -265,6 +265,9 @@ const AppShell: React.FC = () => {
     setMobileNavView(view);
 
     switch (view) {
+      case 'home':
+        navigateTo('home');
+        break;
       case 'create-new':
         setTransitionSongA(undefined);
         setTransitionSongB(undefined);
