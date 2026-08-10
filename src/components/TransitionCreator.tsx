@@ -414,6 +414,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
             selectedSongs={selectedSongs}
             onSongsChange={setSelectedSongs}
             onContinue={handleContinueToSetPoints}
+            onRefreshLibrary={loadData}
           />
         )}
 

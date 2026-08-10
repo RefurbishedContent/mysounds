@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Plus, X, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, X, ChevronRight, ArrowUp, ArrowDown, Music, Upload } from 'lucide-react';
 import { UploadResult } from '../../lib/storage';
 import { SongSelectionModal } from '../SongSelectionModal';
+import LibraryUploader from '../LibraryUploader';
 import {
   MAX_SONGS,
   SONG_LETTERS,
@@ -14,6 +15,7 @@ interface MashUpSongSelectorProps {
   selectedSongs: UploadResult[];
   onSongsChange: (songs: UploadResult[]) => void;
   onContinue: () => void;
+  onRefreshLibrary?: () => void;
 }
 
 const MashUpSongSelector: React.FC<MashUpSongSelectorProps> = ({
@@ -21,9 +23,17 @@ const MashUpSongSelector: React.FC<MashUpSongSelectorProps> = ({
   selectedSongs,
   onSongsChange,
   onContinue,
+  onRefreshLibrary,
 }) => {
   const [showModal, setShowModal] = useState(false);
   const [replacingIndex, setReplacingIndex] = useState<number | null>(null);
+  const [showInsufficientModal, setShowInsufficientModal] = useState(false);
+
+  useEffect(() => {
+    if (allSongs.length < 2) {
+      setShowInsufficientModal(true);
+    }
+  }, [allSongs.length]);
 
   const canAddMore = selectedSongs.length < MAX_SONGS;
   const canContinue = selectedSongs.length >= 2;
@@ -60,6 +70,10 @@ const MashUpSongSelector: React.FC<MashUpSongSelectorProps> = ({
     const newSongs = [...selectedSongs];
     [newSongs[fromIndex], newSongs[toIndex]] = [newSongs[toIndex], newSongs[fromIndex]];
     onSongsChange(newSongs);
+  };
+
+  const handleUploadComplete = () => {
+    onRefreshLibrary?.();
   };
 
   const modalTitle = replacingIndex !== null
@@ -100,8 +114,6 @@ const MashUpSongSelector: React.FC<MashUpSongSelectorProps> = ({
             {selectedSongs.map((song, index) => {
               const colors = SONG_COLORS[index % SONG_COLORS.length];
               const letter = SONG_LETTERS[index];
-
-              const isLastSong = index === selectedSongs.length - 1;
 
               return (
                 <React.Fragment key={`${song.id}-${index}`}>
@@ -230,7 +242,70 @@ const MashUpSongSelector: React.FC<MashUpSongSelectorProps> = ({
         onSelectSong={handleSongSelected}
         songs={allSongs}
         modalTitle={modalTitle}
+        onRefreshLibrary={onRefreshLibrary}
       />
+
+      {showInsufficientModal && (
+        <InsufficientSongsModal
+          songCount={allSongs.length}
+          onClose={() => setShowInsufficientModal(false)}
+          onUploadComplete={handleUploadComplete}
+        />
+      )}
+    </div>
+  );
+};
+
+const InsufficientSongsModal: React.FC<{
+  songCount: number;
+  onClose: () => void;
+  onUploadComplete: () => void;
+}> = ({ songCount, onClose, onUploadComplete }) => {
+  const needed = 2 - songCount;
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[90] p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-gray-900 rounded-2xl border border-gray-700 w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="px-6 pt-6 pb-4">
+          <div className="flex items-center justify-center mb-4">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 flex items-center justify-center">
+              <Music size={28} className="text-cyan-400" />
+            </div>
+          </div>
+
+          <h2 className="text-xl font-bold text-white text-center mb-2">
+            {songCount === 0 ? 'Your Library Is Empty' : 'Need More Songs'}
+          </h2>
+          <p className="text-sm text-gray-400 text-center mb-1">
+            A mash up requires at least <span className="text-white font-semibold">2 songs</span> from your library.
+          </p>
+          <p className="text-sm text-gray-500 text-center">
+            {songCount === 0
+              ? 'Upload your first tracks to get started.'
+              : `You have ${songCount} song — upload ${needed} more to begin.`}
+          </p>
+        </div>
+
+        <div className="px-6 pb-2">
+          <div className="flex items-center gap-2 mb-3">
+            <Upload size={14} className="text-cyan-400" />
+            <span className="text-sm font-semibold text-white">Upload Songs</span>
+          </div>
+          <LibraryUploader onUploadComplete={onUploadComplete} />
+        </div>
+
+        <div className="px-6 py-4 border-t border-gray-700/50 mt-2">
+          <button
+            onClick={onClose}
+            className="w-full px-4 py-2.5 bg-gray-800 hover:bg-gray-750 text-gray-300 hover:text-white rounded-xl text-sm font-medium transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

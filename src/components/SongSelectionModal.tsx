@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Music, Search, X, SlidersHorizontal } from 'lucide-react';
+import { Music, Search, X, SlidersHorizontal, Upload } from 'lucide-react';
 import { UploadResult } from '../lib/storage';
+import LibraryUploader from './LibraryUploader';
 
 interface SongSelectionModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface SongSelectionModalProps {
   songs: UploadResult[];
   selectedSongIds?: string[];
   modalTitle?: string;
+  onRefreshLibrary?: () => void;
 }
 
 export const SongSelectionModal: React.FC<SongSelectionModalProps> = ({
@@ -24,11 +26,13 @@ export const SongSelectionModal: React.FC<SongSelectionModalProps> = ({
   songs,
   selectedSongIds,
   modalTitle,
+  onRefreshLibrary,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [bpmFilter, setBpmFilter] = useState<'all' | 'slow' | 'medium' | 'fast'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'recent' | 'bpm'>('recent');
+  const [showUploader, setShowUploader] = useState(false);
 
   // Reset filters when modal opens
   useEffect(() => {
@@ -37,6 +41,7 @@ export const SongSelectionModal: React.FC<SongSelectionModalProps> = ({
       setBpmFilter('all');
       setSortBy('recent');
       setShowFilters(false);
+      setShowUploader(false);
     }
   }, [isOpen]);
 
@@ -214,11 +219,32 @@ export const SongSelectionModal: React.FC<SongSelectionModalProps> = ({
 
         {/* Songs Grid */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-4">
-          {songs.length === 0 ? (
+          {showUploader ? (
+            <div className="max-w-md mx-auto py-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Upload size={16} className="text-cyan-400" />
+                <span className="text-sm font-semibold text-white">Upload Songs</span>
+              </div>
+              <LibraryUploader onUploadComplete={() => onRefreshLibrary?.()} />
+              <button
+                onClick={() => setShowUploader(false)}
+                className="mt-4 w-full px-4 py-2 bg-gray-800 hover:bg-gray-750 text-gray-300 hover:text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                Back to Library
+              </button>
+            </div>
+          ) : songs.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center py-12">
               <Music size={48} className="text-gray-600 mb-4" />
               <p className="text-gray-400 text-base mb-1">No songs in your library</p>
-              <p className="text-gray-500 text-sm">Upload some tracks in the Library section first!</p>
+              <p className="text-gray-500 text-sm mb-4">Upload some tracks to get started!</p>
+              <button
+                onClick={() => setShowUploader(true)}
+                className="px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2"
+              >
+                <Upload size={16} />
+                <span>Upload Songs</span>
+              </button>
             </div>
           ) : filteredSongs.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center py-12">
@@ -294,7 +320,17 @@ export const SongSelectionModal: React.FC<SongSelectionModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-700 flex justify-end">
+        <div className="px-6 py-4 border-t border-gray-700 flex items-center justify-between">
+          {!showUploader && songs.length > 0 && (
+            <button
+              onClick={() => setShowUploader(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-gray-800 hover:bg-gray-750 text-gray-300 hover:text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              <Upload size={16} />
+              <span>Upload Songs</span>
+            </button>
+          )}
+          <div className="flex-1" />
           <button
             onClick={onClose}
             className="px-6 py-2.5 bg-gray-800 hover:bg-gray-750 text-white rounded-lg font-medium transition-colors"
