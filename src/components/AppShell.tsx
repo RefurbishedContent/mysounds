@@ -816,14 +816,6 @@ const AppShell: React.FC = () => {
             className={`flex-1 overflow-y-auto overflow-x-hidden main-content-scroll ${isMobile ? 'pb-20' : ''}`}
             style={{
               WebkitOverflowScrolling: 'touch',
-              ...(currentView === 'home' ? {
-                backgroundImage: 'linear-gradient(to bottom, rgba(5,5,16,0.4) 0%, rgba(5,5,16,0.5) 50%, rgba(5,5,16,0.75) 100%), url(/DJ_background.png)',
-                backgroundSize: 'cover, cover',
-                backgroundPosition: 'center, center top',
-                backgroundRepeat: 'no-repeat, no-repeat',
-                backgroundAttachment: 'fixed, fixed',
-                backgroundColor: '#050510',
-              } : {}),
             }}
           >
             {renderContent()}
