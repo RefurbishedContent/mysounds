@@ -185,13 +185,6 @@ const HomeView: React.FC<HomeViewProps> = ({ onNavigate, onCreateNew }) => {
 
   return (
     <div className="h-full overflow-y-auto overflow-x-hidden bg-transparent relative">
-      {/* Ambient glow effects */}
-      <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
-        <div className="absolute top-[-15%] left-[-10%] w-[55%] h-[50%] rounded-full bg-cyan-500/[0.07] blur-[120px]" />
-        <div className="absolute top-[10%] right-[-15%] w-[50%] h-[45%] rounded-full bg-blue-600/[0.06] blur-[130px]" />
-        <div className="absolute bottom-[-10%] left-[20%] w-[45%] h-[40%] rounded-full bg-cyan-400/[0.04] blur-[100px]" />
-        <div className="absolute bottom-[15%] right-[5%] w-[35%] h-[35%] rounded-full bg-blue-500/[0.05] blur-[110px]" />
-      </div>
       <div className="max-w-7xl mx-auto p-4 space-y-4 relative z-[1]">
         {/* Welcome Header */}
         <div className="relative">

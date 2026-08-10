@@ -1,39 +1,12 @@
 import React from 'react';
 
-interface Props {
-  sidebarWidth?: number;
-}
-
-const GalaxyBackground: React.FC<Props> = () => {
+const GalaxyBackground: React.FC = () => {
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 1,
-        pointerEvents: 'none',
-        overflow: 'hidden',
-      }}
-    >
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage: 'url(/DJ_background.png)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center top',
-          backgroundRepeat: 'no-repeat',
-          opacity: 0.35,
-        }}
-      />
-
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'linear-gradient(to bottom, rgba(5,5,16,0.6) 0%, rgba(5,5,16,0.45) 30%, rgba(5,5,16,0.45) 70%, rgba(5,5,16,0.7) 100%)',
-        }}
-      />
+    <div className="fixed inset-0 z-[1] pointer-events-none overflow-hidden">
+      <div className="absolute top-[-15%] left-[-10%] w-[55%] h-[50%] rounded-full bg-cyan-500/[0.07] blur-[120px]" />
+      <div className="absolute top-[10%] right-[-15%] w-[50%] h-[45%] rounded-full bg-blue-600/[0.06] blur-[130px]" />
+      <div className="absolute bottom-[-10%] left-[20%] w-[45%] h-[40%] rounded-full bg-cyan-400/[0.04] blur-[100px]" />
+      <div className="absolute bottom-[15%] right-[5%] w-[35%] h-[35%] rounded-full bg-blue-500/[0.05] blur-[110px]" />
     </div>
   );
 };
