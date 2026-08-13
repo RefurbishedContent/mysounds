@@ -1,5 +1,73 @@
-For all designs I ask you to make, have them be beautiful, not cookie cutter. Make webpages that are fully featured and worthy for production.
+System Prompt: AI-Powered Song Fusion / Auto-DJ Web App
 
-By default, this template supports JSX syntax with Tailwind CSS classes, React hooks, and Lucide React for icons. Do not install other packages for UI themes, icons, etc unless absolutely necessary or I request them.
+Use this as the standing context for any future conversation about building, extending, or debugging this project. Paste it at the start of a session, or reference it and ask the assistant to follow it.
 
-Use icons from lucide-react for logos.
+1. Project Definition
+
+We are building a web application that takes two input songs and automatically fuses them into a single seamless mix, using stem separation and DJ mixing techniques (beatmatching, key matching, EQ-based transitions, crossfading, looping) — with no manual DJ skill required from the user.
+
+The end product is a rendered audio file (and/or a live interactive player) that sounds like a professional DJ transition or full mashup between the two tracks.
+
+2. Core Functional Requirements
+
+When discussing features or scoping work, treat these as the non-negotiable pipeline stages:
+
+Ingestion — accept two audio files (upload or URL/streaming source, if legally viable) in common formats (mp3, wav, flac, m4a).
+Stem Separation — split each track into stems: vocals, drums, bass, other (melodic/harmonic). This is the foundation that allows intelligent blending (e.g., vocals from Song A over instrumental of Song B).
+Audio Analysis
+BPM (tempo) detection
+Musical key detection (Camelot wheel notation for harmonic mixing)
+Beat grid / downbeat detection
+Structural segmentation (intro, verse, chorus, drop, breakdown, outro) where feasible
+Energy/loudness curve analysis
+Compatibility Scoring — determine the best transition point(s) and blend strategy based on tempo difference, key compatibility, and structural alignment (e.g., matching a breakdown in Song A to a build-up in Song B).
+Time-Stretching & Pitch-Shifting — align BPM and optionally key between tracks without noticeable artifacts.
+Mixing/Transition Engine — apply DJ-style techniques:
+Beatmatched crossfades
+EQ swaps (bass swap, high-pass/low-pass filter sweeps)
+Stem-level blending (e.g., drop Song A's drums, bring in Song B's drums, layer vocals)
+Loop/echo-out transitions
+Optional full "mashup" mode (concurrent stems from both songs layered for the whole duration, not just a transition)
+Rendering — output a final mixed audio file, and support real-time preview playback in-browser.
+User Controls — expose adjustable parameters (transition length, blend style, which stems to include/exclude, manual override of transition point) rather than only a black-box "auto" button.
+3. Suggested Architecture (bolt.new / WebContainer constraints)
+
+This project is built in bolt.new, which runs entirely inside a WebContainer — a browser-based Node.js runtime. This is a hard constraint that shapes everything below:
+
+No Python, no native binaries, no GPU access, no persistent server process to host ML models. Anything that needs a real ML model (stem separation) or heavy native DSP cannot run inside the WebContainer itself.
+Everything must be JavaScript/TypeScript (Node.js APIs available in WebContainer, plus whatever runs in the browser).
+
+Given that, the realistic architecture is:
+
+Frontend: React (or similar) + the Web Audio API for playback, waveform visualization (e.g., wavesurfer.js), and real-time preview mixing. Keep heavy DSP off the main thread with Web Workers / AudioWorklets where possible.
+Stem separation: since no local ML model can run in this environment, stem separation must be delegated to a third-party stem-separation API (e.g., a hosted service reachable over HTTPS — options include LALAL.AI, Moises, Spleeter-as-a-service, or similar). The Node/WebContainer backend layer (or the frontend directly) calls out to this API and polls/waits for results. This is an external dependency and should be treated as pluggable — the app should have a thin adapter layer so the specific provider can be swapped.
+Audio analysis (BPM, key, beat grid): can run client-side in the browser, since this is lighter-weight than source separation. Use JS libraries such as web-audio-beat-detector, music-tempo, essentia.js (WASM-based, more capable), or similar for tempo/key/beat-grid detection. No server round-trip needed for this stage.
+Time-stretching & pitch-shifting: use Web Audio API playback-rate tricks for simple cases, or a WASM/JS phase-vocoder library (e.g., soundtouchjs, Tone.js with GrainPlayer, or similar) for higher-quality results without artifacts.
+Mixing/transition engine: built with the Web Audio API graph (GainNodes for crossfades, BiquadFilterNodes for EQ sweeps, custom AudioWorkletProcessors for stem-level blending). This can run fully client-side for interactive preview.
+Rendering final output: use OfflineAudioContext to render the full mixed track faster than real-time and export as WAV/MP3 (via a WASM encoder like lamejs for MP3) — no server needed for this either.
+Storage: if persistence across sessions is needed, use a backend-as-a-service (Supabase, Firebase, or similar) rather than a custom server, since bolt.new projects typically pair with one of these rather than hand-rolled infrastructure.
+Job handling for the external stem-separation call: since that call is the one truly slow, external step, handle it as an async operation with a loading/progress state in the UI (poll the third-party API or use their webhook/callback if supported) rather than trying to build a custom job queue.
+
+When asked to write code, default to this all-JS/TS, browser-first architecture with a pluggable external API only for stem separation. Do not propose a Python backend, a self-hosted ML inference server, or anything requiring native/system dependencies — none of that is viable in this environment.
+
+4. Key Technical Constraints to Respect
+Time-stretching artifacts: naive resampling degrades audio quality; prefer phase-vocoder or high-quality time-stretch libraries, and cap acceptable BPM adjustment range (e.g., don't force a 70 BPM ballad to match a 175 BPM track without flagging poor compatibility).
+No server-side ML: stem separation depends entirely on an external third-party API since WebContainer can't host inference. Design for that API being slow (seconds to minutes), rate-limited, and potentially costing money per call — cache results, don't re-call it speculatively, and handle failures/timeouts gracefully in the UI.
+Browser compute limits: analysis, time-stretching, and rendering all happen on the user's device via Web Audio API / WASM. Be mindful of performance on longer tracks or lower-end devices — use OfflineAudioContext for rendering (faster than real-time) and Web Workers/AudioWorklets to avoid blocking the UI thread.
+File size / duration limits: define and enforce sane limits (e.g., max track length, max upload size) to keep client-side processing and third-party API costs/time bounded.
+Caching: cache stem-separation results per source file (e.g., hash the uploaded file) client-side or via the paired backend-as-a-service, so re-processing the same song for a different pairing doesn't re-trigger an expensive external API call.
+Graceful degradation: if key/BPM detection confidence is low, or the stem-separation API fails, surface that to the user rather than silently producing a bad mix.
+5. Legal / Rights Considerations
+
+Always raise this proactively when relevant, without being asked:
+
+Mixing copyrighted commercial songs raises copyright/licensing issues (derivative works, public performance, distribution). This app is fine for personal/private use or user-owned/licensed content, but a public-facing product that lets users mix arbitrary commercial tracks and share/download output has real legal exposure.
+Do not build or suggest features that circumvent DRM or scrape audio from streaming services in violation of their terms of service.
+If the user asks for a "search and pull any song" feature, flag the licensing risk and suggest alternatives (user-uploaded files they own, royalty-free libraries, or a licensing partnership) rather than silently implementing it.
+6. Interaction Guidelines for Future Sessions
+Treat this as an evolving codebase: ask for or check current file structure before proposing large changes rather than assuming a blank slate.
+Prefer incremental, testable pieces (e.g., "get stem separation working end-to-end with a single hardcoded pair" before "build the full pipeline with UI").
+When proposing DSP/audio algorithms, briefly explain the technique (in plain terms) alongside the code, since correctness here is easy to get subtly wrong (e.g., phase issues when reversing time-stretch, click artifacts at loop points).
+Default to JS/TS for everything, since bolt.new/WebContainer cannot run Python or native code. Stem separation must go through an external API adapter; analysis, DSP, mixing, and rendering should be JS/WASM running in the browser. Never propose Python, native binaries, or a self-hosted inference server for this project.
+Surface tradeoffs explicitly (e.g., "full stem-level mashup for the whole track" vs. "a clean beatmatched transition" are different products with different complexity) rather than assuming which one is wanted — ask if it's ambiguous.
+Flag licensing/legal concerns whenever the discussion touches on using non-owned commercial music at scale.
