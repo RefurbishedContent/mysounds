@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Clock } from 'lucide-react';
 import * as Tone from 'tone';
 import { useAuth } from '../contexts/AuthContext';
 import { storageService, UploadResult } from '../lib/storage';
@@ -18,6 +18,7 @@ import {
   SONG_LETTERS,
   SONG_COLORS,
   MIN_CLIP_DURATION,
+  MAX_TRANSITION_BLEND_SECONDS,
   DEFAULT_TRANSITION_DURATION,
   formatTime,
 } from './mashup/constants';
@@ -152,7 +153,12 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
       setClipMarkers(prev => {
         const next = [...prev];
         if (!next[index]) {
-          next[index] = { start: 0, end: fallbackDuration };
+          const isFirst = index === 0;
+          const isLast = index === selectedSongs.length - 1;
+          next[index] = {
+            start: isFirst ? 0 : Math.min(MAX_TRANSITION_BLEND_SECONDS, fallbackDuration),
+            end: isLast ? fallbackDuration : Math.max(fallbackDuration - MAX_TRANSITION_BLEND_SECONDS, 0),
+          };
         }
         return next;
       });
@@ -169,11 +175,22 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
 
             setClipMarkers(prev => {
               const next = [...prev];
-              if (next[index] && next[index].start === 0 && next[index].end === fallbackDuration) {
-                next[index] = { start: 0, end: actualDuration };
-              }
-              if (next[index] && next[index].end > actualDuration) {
-                next[index] = { ...next[index], end: actualDuration };
+              const isFirst = index === 0;
+              const isLast = index === selectedSongs.length - 1;
+              const defaultStart = isFirst ? 0 : Math.min(MAX_TRANSITION_BLEND_SECONDS, actualDuration);
+              const defaultEnd = isLast ? actualDuration : Math.max(actualDuration - MAX_TRANSITION_BLEND_SECONDS, 0);
+
+              if (next[index]) {
+                const prevEntry = next[index];
+                // Re-clamp if still at fallback defaults or exceeding cap
+                const blendOut = actualDuration - prevEntry.end;
+                const blendIn = prevEntry.start;
+                next[index] = {
+                  start: blendIn > MAX_TRANSITION_BLEND_SECONDS ? defaultStart : Math.min(prevEntry.start, actualDuration),
+                  end: blendOut > MAX_TRANSITION_BLEND_SECONDS ? defaultEnd : Math.min(prevEntry.end, actualDuration),
+                };
+              } else {
+                next[index] = { start: defaultStart, end: defaultEnd };
               }
               return next;
             });
@@ -209,9 +226,14 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
   const handleContinueToSetPoints = () => {
     if (selectedSongs.length < 2) return;
 
-    const initialMarkers = selectedSongs.map(song => {
+    const initialMarkers = selectedSongs.map((song, index) => {
       const duration = song.metadata?.duration || 300;
-      return { start: 0, end: duration };
+      const isFirst = index === 0;
+      const isLast = index === selectedSongs.length - 1;
+      return {
+        start: isFirst ? 0 : Math.min(MAX_TRANSITION_BLEND_SECONDS, duration),
+        end: isLast ? duration : Math.max(duration - MAX_TRANSITION_BLEND_SECONDS, 0),
+      };
     });
     const initialDurations = selectedSongs.map(song => song.metadata?.duration || 300);
 
@@ -223,7 +245,22 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
   const updateClipMarker = (songIndex: number, field: 'start' | 'end', value: number) => {
     setClipMarkers(prev => {
       const next = [...prev];
-      next[songIndex] = { ...next[songIndex], [field]: value };
+      const current = next[songIndex];
+      if (!current) return prev;
+      const duration = songDurations[songIndex] || current.end;
+
+      let clamped = value;
+      if (field === 'end') {
+        // Song A end marker: blend-out zone = duration - end, capped at MAX_TRANSITION_BLEND_SECONDS
+        const minEnd = Math.max(current.start + MIN_CLIP_DURATION, duration - MAX_TRANSITION_BLEND_SECONDS);
+        clamped = Math.max(minEnd, Math.min(value, duration));
+      } else {
+        // Song B start marker: blend-in zone = start, capped at MAX_TRANSITION_BLEND_SECONDS
+        const maxStart = Math.min(current.end - MIN_CLIP_DURATION, MAX_TRANSITION_BLEND_SECONDS);
+        clamped = Math.max(0, Math.min(value, maxStart));
+      }
+
+      next[songIndex] = { ...current, [field]: clamped };
       return next;
     });
   };
@@ -241,6 +278,14 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
         const songB = selectedSongs[i + 1];
         const markersA = clipMarkers[i] || { start: 0, end: 300 };
         const markersB = clipMarkers[i + 1] || { start: 0, end: 300 };
+        const durationA = songDurations[i] || markersA.end;
+        const durationB = songDurations[i + 1] || markersB.end;
+
+        // Clamp blend zones to MAX_TRANSITION_BLEND_SECONDS at save time (safety net)
+        const clampedEndA = Math.max(markersA.start, durationA - MAX_TRANSITION_BLEND_SECONDS);
+        const safeEndA = Math.max(markersA.end, clampedEndA);
+        const clampedStartB = Math.min(markersB.end, MAX_TRANSITION_BLEND_SECONDS);
+        const safeStartB = Math.min(markersB.start, clampedStartB);
 
         const pairName = selectedSongs.length === 2
           ? name
@@ -251,12 +296,12 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
           songAId: songA.id,
           songBId: songB.id,
           templateId: null,
-          transitionStartPoint: markersA.end,
+          transitionStartPoint: safeEndA,
           transitionDuration: DEFAULT_TRANSITION_DURATION,
-          songAEndTime: markersA.end,
-          songBStartTime: markersB.start,
-          songAMarkerPoint: markersA.end,
-          songBMarkerPoint: markersB.start,
+          songAEndTime: safeEndA,
+          songBStartTime: safeStartB,
+          songAMarkerPoint: safeEndA,
+          songBMarkerPoint: safeStartB,
           songAClipStart: markersA.start,
           songBClipEnd: markersB.end,
           metadata: {
@@ -353,7 +398,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
     );
   }
 
-  const validationWarnings = buildValidationWarnings(selectedSongs, clipMarkers);
+  const validationWarnings = buildValidationWarnings(selectedSongs, clipMarkers, songDurations);
   const hasErrors = validationWarnings.some(w => w.type === 'error');
 
   const currentStepIndex = STEP_LABELS.findIndex(s => s.step === currentStep);
@@ -468,22 +513,47 @@ interface ValidationWarning {
 
 function buildValidationWarnings(
   selectedSongs: UploadResult[],
-  clipMarkers: ClipMarker[]
+  clipMarkers: ClipMarker[],
+  songDurations?: number[]
 ): ValidationWarning[] {
   const warnings: ValidationWarning[] = [];
 
-  selectedSongs.forEach((_, index) => {
+  selectedSongs.forEach((song, index) => {
     const markers = clipMarkers[index];
     if (!markers) return;
 
     const clipDuration = markers.end - markers.start;
     const letter = SONG_LETTERS[index];
+    const duration = songDurations?.[index] || song.metadata?.duration || markers.end;
 
     if (clipDuration < MIN_CLIP_DURATION) {
       warnings.push({
         type: 'error',
         message: `Song ${letter} clip is too short (${formatTime(clipDuration)}). Minimum is ${MIN_CLIP_DURATION}s.`,
       });
+    }
+
+    const isFirst = index === 0;
+    const isLast = index === selectedSongs.length - 1;
+
+    if (!isLast) {
+      const blendOut = duration - markers.end;
+      if (blendOut > MAX_TRANSITION_BLEND_SECONDS) {
+        warnings.push({
+          type: 'error',
+          message: `Song ${letter} blend-out zone is ${formatTime(blendOut)} — maximum is ${MAX_TRANSITION_BLEND_SECONDS}s.`,
+        });
+      }
+    }
+
+    if (!isFirst) {
+      const blendIn = markers.start;
+      if (blendIn > MAX_TRANSITION_BLEND_SECONDS) {
+        warnings.push({
+          type: 'error',
+          message: `Song ${letter} blend-in zone is ${formatTime(blendIn)} — maximum is ${MAX_TRANSITION_BLEND_SECONDS}s.`,
+        });
+      }
     }
   });
 
@@ -516,8 +586,12 @@ const TransitionPointsStep: React.FC<TransitionPointsStepProps> = ({
       <DJCrowdCanvas />
       <div className="relative z-10 max-w-3xl mx-auto px-4 py-6 space-y-6">
       <div className="text-center mb-4">
-        <h2 className="text-2xl font-bold text-white mb-2">Set Start & End Points</h2>
-        <p className="text-gray-400 mb-4">Drag markers to control each song's start and end</p>
+        <h2 className="text-2xl font-bold text-white mb-2">Set Transition Points</h2>
+        <p className="text-gray-400 mb-2">Choose where each song blends in and out</p>
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-800/70 rounded-full border border-gray-700/50 text-xs text-gray-400">
+          <Clock size={12} className="text-cyan-400" />
+          <span>Max <span className="text-cyan-300 font-semibold">{MAX_TRANSITION_BLEND_SECONDS}s</span> blend per transition</span>
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -529,6 +603,10 @@ const TransitionPointsStep: React.FC<TransitionPointsStepProps> = ({
           const colors = SONG_COLORS[index % SONG_COLORS.length];
           const letter = SONG_LETTERS[index];
           const clipDuration = markers.end - markers.start;
+          const isFirst = index === 0;
+          const isLast = index === selectedSongs.length - 1;
+          const blendIn = isFirst ? 0 : markers.start;
+          const blendOut = isLast ? 0 : (duration - markers.end);
 
           return (
             <React.Fragment key={song.id}>
@@ -542,7 +620,12 @@ const TransitionPointsStep: React.FC<TransitionPointsStepProps> = ({
                       <h4 className="text-sm font-semibold text-white truncate" title={song.originalName}>
                         {song.originalName}
                       </h4>
-                      <p className="text-xs text-gray-500">Drag markers to set boundaries</p>
+                      <p className="text-xs text-gray-500">
+                        {isFirst && isLast ? 'Full song' :
+                         isFirst ? 'Drag END marker to set blend-out point' :
+                         isLast ? 'Drag START marker to set blend-in point' :
+                         'Drag markers to set blend-in and blend-out points'}
+                      </p>
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
@@ -556,50 +639,57 @@ const TransitionPointsStep: React.FC<TransitionPointsStepProps> = ({
                   currentTime={0}
                   duration={duration}
                   onSeek={() => {}}
-                  onSetInMarker={(time) => {
-                    const maxStart = markers.end - MIN_CLIP_DURATION;
-                    onUpdateClipMarker(index, 'start', Math.max(0, Math.min(time, maxStart)));
-                  }}
-                  onSetEndMarker={(time) => {
-                    const minEnd = markers.start + MIN_CLIP_DURATION;
-                    onUpdateClipMarker(index, 'end', Math.max(minEnd, Math.min(time, duration)));
-                  }}
-                  inMarkerLabel="Set START"
-                  endMarkerLabel="Set END"
+                  onSetInMarker={!isFirst ? (time) => {
+                    onUpdateClipMarker(index, 'start', time);
+                  } : undefined}
+                  onSetEndMarker={!isLast ? (time) => {
+                    onUpdateClipMarker(index, 'end', time);
+                  } : undefined}
+                  inMarkerLabel={isFirst ? undefined : 'Set BLEND IN'}
+                  endMarkerLabel={isLast ? undefined : 'Set BLEND OUT'}
                   isPlaying={false}
                   showGradient={true}
                   markers={[
-                    {
+                    ...(!isFirst ? [{
                       id: `song-${index}-start`,
                       time: markers.start,
                       color: '#10b981',
-                      label: 'START',
+                      label: 'BLEND IN',
                       onDrag: (newTime: number) => {
-                        const maxStart = markers.end - MIN_CLIP_DURATION;
-                        onUpdateClipMarker(index, 'start', Math.max(0, Math.min(newTime, maxStart)));
+                        onUpdateClipMarker(index, 'start', newTime);
                       },
-                    },
-                    {
+                    }] : []),
+                    ...(!isLast ? [{
                       id: `song-${index}-end`,
                       time: markers.end,
                       color: '#ef4444',
-                      label: 'END',
+                      label: 'BLEND OUT',
                       onDrag: (newTime: number) => {
-                        const minEnd = markers.start + MIN_CLIP_DURATION;
-                        onUpdateClipMarker(index, 'end', Math.max(minEnd, Math.min(newTime, duration)));
+                        onUpdateClipMarker(index, 'end', newTime);
                       },
-                    },
+                    }] : []),
                   ]}
                 />
 
                 <div className="bg-gray-900/60 backdrop-blur-sm rounded-lg p-3 border border-gray-700/50">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-300">
-                      <span className="text-cyan-400 font-mono">{formatTime(markers.start)}</span>
-                      {' to '}
-                      <span className="text-pink-400 font-mono">{formatTime(markers.end)}</span>
-                    </span>
-                    <span className="text-gray-500">({formatTime(clipDuration)} clip)</span>
+                    <div className="flex items-center gap-3">
+                      {!isFirst && (
+                        <span className="flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                          <span className="text-gray-400">Blend in:</span>
+                          <span className="text-emerald-400 font-mono font-semibold">{formatTime(blendIn)}</span>
+                        </span>
+                      )}
+                      {!isLast && (
+                        <span className="flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                          <span className="text-gray-400">Blend out:</span>
+                          <span className="text-red-400 font-mono font-semibold">{formatTime(blendOut)}</span>
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-gray-500">({formatTime(clipDuration)} total)</span>
                   </div>
                 </div>
               </div>

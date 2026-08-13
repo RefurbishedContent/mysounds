@@ -131,7 +131,7 @@ const MashUpConfirmationStep: React.FC<MashUpConfirmationStepProps> = ({
                         </span>
                       </div>
                       <span className="text-[10px] text-gray-500 font-mono">
-                        {pair.transitionDuration}s
+                        {Math.min(pair.transitionDuration, 10)}s blend
                       </span>
                     </>
                   )}

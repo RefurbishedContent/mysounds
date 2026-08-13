@@ -92,9 +92,11 @@ class BlendExportService {
         songB: songB.originalName
       });
 
+      const MAX_BLEND = 10;
       const songAMarker = transition.songAMarkerPoint || 0;
       const songBMarker = transition.songBMarkerPoint || 0;
-      const transitionDuration = transition.transitionDuration || 12;
+      const rawTransitionDuration = transition.transitionDuration || 10;
+      const transitionDuration = Math.min(rawTransitionDuration, MAX_BLEND);
 
       const songADuration = songA.analysis?.duration || 0;
       const songBDuration = songB.analysis?.duration || 0;

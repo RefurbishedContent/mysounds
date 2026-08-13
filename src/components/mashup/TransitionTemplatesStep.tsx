@@ -7,6 +7,7 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 import { SongTimelineRow } from './SongTimelineRow';
 import { TransitionConnector } from './TransitionConnector';
 import { EffectsPanel, EffectTimelineRow } from './EffectsPanel';
+import { MAX_TRANSITION_BLEND_SECONDS } from './constants';
 
 const DEFAULT_FADE_KEYFRAMES = {
   songAOut: [
@@ -93,10 +94,11 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
   };
 
   const handleTemplateSelect = (pairIndex: number, template: TemplateData) => {
+    const cappedDuration = Math.min(template.duration, MAX_TRANSITION_BLEND_SECONDS);
     updatePair(pairIndex, {
       selectedTemplate: template,
       directCut: false,
-      transitionDuration: template.duration,
+      transitionDuration: cappedDuration,
     });
     setExpandedPanelIndex(null);
   };
