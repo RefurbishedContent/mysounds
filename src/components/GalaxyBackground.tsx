@@ -4,79 +4,115 @@ const GalaxyBackground: React.FC = () => {
   return (
     <div className="fixed inset-0 z-[1] pointer-events-none overflow-hidden">
       <style>{`
-        @keyframes orbDrift1 {
-          0% { top: 45%; left: 45%; transform: scale(1) rotate(0deg); border-radius: 48% 52% 50% 50%; }
-          12% { top: 20%; left: 55%; transform: scale(1.2) rotate(20deg); border-radius: 55% 45% 42% 58%; }
-          25% { top: 15%; left: 75%; transform: scale(0.85) rotate(-15deg); border-radius: 42% 58% 55% 45%; }
-          37% { top: 35%; left: 80%; transform: scale(1.3) rotate(30deg); border-radius: 58% 42% 48% 52%; }
-          50% { top: 60%; left: 65%; transform: scale(0.9) rotate(-10deg); border-radius: 45% 55% 58% 42%; }
-          62% { top: 70%; left: 40%; transform: scale(1.15) rotate(25deg); border-radius: 52% 48% 42% 58%; }
-          75% { top: 55%; left: 20%; transform: scale(0.8) rotate(-20deg); border-radius: 42% 58% 52% 48%; }
-          87% { top: 30%; left: 25%; transform: scale(1.1) rotate(15deg); border-radius: 55% 45% 48% 52%; }
-          100% { top: 45%; left: 45%; transform: scale(1) rotate(0deg); border-radius: 48% 52% 50% 50%; }
+        @keyframes grain {
+          0%, 100% { transform: translate(0, 0); }
+          10% { transform: translate(-5%, -10%); }
+          20% { transform: translate(-15%, 5%); }
+          30% { transform: translate(7%, -25%); }
+          40% { transform: translate(-5%, 25%); }
+          50% { transform: translate(-15%, 10%); }
+          60% { transform: translate(15%, 0%); }
+          70% { transform: translate(0%, 15%); }
+          80% { transform: translate(3%, 35%); }
+          90% { transform: translate(-10%, 10%); }
         }
-        @keyframes orbDrift2 {
-          0% { top: 50%; left: 50%; transform: scale(1.1) rotate(0deg); border-radius: 52% 48% 45% 55%; }
-          16% { top: 65%; left: 70%; transform: scale(0.8) rotate(-30deg); border-radius: 45% 55% 58% 42%; }
-          33% { top: 75%; left: 45%; transform: scale(1.25) rotate(20deg); border-radius: 58% 42% 48% 52%; }
-          50% { top: 55%; left: 25%; transform: scale(0.9) rotate(-15deg); border-radius: 42% 58% 52% 48%; }
-          66% { top: 30%; left: 35%; transform: scale(1.15) rotate(35deg); border-radius: 55% 45% 42% 58%; }
-          83% { top: 25%; left: 60%; transform: scale(0.85) rotate(-25deg); border-radius: 48% 52% 55% 45%; }
-          100% { top: 50%; left: 50%; transform: scale(1.1) rotate(0deg); border-radius: 52% 48% 45% 55%; }
+        .grain-overlay {
+          position: fixed;
+          inset: -50%;
+          width: 200%;
+          height: 200%;
+          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+          background-size: 128px 128px;
+          opacity: 0.035;
+          animation: grain 8s steps(10) infinite;
+          z-index: 1;
         }
-        @keyframes orbDrift3 {
-          0% { top: 40%; left: 55%; transform: scale(0.9) rotate(10deg); border-radius: 50% 50% 55% 45%; }
-          20% { top: 25%; left: 30%; transform: scale(1.3) rotate(-35deg); border-radius: 42% 58% 45% 55%; }
-          40% { top: 50%; left: 15%; transform: scale(0.75) rotate(25deg); border-radius: 58% 42% 50% 50%; }
-          60% { top: 70%; left: 50%; transform: scale(1.2) rotate(-20deg); border-radius: 48% 52% 58% 42%; }
-          80% { top: 40%; left: 75%; transform: scale(0.85) rotate(30deg); border-radius: 55% 45% 45% 55%; }
-          100% { top: 40%; left: 55%; transform: scale(0.9) rotate(10deg); border-radius: 50% 50% 55% 45%; }
-        }
-        @keyframes coreFloat {
-          0% { top: 45%; left: 48%; transform: scale(1); }
-          20% { top: 35%; left: 60%; transform: scale(1.1); }
-          40% { top: 55%; left: 55%; transform: scale(0.9); }
-          60% { top: 50%; left: 35%; transform: scale(1.15); }
-          80% { top: 38%; left: 42%; transform: scale(0.95); }
-          100% { top: 45%; left: 48%; transform: scale(1); }
+        @keyframes edgePulse {
+          0%, 100% { opacity: 0.6; }
+          50% { opacity: 1; }
         }
       `}</style>
 
-      {/* Outer diffuse layer - large, soft, wanders wide */}
+      {/* Film grain texture */}
+      <div className="grain-overlay" />
+
+      {/* Top edge glow */}
       <div
-        className="absolute w-[420px] h-[420px] blur-[120px]"
+        className="absolute top-0 left-0 right-0 h-[2px]"
         style={{
-          background: 'radial-gradient(circle, rgba(0,210,255,0.12) 0%, rgba(0,140,255,0.06) 60%, transparent 100%)',
-          animation: 'orbDrift3 25s ease-in-out infinite',
+          background: 'linear-gradient(90deg, transparent 0%, #06b6d4 15%, #3b82f6 35%, #06b6d4 50%, #3b82f6 65%, #06b6d4 85%, transparent 100%)',
+          animation: 'edgePulse 4s ease-in-out infinite',
+        }}
+      />
+      <div
+        className="absolute top-0 left-0 right-0 h-16"
+        style={{
+          background: 'linear-gradient(180deg, rgba(6,182,212,0.08) 0%, transparent 100%)',
         }}
       />
 
-      {/* Mid energy layer */}
+      {/* Bottom edge glow */}
       <div
-        className="absolute w-[280px] h-[280px] blur-[80px]"
+        className="absolute bottom-0 left-0 right-0 h-[2px]"
         style={{
-          background: 'radial-gradient(circle, rgba(0,180,255,0.18) 0%, rgba(6,182,212,0.10) 50%, transparent 100%)',
-          animation: 'orbDrift2 18s ease-in-out infinite',
+          background: 'linear-gradient(90deg, transparent 0%, #06b6d4 15%, #3b82f6 35%, #06b6d4 50%, #3b82f6 65%, #06b6d4 85%, transparent 100%)',
+          animation: 'edgePulse 4s ease-in-out infinite 1s',
+        }}
+      />
+      <div
+        className="absolute bottom-0 left-0 right-0 h-16"
+        style={{
+          background: 'linear-gradient(0deg, rgba(6,182,212,0.08) 0%, transparent 100%)',
         }}
       />
 
-      {/* Primary energy orb - tighter, more vivid */}
+      {/* Left edge glow */}
       <div
-        className="absolute w-[180px] h-[180px] blur-[50px]"
+        className="absolute top-0 bottom-0 left-0 w-[2px]"
         style={{
-          background: 'radial-gradient(circle, rgba(34,211,238,0.22) 0%, rgba(56,189,248,0.12) 50%, transparent 100%)',
-          animation: 'orbDrift1 14s ease-in-out infinite',
+          background: 'linear-gradient(180deg, transparent 0%, #06b6d4 15%, #3b82f6 35%, #06b6d4 50%, #3b82f6 65%, #06b6d4 85%, transparent 100%)',
+          animation: 'edgePulse 4s ease-in-out infinite 0.5s',
+        }}
+      />
+      <div
+        className="absolute top-0 bottom-0 left-0 w-16"
+        style={{
+          background: 'linear-gradient(90deg, rgba(6,182,212,0.06) 0%, transparent 100%)',
         }}
       />
 
-      {/* Bright core - small hot center */}
+      {/* Right edge glow */}
       <div
-        className="absolute w-[70px] h-[70px] rounded-full blur-[30px]"
+        className="absolute top-0 bottom-0 right-0 w-[2px]"
         style={{
-          background: 'radial-gradient(circle, rgba(165,243,252,0.25) 0%, rgba(34,211,238,0.15) 60%, transparent 100%)',
-          animation: 'coreFloat 10s ease-in-out infinite',
+          background: 'linear-gradient(180deg, transparent 0%, #06b6d4 15%, #3b82f6 35%, #06b6d4 50%, #3b82f6 65%, #06b6d4 85%, transparent 100%)',
+          animation: 'edgePulse 4s ease-in-out infinite 1.5s',
         }}
       />
+      <div
+        className="absolute top-0 bottom-0 right-0 w-16"
+        style={{
+          background: 'linear-gradient(270deg, rgba(6,182,212,0.06) 0%, transparent 100%)',
+        }}
+      />
+
+      {/* Corner accents - bright spots where edges meet */}
+      {/* Top-left */}
+      <div className="absolute top-0 left-0 w-24 h-24" style={{
+        background: 'radial-gradient(circle at 0% 0%, rgba(6,182,212,0.15) 0%, transparent 70%)',
+      }} />
+      {/* Top-right */}
+      <div className="absolute top-0 right-0 w-24 h-24" style={{
+        background: 'radial-gradient(circle at 100% 0%, rgba(59,130,246,0.15) 0%, transparent 70%)',
+      }} />
+      {/* Bottom-left */}
+      <div className="absolute bottom-0 left-0 w-24 h-24" style={{
+        background: 'radial-gradient(circle at 0% 100%, rgba(59,130,246,0.15) 0%, transparent 70%)',
+      }} />
+      {/* Bottom-right */}
+      <div className="absolute bottom-0 right-0 w-24 h-24" style={{
+        background: 'radial-gradient(circle at 100% 100%, rgba(6,182,212,0.15) 0%, transparent 70%)',
+      }} />
     </div>
   );
 };
