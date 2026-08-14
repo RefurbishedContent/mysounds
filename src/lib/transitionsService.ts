@@ -64,6 +64,12 @@ export interface UpdateTransitionInput {
 }
 
 class TransitionsService {
+  private static readonly MAX_BLEND_SECONDS = 10;
+
+  private clampBlend(value: number): number {
+    return Math.min(Math.max(value, 0), TransitionsService.MAX_BLEND_SECONDS);
+  }
+
   async createTransition(userId: string, input: CreateTransitionInput): Promise<TransitionData> {
     const insertData: any = {
       user_id: userId,
@@ -72,8 +78,8 @@ class TransitionsService {
       song_b_id: input.songBId,
       template_id: input.templateId,
       transition_start_point: input.transitionStartPoint,
-      transition_duration: input.transitionDuration,
-      song_a_end_time: input.songAEndTime,
+      transition_duration: this.clampBlend(input.transitionDuration),
+      song_a_end_time: this.clampBlend(input.songAEndTime),
       song_b_start_time: input.songBStartTime || 0,
       metadata: input.metadata || {},
       status: 'draft'
@@ -82,7 +88,7 @@ class TransitionsService {
     if (input.songAMarkerPoint !== undefined) insertData.song_a_marker_point = input.songAMarkerPoint;
     if (input.songBMarkerPoint !== undefined) insertData.song_b_marker_point = input.songBMarkerPoint;
     if (input.songAClipStart !== undefined) insertData.song_a_clip_start = input.songAClipStart;
-    if (input.songBClipEnd !== undefined) insertData.song_b_clip_end = input.songBClipEnd;
+    if (input.songBClipEnd !== undefined) insertData.song_b_clip_end = this.clampBlend(input.songBClipEnd);
 
     const { data, error } = await supabase
       .from('transitions')
@@ -122,8 +128,8 @@ class TransitionsService {
     if (updates.name !== undefined) updateData.name = updates.name;
     if (updates.templateId !== undefined) updateData.template_id = updates.templateId;
     if (updates.transitionStartPoint !== undefined) updateData.transition_start_point = updates.transitionStartPoint;
-    if (updates.transitionDuration !== undefined) updateData.transition_duration = updates.transitionDuration;
-    if (updates.songAEndTime !== undefined) updateData.song_a_end_time = updates.songAEndTime;
+    if (updates.transitionDuration !== undefined) updateData.transition_duration = this.clampBlend(updates.transitionDuration);
+    if (updates.songAEndTime !== undefined) updateData.song_a_end_time = this.clampBlend(updates.songAEndTime);
     if (updates.songBStartTime !== undefined) updateData.song_b_start_time = updates.songBStartTime;
     if (updates.songAMarkerPoint !== undefined) updateData.song_a_marker_point = updates.songAMarkerPoint;
     if (updates.songBMarkerPoint !== undefined) updateData.song_b_marker_point = updates.songBMarkerPoint;

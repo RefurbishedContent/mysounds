@@ -2,7 +2,7 @@ import { UploadResult } from '../../lib/storage';
 
 export const MAX_SONGS = 10;
 export const MIN_CLIP_DURATION = 5;
-export const MAX_CLIP_DURATION = 30;
+export const MAX_CLIP_DURATION = 10;
 export const DEFAULT_TRANSITION_DURATION = 10;
 export const MAX_TRANSITION_BLEND_SECONDS = 10;
 
