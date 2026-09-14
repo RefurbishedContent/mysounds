@@ -1,0 +1,41 @@
+[functions.ai-generate-assets]
+verify_jwt = true
+
+[functions.ai-generate-request]
+verify_jwt = true
+
+[functions.ai-generate-status]
+verify_jwt = true
+
+[functions.analyze-audio]
+verify_jwt = true
+
+[functions.analyze-mix]
+verify_jwt = true
+
+[functions.analyze-stems]
+verify_jwt = true
+
+[functions.execute-mix]
+verify_jwt = true
+
+[functions.export-blend]
+verify_jwt = true
+
+[functions.get-stems]
+verify_jwt = true
+
+[functions.mix-suggestions]
+verify_jwt = true
+
+[functions.render-audio]
+verify_jwt = true
+
+[functions.render-mix]
+verify_jwt = true
+
+[functions.separate-stems]
+verify_jwt = true
+
+[functions.stem-webhook]
+verify_jwt = false
