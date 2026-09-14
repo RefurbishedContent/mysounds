@@ -6,6 +6,7 @@
 
 import { spawn } from 'node:child_process';
 import { mkdtemp, rm, stat } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -234,27 +235,118 @@ export async function runStartupSelfTest() {
   }
 }
 
-// Return { peakDbfs } measured by ffmpeg astats. peakDbfs is <= 0 (0 == full-scale).
-// Silent input yields -Infinity; we clamp to a safe floor.
-export async function measurePeakDbfs(wavPath) {
-  const { stderr } = await runBinary(FFMPEG_BIN, [
-    ...BASE_FFMPEG_FLAGS,
-    '-i', wavPath,
-    '-af', 'astats=measure_overall=Peak_level:measure_perchannel=0',
-    '-f', 'null',
-    '-',
-  ], { timeoutMs: 120_000 }).catch(err => ({ stderr: err.message || '' }));
+// Fold a Node.js Readable of raw little-endian Float32 PCM into a peak measurement.
+// Buffers any partial 4-byte tail across chunk boundaries. Rejects NaN and
+// non-finite samples (Infinity / -Infinity) with a descriptive throw. Total
+// byte count MUST be divisible by 4; otherwise a descriptive throw fires.
+// Returns { peakDbfs, sampleCount, maxAbs, silent, byteCount }.
+// Exported for direct unit testing of chunk-boundary and NaN-rejection paths.
+export async function computePeakFromRawF32Stream(readable) {
+  let maxAbs = 0;
+  let sampleCount = 0;
+  let byteCount = 0;
+  let tail = null;
 
-  // Look for "Peak level dB: <n>" in overall stats.
-  const lines = String(stderr).split('\n');
-  let peak = null;
-  for (const line of lines) {
-    const m = line.match(/Peak level dB:\s*(-?\d+(?:\.\d+)?|-inf)/i);
-    if (m) {
-      peak = m[1].toLowerCase() === '-inf' ? -Infinity : Number(m[1]);
-      // Overall block comes last; keep updating.
+  const scanBuffer = (buf) => {
+    const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+    const frames = Math.floor(buf.byteLength / 4);
+    for (let i = 0; i < frames; i++) {
+      const v = view.getFloat32(i * 4, true);
+      if (!Number.isFinite(v)) {
+        throw new Error(
+          `computePeakFromRawF32Stream: non-finite sample at frame ${sampleCount + i} (value=${v})`,
+        );
+      }
+      const a = v < 0 ? -v : v;
+      if (a > maxAbs) maxAbs = a;
+    }
+    sampleCount += frames;
+  };
+
+  for await (const rawChunk of readable) {
+    const chunk = Buffer.isBuffer(rawChunk) ? rawChunk : Buffer.from(rawChunk);
+    byteCount += chunk.length;
+
+    let work = chunk;
+    if (tail && tail.length > 0) {
+      work = Buffer.concat([tail, chunk]);
+      tail = null;
+    }
+    const wholeBytes = work.length - (work.length % 4);
+    if (wholeBytes > 0) {
+      scanBuffer(work.subarray(0, wholeBytes));
+    }
+    if (wholeBytes < work.length) {
+      tail = Buffer.from(work.subarray(wholeBytes));
     }
   }
-  if (peak === null) throw new Error(`Failed to measure peak level for ${wavPath}`);
-  return { peakDbfs: peak };
+
+  if (tail && tail.length > 0) {
+    throw new Error(
+      `computePeakFromRawF32Stream: raw byte length ${byteCount} is not divisible by 4`,
+    );
+  }
+
+  if (maxAbs === 0) {
+    return { peakDbfs: -Infinity, sampleCount, maxAbs: 0, silent: true, byteCount };
+  }
+  return {
+    peakDbfs: 20 * Math.log10(maxAbs),
+    sampleCount,
+    maxAbs,
+    silent: false,
+    byteCount,
+  };
+}
+
+// Deterministic peak measurement.
+// 1. Decode the input to raw little-endian Float32 PCM into a temp file
+//    (preserves the input's channel count and sample rate — peak is a
+//    per-sample statistic so this is safe).
+// 2. Stream the raw file in bounded chunks and interpret each complete 4-byte
+//    value as a little-endian Float32 sample via DataView.
+// 3. Reject NaN / +/-Infinity samples.
+// 4. Track only the running maximum absolute value; never load the whole
+//    render into memory.
+// 5. Silence -> peakDbfs = -Infinity, not a parsing failure.
+// 6. Temp file is always cleaned up in `finally`.
+// Return shape includes peakDbfs (kept for backwards compatibility with the
+// render pipeline) plus richer diagnostic fields.
+export async function measurePeakDbfs(inputPath) {
+  const probe = await probeAudio(inputPath);
+  const channels = Number.isFinite(probe.channels) && probe.channels > 0 ? probe.channels : 2;
+  const sampleRate = Number.isFinite(probe.sampleRate) && probe.sampleRate > 0 ? probe.sampleRate : 44100;
+
+  const dir = await mkdtemp(join(tmpdir(), 'audio-worker-peak-'));
+  const rawPath = join(dir, 'samples.f32le');
+  try {
+    await ffmpeg([
+      '-i', inputPath,
+      '-map', '0:a:0',
+      '-vn',
+      '-ac', String(channels),
+      '-ar', String(sampleRate),
+      '-f', 'f32le',
+      '-acodec', 'pcm_f32le',
+      rawPath,
+    ], { timeoutMs: 180_000 });
+
+    const st = await stat(rawPath);
+    if (st.size % 4 !== 0) {
+      throw new Error(
+        `measurePeakDbfs: raw f32le byte length ${st.size} is not divisible by 4 for ${inputPath}`,
+      );
+    }
+
+    const stream = createReadStream(rawPath, { highWaterMark: 1024 * 1024 });
+    const result = await computePeakFromRawF32Stream(stream);
+    if (result.byteCount !== st.size) {
+      throw new Error(
+        `measurePeakDbfs: streamed ${result.byteCount} bytes but stat reported ${st.size}`,
+      );
+    }
+    return result;
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
 }

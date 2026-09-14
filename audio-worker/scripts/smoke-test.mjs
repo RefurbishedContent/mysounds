@@ -1,11 +1,17 @@
 #!/usr/bin/env node
-// End-to-end smoke test using two synthetic tone WAVs.
-// Runs the same startup self-test the worker runs on boot (which exercises the
-// probe + decoded-sample-count paths against the shipped ffmpeg + ffprobe),
-// then renders a direct_cut and a smooth_crossfade and verifies both outputs.
-// Run this INSIDE the final Docker image so it exercises the exact binaries
-// that will run in production:
-//   docker run --rm --entrypoint node <image> scripts/smoke-test.mjs
+// End-to-end smoke test using synthetic tone WAVs.
+//
+// This test MUST be run inside the final Docker image so it exercises the
+// EXACT ffmpeg + ffprobe binaries that will run in production:
+//     docker run --rm --entrypoint node <image> scripts/smoke-test.mjs
+//
+// It covers:
+//   * runStartupSelfTest      — probe + decoded-sample-count path (v1 regression)
+//   * render (direct_cut)     — extract + concat + peak measurement + limiter
+//   * render (smooth_crossfade) — extract + acrossfade + peak measurement + limiter
+//   * verify()                — output verifier used by production
+//   * measurePeakDbfs         — deterministic raw-f32le peak on the real output
+//   * measurePeakDbfs (silence) — never throws, returns -Infinity
 
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -14,9 +20,10 @@ import {
   ffmpeg,
   probeAudio,
   countDecodedPcmSamples,
+  measurePeakDbfs,
   runStartupSelfTest,
 } from '../src/process.mjs';
-import { render, SAMPLE_RATE } from '../src/render.mjs';
+import { render, SAMPLE_RATE, PEAK_CEILING_DBFS } from '../src/render.mjs';
 import { verify } from './verify-output.mjs';
 
 async function makeTone(outPath, freq, seconds) {
@@ -29,7 +36,17 @@ async function makeTone(outPath, freq, seconds) {
   ]);
 }
 
-function specBase(dir, aPath, bPath) {
+async function makeSilence(outPath, seconds) {
+  await ffmpeg([
+    '-f', 'lavfi',
+    '-i', `anullsrc=r=44100:cl=stereo`,
+    '-t', String(seconds),
+    '-c:a', 'pcm_s16le',
+    outPath,
+  ]);
+}
+
+function specBase(aPath, bPath) {
   return {
     version: 1,
     mashUpGroup: 'smoke',
@@ -54,12 +71,19 @@ async function assertOutput(outPath, spec) {
   if (Math.abs(samples - expected) > 1) {
     throw new Error(`smoke: samples ${samples} vs expected ${expected}`);
   }
+
+  const peak = await measurePeakDbfs(outPath);
+  if (!Number.isFinite(peak.peakDbfs)) {
+    throw new Error(`smoke: production peak path returned non-finite ${peak.peakDbfs}`);
+  }
+  if (peak.peakDbfs > PEAK_CEILING_DBFS + 0.05) {
+    throw new Error(
+      `smoke: output exceeds peak ceiling ${PEAK_CEILING_DBFS} dBFS (got ${peak.peakDbfs})`,
+    );
+  }
 }
 
 async function main() {
-  // Exercise the exact probe + decoded-sample-count paths that fail fast in the
-  // presence of a bad ffmpeg/ffprobe build. This is the check that would have
-  // caught the "-count_samples 1" regression before deploy.
   const selfTest = await runStartupSelfTest();
   process.stdout.write(JSON.stringify({ selfTest }) + '\n');
 
@@ -71,7 +95,7 @@ async function main() {
     await makeTone(b, 880, 4);
 
     const outDirect = join(dir, 'direct.wav');
-    const specDirect = { ...specBase(dir, a, b), renderMode: 'direct_cut', overlapSeconds: 0 };
+    const specDirect = { ...specBase(a, b), renderMode: 'direct_cut', overlapSeconds: 0 };
     const rDirect = await render(specDirect, outDirect);
     const vDirect = await verify(outDirect, specDirect);
     process.stdout.write(JSON.stringify({ direct: { render: rDirect, verify: vDirect } }) + '\n');
@@ -79,12 +103,21 @@ async function main() {
     await assertOutput(outDirect, specDirect);
 
     const outCross = join(dir, 'cross.wav');
-    const specCross = { ...specBase(dir, a, b), renderMode: 'smooth_crossfade', overlapSeconds: 1 };
+    const specCross = { ...specBase(a, b), renderMode: 'smooth_crossfade', overlapSeconds: 1 };
     const rCross = await render(specCross, outCross);
     const vCross = await verify(outCross, specCross);
     process.stdout.write(JSON.stringify({ crossfade: { render: rCross, verify: vCross } }) + '\n');
     if (!vCross.ok) throw new Error('smooth_crossfade verification failed');
     await assertOutput(outCross, specCross);
+
+    // Silence must NEVER throw and must report -Infinity.
+    const silentPath = join(dir, 'silence.wav');
+    await makeSilence(silentPath, 0.5);
+    const silentPeak = await measurePeakDbfs(silentPath);
+    if (silentPeak.peakDbfs !== -Infinity || silentPeak.silent !== true) {
+      throw new Error(`smoke: silence peak wrong: ${JSON.stringify(silentPeak)}`);
+    }
+    process.stdout.write(JSON.stringify({ silence: silentPeak }) + '\n');
   } finally {
     await rm(dir, { recursive: true, force: true }).catch(() => {});
   }
