@@ -3,6 +3,28 @@ import { storageService, UploadResult } from './storage';
 import { TransitionData } from './transitionsService';
 import { reconstructRenderSpec, RenderSpec } from './renderSpec';
 
+export type BlendAccessMode = 'playable' | 'demo_unavailable' | 'source_revoked';
+
+export interface BlendAccess {
+  mode: BlendAccessMode;
+  url?: string;
+  expiresAt?: string;
+  filename?: string;
+  size?: number;
+  contentType?: string;
+  message?: string;
+}
+
+export class BlendAccessError extends Error {
+  readonly code: string;
+  readonly transient: boolean;
+  constructor(code: string, message: string, transient = true) {
+    super(message);
+    this.code = code;
+    this.transient = transient;
+  }
+}
+
 export interface BlendData {
   id: string;
   userId: string;
@@ -10,8 +32,17 @@ export interface BlendData {
   name: string;
   songAId: string;
   songBId: string;
+  /**
+   * Raw value stored in the `blends.url` column. This is either an empty
+   * string, the legacy `demo-no-audio` sentinel, or a stale historical URL.
+   * Never render it directly for playback — always resolve access through
+   * `blendExportService.getPlaybackAccess(blendId)`.
+   */
   url: string;
+  /** Durable storage path in the `blends` bucket. */
   filename: string;
+  storagePath: string;
+  isDemo: boolean;
   duration: number;
   fileSize: number;
   format: 'mp3' | 'wav' | 'flac';
@@ -69,8 +100,85 @@ const POLL_INTERVAL_MS = 2000;
 const MAX_TRANSIENT_ERRORS = 6;
 const RENDER_TIMEOUT_MS = 10 * 60 * 1000;
 
+const ACCESS_REFRESH_MARGIN_MS = 60 * 1000;
+
 class BlendExportService {
   private readonly BUCKET_NAME = 'blends';
+  private readonly accessCache = new Map<string, BlendAccess>();
+
+  /**
+   * Fetch a fresh authorized playback URL for a blend. Cached in-memory and
+   * automatically re-signed when it is within one minute of expiry. Never
+   * mutates the blend row. Errors are output-access failures, not render
+   * failures — callers must NOT flip the blend into `failed` on them.
+   */
+  async getPlaybackAccess(blendId: string, options?: { forceRefresh?: boolean }): Promise<BlendAccess> {
+    if (!options?.forceRefresh) {
+      const cached = this.accessCache.get(blendId);
+      if (cached) {
+        if (cached.mode !== 'playable') {
+          return cached;
+        }
+        const expiresAtMs = cached.expiresAt ? Date.parse(cached.expiresAt) : 0;
+        if (expiresAtMs - Date.now() > ACCESS_REFRESH_MARGIN_MS) {
+          return cached;
+        }
+      }
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData?.session) {
+      throw new BlendAccessError('auth_expired', 'Your session expired. Please sign in again.', false);
+    }
+
+    const { data, error } = await supabase.functions.invoke('get-blend-output', {
+      body: { blendId },
+    });
+
+    if (error) {
+      const ctx = (error as any).context;
+      let body: any = null;
+      if (ctx && typeof ctx.json === 'function') {
+        try { body = await ctx.json(); } catch { body = null; }
+      }
+      const status = ctx?.status ?? (error as any).status;
+      const code = body?.error?.code ?? 'access_failed';
+      const message = body?.error?.message ?? error.message ?? 'Could not get playback access.';
+      if (status === 401 || code === 'unauthorized') {
+        throw new BlendAccessError('auth_expired', 'Your session expired. Please sign in again.', false);
+      }
+      if (status === 403 || code === 'forbidden') {
+        throw new BlendAccessError('forbidden', message, false);
+      }
+      if (status === 404 || code === 'not_found') {
+        throw new BlendAccessError('not_found', message, false);
+      }
+      // Everything else (network, 5xx, signing) is transient: DO NOT change
+      // blend.status on account of it.
+      throw new BlendAccessError(code, message, true);
+    }
+
+    if (!data || typeof data !== 'object' || typeof (data as any).mode !== 'string') {
+      throw new BlendAccessError('access_failed', 'Unexpected response from server.', true);
+    }
+
+    const access: BlendAccess = {
+      mode: (data as any).mode,
+      url: (data as any).url,
+      expiresAt: (data as any).expiresAt,
+      filename: (data as any).filename,
+      size: (data as any).size,
+      contentType: (data as any).contentType,
+      message: (data as any).message,
+    };
+    this.accessCache.set(blendId, access);
+    return access;
+  }
+
+  clearBlendAccess(blendId?: string) {
+    if (blendId) this.accessCache.delete(blendId);
+    else this.accessCache.clear();
+  }
 
   async createBlend(
     userId: string,
@@ -754,6 +862,10 @@ class BlendExportService {
   }
 
   private mapRowToBlend(row: any): BlendData {
+    const filename = row.filename ?? '';
+    const url = row.url ?? '';
+    const fileSize = Number(row.file_size ?? 0);
+    const isDemo = url === 'demo-no-audio' && fileSize === 0;
     return {
       id: row.id,
       userId: row.user_id,
@@ -761,8 +873,10 @@ class BlendExportService {
       name: row.name,
       songAId: row.song_a_id,
       songBId: row.song_b_id,
-      url: row.url,
-      filename: row.filename,
+      url,
+      filename,
+      storagePath: filename,
+      isDemo,
       duration: row.duration,
       fileSize: row.file_size,
       format: row.format,

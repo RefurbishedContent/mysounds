@@ -6,6 +6,7 @@ import { blendExportService, BlendData } from '../lib/blendExportService';
 import { songAnalyzer } from '../lib/songAnalyzer';
 import LibraryUploader from './LibraryUploader';
 import SongDetailModal from './SongDetailModal';
+import BlendAudioControls from './BlendAudioControls';
 
 interface LibraryViewProps {
   onCreateTransitionWithSong?: (song: UploadResult) => void;
@@ -417,17 +418,12 @@ const LibraryView: React.FC<LibraryViewProps> = ({ onCreateTransitionWithSong, o
                       {blend.status === 'completed' ? 'Ready' : blend.status === 'processing' ? 'Processing' : 'Failed'}
                     </span>
                   </div>
-                  <div className="flex items-center space-x-1">
-                    {blend.status === 'completed' && blend.url && (
-                      <a
-                        href={blend.url}
-                        download
-                        onClick={(e) => e.stopPropagation()}
-                        className="p-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
-                        title="Download"
-                      >
-                        <Download className="w-3.5 h-3.5 text-white" />
-                      </a>
+                  <div
+                    className="flex items-center space-x-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {blend.status === 'completed' && (
+                      <BlendAudioControls blend={blend} compact />
                     )}
                     <button
                       onClick={(e) => {

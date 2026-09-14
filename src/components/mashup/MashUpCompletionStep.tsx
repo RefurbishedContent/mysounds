@@ -5,6 +5,7 @@ import {
 import { BlendData } from '../../lib/blendExportService';
 import { SONG_LETTERS, SONG_COLORS, formatTime } from './constants';
 import { TransitionPairConfig } from './types';
+import BlendAudioControls from '../BlendAudioControls';
 
 interface MashUpCompletionStepProps {
   blends: BlendData[];
@@ -88,7 +89,7 @@ const MashUpCompletionStep: React.FC<MashUpCompletionStepProps> = ({
                   key={blend.id}
                   className="bg-gray-900/50 border border-gray-700/50 rounded-lg p-2.5"
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <div className="w-6 h-6 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0">
                         <CheckCircle size={12} className="text-green-400" />
@@ -112,7 +113,7 @@ const MashUpCompletionStep: React.FC<MashUpCompletionStepProps> = ({
                         {blend.name}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0 ml-2 text-[10px] text-gray-400">
+                    <div className="flex items-center gap-2 flex-shrink-0 text-[10px] text-gray-400">
                       <span>{formatTime(blend.duration)}</span>
                       {pair?.directCut ? (
                         <Scissors size={10} />
@@ -120,6 +121,9 @@ const MashUpCompletionStep: React.FC<MashUpCompletionStepProps> = ({
                         <Sparkles size={10} className="text-cyan-400" />
                       )}
                     </div>
+                  </div>
+                  <div className="mt-2 flex justify-end">
+                    <BlendAudioControls blend={blend} compact />
                   </div>
                 </div>
               );

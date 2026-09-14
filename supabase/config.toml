@@ -25,6 +25,9 @@ verify_jwt = true
 [functions.get-stems]
 verify_jwt = true
 
+[functions.get-blend-output]
+verify_jwt = true
+
 [functions.mix-suggestions]
 verify_jwt = true
 
