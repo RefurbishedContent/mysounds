@@ -285,10 +285,15 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
 
         // End/start points are free-position; the render only uses the
         // MAX_TRANSITION_BLEND_SECONDS window adjacent to each transition point.
+        const safeStartA = Math.max(0, Math.min(markersA.start, durationA));
         const safeEndA = Math.max(0, Math.min(markersA.end, durationA));
         const safeStartB = Math.max(0, Math.min(markersB.start, durationB));
+        const safeEndB = Math.max(0, Math.min(markersB.end, durationB));
         const blendClipStartA = Math.max(0, safeEndA - MAX_TRANSITION_BLEND_SECONDS);
-        const blendClipEndB = Math.min(durationB, safeStartB + MAX_TRANSITION_BLEND_SECONDS);
+        const isLastPair = i === selectedSongs.length - 2;
+        const songBClipEndValue = isLastPair
+          ? safeEndB
+          : Math.min(durationB, safeStartB + MAX_TRANSITION_BLEND_SECONDS);
 
         const pairName = selectedSongs.length === 2
           ? name
@@ -306,14 +311,16 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
           songAMarkerPoint: safeEndA,
           songBMarkerPoint: safeStartB,
           songAClipStart: blendClipStartA,
-          songBClipEnd: blendClipEndB,
+          songBClipEnd: songBClipEndValue,
           metadata: {
             songAName: songA.originalName,
             songBName: songB.originalName,
             mashUpGroup: name,
             pairIndex: i,
-            songAFullClipStart: markersA.start,
-            songBFullClipEnd: markersB.end,
+            songAFullClipStart: safeStartA,
+            songAFullClipEnd: safeEndA,
+            songBFullClipStart: safeStartB,
+            songBFullClipEnd: safeEndB,
             blendWindowSeconds: MAX_TRANSITION_BLEND_SECONDS,
           },
         });
@@ -621,9 +628,9 @@ const TransitionPointsStep: React.FC<TransitionPointsStepProps> = ({
                         {song.originalName}
                       </h4>
                       <p className="text-xs text-gray-500">
-                        {isFirst && isLast ? 'Full song' :
+                        {isFirst && isLast ? 'Drag START and END to trim the song' :
                          isFirst ? 'Drag START to set intro, END to set blend-out' :
-                         isLast ? 'Drag START marker to set blend-in point' :
+                         isLast ? 'Drag START to set blend-in, END to set outro' :
                          'Drag markers to set blend-in and blend-out points'}
                       </p>
                     </div>
@@ -639,14 +646,14 @@ const TransitionPointsStep: React.FC<TransitionPointsStepProps> = ({
                   currentTime={0}
                   duration={duration}
                   onSeek={() => {}}
-                  onSetInMarker={!isFirst ? (time) => {
+                  onSetInMarker={(time) => {
                     onUpdateClipMarker(index, 'start', time);
-                  } : undefined}
-                  onSetEndMarker={!isLast ? (time) => {
+                  }}
+                  onSetEndMarker={(time) => {
                     onUpdateClipMarker(index, 'end', time);
-                  } : undefined}
-                  inMarkerLabel={isFirst ? undefined : 'Set BLEND IN'}
-                  endMarkerLabel={isLast ? undefined : 'Set BLEND OUT'}
+                  }}
+                  inMarkerLabel={isFirst ? 'Set START' : 'Set BLEND IN'}
+                  endMarkerLabel={isLast ? 'Set END' : 'Set BLEND OUT'}
                   isPlaying={false}
                   showGradient={true}
                   markers={[
@@ -659,15 +666,15 @@ const TransitionPointsStep: React.FC<TransitionPointsStepProps> = ({
                         onUpdateClipMarker(index, 'start', newTime);
                       },
                     },
-                    ...(!isLast ? [{
+                    {
                       id: `song-${index}-end`,
                       time: markers.end,
                       color: '#ef4444',
-                      label: 'BLEND OUT',
+                      label: isLast ? 'END' : 'BLEND OUT',
                       onDrag: (newTime: number) => {
                         onUpdateClipMarker(index, 'end', newTime);
                       },
-                    }] : []),
+                    },
                   ]}
                 />
 
