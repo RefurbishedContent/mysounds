@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { TemplateData } from '../../lib/database';
 import { transitionsService } from '../../lib/transitionsService';
+import { buildRenderSpec, RenderMode, reconstructRenderSpec } from '../../lib/renderSpec';
 import { TransitionPairConfig } from './types';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { SongTimelineRow } from './SongTimelineRow';
@@ -130,6 +131,36 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
       for (const pair of pairs) {
         const transition = await transitionsService.getTransition(pair.transitionId);
 
+        const renderMode: RenderMode = pair.directCut
+          ? 'direct_cut'
+          : (pair.selectedTemplate ? 'template' : 'smooth_crossfade');
+        const overlapSeconds = pair.directCut ? 0 : Math.max(0, pair.transitionDuration || 0);
+        const priorSpec = reconstructRenderSpec(transition, {
+          songA: pair.songA.metadata?.duration,
+          songB: pair.songB.metadata?.duration,
+        });
+        if (!priorSpec) {
+          throw new Error('Missing selected ranges for this pair. Reopen the Clip Points step and save it before choosing a template.');
+        }
+        const templateRef = renderMode === 'template' && pair.selectedTemplate
+          ? {
+              templateId: pair.selectedTemplate.id,
+              templateName: pair.selectedTemplate.name,
+              templateAudioUrl: pair.selectedTemplate.templateData?.previewUrl || null,
+            }
+          : undefined;
+        const renderSpec = buildRenderSpec({
+          mashUpGroup: priorSpec.mashUpGroup,
+          pairIndex: priorSpec.pairIndex,
+          isFirstPair: priorSpec.isFirstPair,
+          isLastPair: priorSpec.isLastPair,
+          songA: priorSpec.songA,
+          songB: priorSpec.songB,
+          renderMode,
+          overlapSeconds,
+          templateRef,
+        });
+
         if (pair.directCut) {
           await transitionsService.updateTransition(pair.transitionId, {
             status: 'ready',
@@ -137,6 +168,8 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
             metadata: {
               ...transition.metadata,
               directCut: true,
+              renderMode: 'direct_cut',
+              renderSpec,
               blenderOutput: {
                 songASegment: {
                   clipStart: transition.songAClipStart,
@@ -159,6 +192,9 @@ const TransitionTemplatesStep: React.FC<TransitionTemplatesStepProps> = ({
             status: 'ready',
             metadata: {
               ...transition.metadata,
+              directCut: false,
+              renderMode,
+              renderSpec,
               songAKeyframes: DEFAULT_FADE_KEYFRAMES.songAOut,
               songBKeyframes: DEFAULT_FADE_KEYFRAMES.songBIn,
               songAFadeCurve: 'smooth',

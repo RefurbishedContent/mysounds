@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { storageService, UploadResult } from '../lib/storage';
 import { transitionsService } from '../lib/transitionsService';
 import { BlendData } from '../lib/blendExportService';
+import { buildRenderSpec } from '../lib/renderSpec';
 import { getUserMashupCounter, incrementMashupCounter } from '../lib/supabase';
 import { AudioScrubber } from './AudioScrubber';
 import DJCrowdCanvas from './DJCrowdCanvas';
@@ -299,6 +300,27 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
           ? name
           : `${name} (${SONG_LETTERS[i]}→${SONG_LETTERS[i + 1]})`;
 
+        const renderSpec = buildRenderSpec({
+          mashUpGroup: name,
+          pairIndex: i,
+          isFirstPair: i === 0,
+          isLastPair,
+          songA: {
+            uploadId: songA.id,
+            sourceStart: safeStartA,
+            sourceEnd: safeEndA,
+            sourceDuration: durationA,
+          },
+          songB: {
+            uploadId: songB.id,
+            sourceStart: safeStartB,
+            sourceEnd: safeEndB,
+            sourceDuration: durationB,
+          },
+          renderMode: 'direct_cut',
+          overlapSeconds: 0,
+        });
+
         const transition = await transitionsService.createTransition(user.id, {
           name: pairName,
           songAId: songA.id,
@@ -317,11 +339,15 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
             songBName: songB.originalName,
             mashUpGroup: name,
             pairIndex: i,
+            isLastPair,
             songAFullClipStart: safeStartA,
             songAFullClipEnd: safeEndA,
             songBFullClipStart: safeStartB,
             songBFullClipEnd: safeEndB,
             blendWindowSeconds: MAX_TRANSITION_BLEND_SECONDS,
+            renderMode: 'direct_cut',
+            directCut: true,
+            renderSpec,
           },
         });
 

@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { storageService, UploadResult } from './storage';
 import { TransitionData } from './transitionsService';
+import { reconstructRenderSpec, RenderSpec } from './renderSpec';
 
 export interface BlendData {
   id: string;
@@ -92,18 +93,21 @@ class BlendExportService {
         songB: songB.originalName
       });
 
-      const MAX_BLEND = 10;
-      const songAMarker = transition.songAMarkerPoint || 0;
-      const songBMarker = transition.songBMarkerPoint || 0;
-      const rawTransitionDuration = transition.transitionDuration || 10;
-      const transitionDuration = Math.min(rawTransitionDuration, MAX_BLEND);
+      const renderSpec: RenderSpec | null = reconstructRenderSpec(transition, {
+        songA: songA.analysis?.duration ?? songA.metadata?.duration,
+        songB: songB.analysis?.duration ?? songB.metadata?.duration,
+      });
 
-      const songADuration = songA.analysis?.duration || 0;
-      const songBDuration = songB.analysis?.duration || 0;
+      if (!renderSpec) {
+        throw new Error(
+          'This mash-up is missing its selected clip ranges. Re-open it in the wizard and save the Clip Points step before creating.'
+        );
+      }
 
-      const songAContribution = songAMarker;
-      const songBContribution = songBDuration - songBMarker;
-      const totalDuration = songAContribution + transitionDuration + songBContribution;
+      const songAContribution = renderSpec.expectedContribution.songASeconds;
+      const songBContribution = renderSpec.expectedContribution.songBSeconds;
+      const transitionDuration = renderSpec.overlapSeconds;
+      const totalDuration = renderSpec.expectedContribution.outputSeconds;
 
       const blendName = input.name || `${songA.originalName} → ${songB.originalName}`;
       const filename = `${userId}/${Date.now()}-blend.${input.format || 'wav'}`;
@@ -134,7 +138,8 @@ class BlendExportService {
           export_settings: {
             normalize: input.normalize ?? true,
             fadeIn: input.fadeIn || 0,
-            fadeOut: input.fadeOut || 0
+            fadeOut: input.fadeOut || 0,
+            renderSpec,
           },
           song_a_duration_contribution: Math.round(songAContribution),
           song_b_duration_contribution: Math.round(songBContribution),

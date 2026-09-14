@@ -229,16 +229,27 @@ const AppShell: React.FC = () => {
             if (song) songsMap.set(song.id, song);
           });
 
-          const pairConfigs: TransitionPairConfig[] = groupTransitions.map((t, index) => ({
-            transitionId: t.id,
-            songA: songsMap.get(t.songAId)!,
-            songB: songsMap.get(t.songBId)!,
-            songAIndex: t.metadata?.pairIndex ?? index,
-            songBIndex: (t.metadata?.pairIndex ?? index) + 1,
-            selectedTemplate: null,
-            directCut: true,
-            transitionDuration: t.transitionDuration || DEFAULT_TRANSITION_DURATION,
-          }));
+          const pairConfigs: TransitionPairConfig[] = groupTransitions.map((t, index) => {
+            const md = t.metadata || {};
+            const spec = md.renderSpec;
+            const explicitDirectCut = md.renderMode === 'direct_cut' || md.directCut === true;
+            const overlap = typeof spec?.overlapSeconds === 'number'
+              ? spec.overlapSeconds
+              : (t.transitionDuration ?? DEFAULT_TRANSITION_DURATION);
+            const derivedDirectCut = explicitDirectCut || (spec?.renderMode === 'direct_cut');
+            return {
+              transitionId: t.id,
+              songA: songsMap.get(t.songAId)!,
+              songB: songsMap.get(t.songBId)!,
+              songAIndex: md.pairIndex ?? index,
+              songBIndex: (md.pairIndex ?? index) + 1,
+              selectedTemplate: null,
+              directCut: derivedDirectCut,
+              transitionDuration: derivedDirectCut
+                ? 0
+                : (overlap > 0 ? overlap : (t.transitionDuration || DEFAULT_TRANSITION_DURATION)),
+            };
+          });
 
           setEditingPairConfigs(pairConfigs);
           setEditingMashUpName(mashUpGroup);
