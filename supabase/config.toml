@@ -31,6 +31,9 @@ verify_jwt = true
 [functions.render-audio]
 verify_jwt = true
 
+[functions.render-blend]
+verify_jwt = true
+
 [functions.render-mix]
 verify_jwt = true
 
