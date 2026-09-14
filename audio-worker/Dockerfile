@@ -105,8 +105,10 @@ RUN mkdir -p /work && chown worker:worker /work
 USER worker
 WORKDIR /work
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=3s --retries=1 \
-  CMD ["ffmpeg", "-version"]
+EXPOSE 8080
 
-ENTRYPOINT ["node", "/app/scripts/render-local.mjs"]
-CMD ["--help"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD node -e "require('http').get({host:'127.0.0.1',port:process.env.PORT||8080,path:'/health',timeout:3000},r=>{let b='';r.on('data',c=>b+=c);r.on('end',()=>{try{process.exit(JSON.parse(b).ok?0:1)}catch{process.exit(1)}})}).on('error',()=>process.exit(1))"
+
+ENTRYPOINT ["node"]
+CMD ["/app/src/worker.mjs"]

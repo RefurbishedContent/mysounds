@@ -3,14 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Local FFmpeg-backed renderer for mash-up specs (direct_cut and smooth_crossfade). No network, no queue.",
+  "description": "Local FFmpeg-backed renderer for mash-up specs (direct_cut and smooth_crossfade). Runs as a queue worker against Supabase blend_render_jobs.",
   "engines": {
     "node": ">=24.0.0 <25"
   },
   "scripts": {
+    "start": "node src/worker.mjs",
     "render": "node scripts/render-local.mjs",
     "verify": "node scripts/verify-output.mjs",
     "smoke": "node scripts/smoke-test.mjs",
     "test": "node --test tests/"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4"
   }
 }
