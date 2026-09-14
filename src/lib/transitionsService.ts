@@ -79,8 +79,8 @@ class TransitionsService {
       template_id: input.templateId,
       transition_start_point: input.transitionStartPoint,
       transition_duration: this.clampBlend(input.transitionDuration),
-      song_a_end_time: this.clampBlend(input.songAEndTime),
-      song_b_start_time: input.songBStartTime || 0,
+      song_a_end_time: Math.max(input.songAEndTime, 0),
+      song_b_start_time: Math.max(input.songBStartTime || 0, 0),
       metadata: input.metadata || {},
       status: 'draft'
     };
@@ -88,7 +88,7 @@ class TransitionsService {
     if (input.songAMarkerPoint !== undefined) insertData.song_a_marker_point = input.songAMarkerPoint;
     if (input.songBMarkerPoint !== undefined) insertData.song_b_marker_point = input.songBMarkerPoint;
     if (input.songAClipStart !== undefined) insertData.song_a_clip_start = input.songAClipStart;
-    if (input.songBClipEnd !== undefined) insertData.song_b_clip_end = this.clampBlend(input.songBClipEnd);
+    if (input.songBClipEnd !== undefined) insertData.song_b_clip_end = Math.max(input.songBClipEnd, 0);
 
     const { data, error } = await supabase
       .from('transitions')
@@ -129,7 +129,7 @@ class TransitionsService {
     if (updates.templateId !== undefined) updateData.template_id = updates.templateId;
     if (updates.transitionStartPoint !== undefined) updateData.transition_start_point = updates.transitionStartPoint;
     if (updates.transitionDuration !== undefined) updateData.transition_duration = this.clampBlend(updates.transitionDuration);
-    if (updates.songAEndTime !== undefined) updateData.song_a_end_time = this.clampBlend(updates.songAEndTime);
+    if (updates.songAEndTime !== undefined) updateData.song_a_end_time = Math.max(updates.songAEndTime, 0);
     if (updates.songBStartTime !== undefined) updateData.song_b_start_time = updates.songBStartTime;
     if (updates.songAMarkerPoint !== undefined) updateData.song_a_marker_point = updates.songAMarkerPoint;
     if (updates.songBMarkerPoint !== undefined) updateData.song_b_marker_point = updates.songBMarkerPoint;

@@ -251,12 +251,14 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
 
       let clamped = value;
       if (field === 'end') {
-        // Song A end marker: blend-out zone = duration - end, capped at MAX_TRANSITION_BLEND_SECONDS
-        const minEnd = Math.max(current.start + MIN_CLIP_DURATION, duration - MAX_TRANSITION_BLEND_SECONDS);
+        // Song A end point can be anywhere after the start marker; the render only
+        // uses the MAX_TRANSITION_BLEND_SECONDS immediately preceding this point.
+        const minEnd = current.start + MIN_CLIP_DURATION;
         clamped = Math.max(minEnd, Math.min(value, duration));
       } else {
-        // Song B start marker: blend-in zone = start, capped at MAX_TRANSITION_BLEND_SECONDS
-        const maxStart = Math.min(current.end - MIN_CLIP_DURATION, MAX_TRANSITION_BLEND_SECONDS);
+        // Song B start point can be anywhere before the end marker; the render only
+        // uses the MAX_TRANSITION_BLEND_SECONDS immediately following this point.
+        const maxStart = Math.max(0, current.end - MIN_CLIP_DURATION);
         clamped = Math.max(0, Math.min(value, maxStart));
       }
 
@@ -281,11 +283,12 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
         const durationA = songDurations[i] || markersA.end;
         const durationB = songDurations[i + 1] || markersB.end;
 
-        // Clamp blend zones to MAX_TRANSITION_BLEND_SECONDS at save time (safety net)
-        const clampedEndA = Math.max(markersA.start, durationA - MAX_TRANSITION_BLEND_SECONDS);
-        const safeEndA = Math.max(markersA.end, clampedEndA);
-        const clampedStartB = Math.min(markersB.end, MAX_TRANSITION_BLEND_SECONDS);
-        const safeStartB = Math.min(markersB.start, clampedStartB);
+        // End/start points are free-position; the render only uses the
+        // MAX_TRANSITION_BLEND_SECONDS window adjacent to each transition point.
+        const safeEndA = Math.max(0, Math.min(markersA.end, durationA));
+        const safeStartB = Math.max(0, Math.min(markersB.start, durationB));
+        const blendClipStartA = Math.max(0, safeEndA - MAX_TRANSITION_BLEND_SECONDS);
+        const blendClipEndB = Math.min(durationB, safeStartB + MAX_TRANSITION_BLEND_SECONDS);
 
         const pairName = selectedSongs.length === 2
           ? name
@@ -302,13 +305,16 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
           songBStartTime: safeStartB,
           songAMarkerPoint: safeEndA,
           songBMarkerPoint: safeStartB,
-          songAClipStart: markersA.start,
-          songBClipEnd: markersB.end,
+          songAClipStart: blendClipStartA,
+          songBClipEnd: blendClipEndB,
           metadata: {
             songAName: songA.originalName,
             songBName: songB.originalName,
             mashUpGroup: name,
             pairIndex: i,
+            songAFullClipStart: markersA.start,
+            songBFullClipEnd: markersB.end,
+            blendWindowSeconds: MAX_TRANSITION_BLEND_SECONDS,
           },
         });
 
@@ -536,24 +542,18 @@ function buildValidationWarnings(
     const isFirst = index === 0;
     const isLast = index === selectedSongs.length - 1;
 
-    if (!isLast) {
-      const blendOut = duration - markers.end;
-      if (blendOut > MAX_TRANSITION_BLEND_SECONDS) {
-        warnings.push({
-          type: 'error',
-          message: `Song ${letter} blend-out zone is ${formatTime(blendOut)} — maximum is ${MAX_TRANSITION_BLEND_SECONDS}s.`,
-        });
-      }
+    if (markers.end > duration) {
+      warnings.push({
+        type: 'error',
+        message: `Song ${letter} end point is beyond the track length.`,
+      });
     }
 
-    if (!isFirst) {
-      const blendIn = markers.start;
-      if (blendIn > MAX_TRANSITION_BLEND_SECONDS) {
-        warnings.push({
-          type: 'error',
-          message: `Song ${letter} blend-in zone is ${formatTime(blendIn)} — maximum is ${MAX_TRANSITION_BLEND_SECONDS}s.`,
-        });
-      }
+    if (!isFirst && markers.start < 0) {
+      warnings.push({
+        type: 'error',
+        message: `Song ${letter} start point is invalid.`,
+      });
     }
   });
 
