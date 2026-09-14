@@ -622,7 +622,7 @@ const TransitionPointsStep: React.FC<TransitionPointsStepProps> = ({
                       </h4>
                       <p className="text-xs text-gray-500">
                         {isFirst && isLast ? 'Full song' :
-                         isFirst ? 'Drag END marker to set blend-out point' :
+                         isFirst ? 'Drag START to set intro, END to set blend-out' :
                          isLast ? 'Drag START marker to set blend-in point' :
                          'Drag markers to set blend-in and blend-out points'}
                       </p>
@@ -650,15 +650,15 @@ const TransitionPointsStep: React.FC<TransitionPointsStepProps> = ({
                   isPlaying={false}
                   showGradient={true}
                   markers={[
-                    ...(!isFirst ? [{
+                    {
                       id: `song-${index}-start`,
                       time: markers.start,
                       color: '#10b981',
-                      label: 'BLEND IN',
+                      label: isFirst ? 'START' : 'BLEND IN',
                       onDrag: (newTime: number) => {
                         onUpdateClipMarker(index, 'start', newTime);
                       },
-                    }] : []),
+                    },
                     ...(!isLast ? [{
                       id: `song-${index}-end`,
                       time: markers.end,

@@ -397,6 +397,12 @@ export function AudioScrubber({
       marker.onDrag(newTime);
     }
 
+    const isStartMarker = markerId.includes('start');
+    if (isStartMarker) {
+      setPlaybackTime(newTime);
+      pauseTimeRef.current = newTime;
+    }
+
     updateMarkerPreview(markerId, newTime);
   }, [calcTimeFromPointer, updateMarkerPreview]);
 
