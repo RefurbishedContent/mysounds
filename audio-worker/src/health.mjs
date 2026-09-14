@@ -17,8 +17,13 @@ export function startHealthServer({ port, engineVersion, state }) {
       pollAgeMs !== null &&
       pollAgeMs < state.pollIntervalMs * 3;
 
+    const healthy =
+      !state.shuttingDown &&
+      state.ffmpegAvailable === true &&
+      (state.lastPollAt === null || pollingHealthy);
+
     const body = {
-      ok: !state.shuttingDown && (state.lastPollAt === null || pollingHealthy),
+      ok: healthy,
       engineVersion,
       uptimeSeconds: Math.round((now - startedAt) / 1000),
       ffmpegAvailable: state.ffmpegAvailable,
@@ -27,8 +32,9 @@ export function startHealthServer({ port, engineVersion, state }) {
       inFlight: state.inFlight,
       shuttingDown: state.shuttingDown,
     };
+    if (state.ffmpegError) body.ffmpegError = state.ffmpegError;
 
-    res.writeHead(200, { 'content-type': 'application/json' });
+    res.writeHead(healthy ? 200 : 503, { 'content-type': 'application/json' });
     res.end(JSON.stringify(body));
   });
 

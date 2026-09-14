@@ -12,7 +12,7 @@ import {
   SAMPLE_RATE, CHANNELS, BIT_DEPTH,
   validateSpec,
 } from '../src/render.mjs';
-import { probeAudio, countAudioSamples } from '../src/process.mjs';
+import { probeAudio, countDecodedPcmSamples } from '../src/process.mjs';
 
 function parseArgs(argv) {
   const args = {};
@@ -40,7 +40,7 @@ export async function verify(outPath, spec) {
   if (probe.bitsPerSample && probe.bitsPerSample !== BIT_DEPTH) {
     failures.push(`bitsPerSample=${probe.bitsPerSample} (expected ${BIT_DEPTH})`);
   }
-  const samples = await countAudioSamples(outPath);
+  const samples = await countDecodedPcmSamples(outPath);
   let expectedSamples = null;
   if (spec) {
     const v = validateSpec(spec);

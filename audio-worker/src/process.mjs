@@ -5,6 +5,9 @@
 // - no inheritance of caller stdio
 
 import { spawn } from 'node:child_process';
+import { mkdtemp, rm, stat } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 export const FFMPEG_BIN = process.env.AUDIO_WORKER_FFMPEG || 'ffmpeg';
 export const FFPROBE_BIN = process.env.AUDIO_WORKER_FFPROBE || 'ffprobe';
@@ -92,7 +95,10 @@ export function ffprobe(args, opts) {
   return runBinary(FFPROBE_BIN, [...BASE_FFPROBE_FLAGS, ...args], opts);
 }
 
-// Return { format, streams, durationSeconds, sampleRate, channels, codec, sampleCount }
+// Probe an audio file's metadata using only well-supported ffprobe fields.
+// Returns durationSeconds, sampleRate, channels, codec, formatName, bitsPerSample,
+// plus an `estimatedSampleCount` derived from duration/time_base. The estimate is
+// non-authoritative; for exact sample counts use countDecodedPcmSamples().
 export async function probeAudio(inputPath) {
   const { stdout } = await ffprobe([
     '-print_format', 'json',
@@ -112,30 +118,120 @@ export async function probeAudio(inputPath) {
   const sampleRate = Number(stream.sample_rate);
   const channels = Number(stream.channels);
   const codec = String(stream.codec_name || '');
-  const sampleCount = Number(stream.duration_ts ?? NaN);
+
+  let estimatedSampleCount = null;
+  const timeBase = typeof stream.time_base === 'string' ? stream.time_base : '';
+  const durationTs = Number(stream.duration_ts ?? NaN);
+  const tbMatch = timeBase.match(/^(\d+)\/(\d+)$/);
+  if (Number.isFinite(durationTs) && tbMatch) {
+    const num = Number(tbMatch[1]);
+    const den = Number(tbMatch[2]);
+    if (den > 0 && num === 1 && den === sampleRate) {
+      estimatedSampleCount = durationTs;
+    } else if (den > 0 && Number.isFinite(sampleRate)) {
+      estimatedSampleCount = Math.round((durationTs * num / den) * sampleRate);
+    }
+  }
+  if (estimatedSampleCount === null && Number.isFinite(durationSeconds) && Number.isFinite(sampleRate)) {
+    estimatedSampleCount = Math.round(durationSeconds * sampleRate);
+  }
+
   return {
     durationSeconds,
     sampleRate,
     channels,
     codec,
-    sampleCount: Number.isFinite(sampleCount) ? sampleCount : null,
+    channelLayout: String(stream.channel_layout || ''),
+    estimatedSampleCount: Number.isFinite(estimatedSampleCount) ? estimatedSampleCount : null,
     formatName: String(parsed.format?.format_name || ''),
     bitsPerSample: Number(stream.bits_per_sample || 0),
   };
 }
 
-// Count samples exactly by asking ffprobe to iterate packets.
-export async function countAudioSamples(wavPath) {
-  const { stdout } = await ffprobe([
-    '-select_streams', 'a:0',
-    '-show_entries', 'stream=nb_read_samples',
-    '-count_samples', '1',
-    '-of', 'default=nw=1:nk=1',
-    wavPath,
-  ], { timeoutMs: 60_000 });
-  const n = Number(String(stdout).trim());
-  if (!Number.isFinite(n)) throw new Error(`Could not read sample count from ${wavPath}`);
-  return n;
+// Count decoded samples per channel exactly by asking ffmpeg to re-decode the
+// input to signed 16-bit little-endian PCM and measuring the raw byte length.
+// samplesPerChannel = bytes / (channels * 2). This does NOT rely on the invalid
+// ffprobe `-count_samples 1` flag, and it treats decoded sample count (not
+// compressed frame count) as the source of truth.
+export async function countDecodedPcmSamples(inputPath) {
+  const probe = await probeAudio(inputPath);
+  const channels = Number(probe.channels);
+  const sampleRate = Number(probe.sampleRate);
+  if (!Number.isFinite(channels) || channels <= 0) {
+    throw new Error(`countDecodedPcmSamples: invalid channel count for ${inputPath}`);
+  }
+  if (!Number.isFinite(sampleRate) || sampleRate <= 0) {
+    throw new Error(`countDecodedPcmSamples: invalid sample rate for ${inputPath}`);
+  }
+  const dir = await mkdtemp(join(tmpdir(), 'audio-worker-count-'));
+  const rawPath = join(dir, 'samples.s16le');
+  try {
+    await ffmpeg([
+      '-i', inputPath,
+      '-map', '0:a:0',
+      '-vn',
+      '-ac', String(channels),
+      '-ar', String(sampleRate),
+      '-f', 's16le',
+      '-acodec', 'pcm_s16le',
+      rawPath,
+    ], { timeoutMs: 180_000 });
+    const st = await stat(rawPath);
+    const bytesPerFrame = channels * 2;
+    if (st.size % bytesPerFrame !== 0) {
+      throw new Error(
+        `countDecodedPcmSamples: raw byte size ${st.size} not divisible by ${bytesPerFrame} for ${inputPath}`,
+      );
+    }
+    return st.size / bytesPerFrame;
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+// Exercise the same probe + decoded-sample-count code paths used for real jobs
+// against a small synthetic tone. If this fails, the worker's ffmpeg/ffprobe
+// binaries are unusable for real work and the worker must refuse to start.
+export async function runStartupSelfTest() {
+  const dir = await mkdtemp(join(tmpdir(), 'audio-worker-selftest-'));
+  const tonePath = join(dir, 'tone.wav');
+  try {
+    const seconds = 0.25;
+    const sampleRate = 44100;
+    const channels = 2;
+    await ffmpeg([
+      '-f', 'lavfi',
+      '-i', `sine=frequency=440:sample_rate=${sampleRate}:duration=${seconds}`,
+      '-ac', String(channels),
+      '-ar', String(sampleRate),
+      '-c:a', 'pcm_s16le',
+      '-f', 'wav',
+      tonePath,
+    ], { timeoutMs: 30_000 });
+
+    const probe = await probeAudio(tonePath);
+    if (probe.codec !== 'pcm_s16le') {
+      throw new Error(`self-test: expected codec pcm_s16le, got ${probe.codec}`);
+    }
+    if (probe.sampleRate !== sampleRate) {
+      throw new Error(`self-test: expected ${sampleRate} Hz, got ${probe.sampleRate}`);
+    }
+    if (probe.channels !== channels) {
+      throw new Error(`self-test: expected ${channels} channels, got ${probe.channels}`);
+    }
+    if (!/wav/i.test(probe.formatName)) {
+      throw new Error(`self-test: expected wav container, got ${probe.formatName}`);
+    }
+
+    const samples = await countDecodedPcmSamples(tonePath);
+    const expected = Math.round(seconds * sampleRate);
+    if (Math.abs(samples - expected) > 2) {
+      throw new Error(`self-test: sample count ${samples} vs expected ${expected}`);
+    }
+    return { ok: true, samples, expected };
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
 }
 
 // Return { peakDbfs } measured by ffmpeg astats. peakDbfs is <= 0 (0 == full-scale).

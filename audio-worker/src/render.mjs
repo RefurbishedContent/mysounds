@@ -14,7 +14,7 @@ import { join, isAbsolute, dirname } from 'node:path';
 import {
   ffmpeg,
   probeAudio,
-  countAudioSamples,
+  countDecodedPcmSamples,
   measurePeakDbfs,
 } from './process.mjs';
 
@@ -288,8 +288,8 @@ export async function render(rawSpec, outputPath, { keepTemp = false } = {}) {
     await extractRange(spec.songA.inputPath, spec.songA.sourceStart, spec.songA.sourceEnd, aExtract);
     await extractRange(spec.songB.inputPath, spec.songB.sourceStart, spec.songB.sourceEnd, bExtract);
 
-    const samplesA = await countAudioSamples(aExtract);
-    const samplesB = await countAudioSamples(bExtract);
+    const samplesA = await countDecodedPcmSamples(aExtract);
+    const samplesB = await countDecodedPcmSamples(bExtract);
     const tolerance = 1;
     if (Math.abs(samplesA - spec._computed.samplesA) > tolerance) {
       throw new Error(
@@ -308,7 +308,7 @@ export async function render(rawSpec, outputPath, { keepTemp = false } = {}) {
       await crossfadeFloatWavs(aExtract, bExtract, spec.overlapSeconds, mixedFloat);
     }
 
-    mixedSamples = await countAudioSamples(mixedFloat);
+    mixedSamples = await countDecodedPcmSamples(mixedFloat);
     if (Math.abs(mixedSamples - spec._computed.expectedTotalSamples) > tolerance) {
       throw new Error(
         `Mixed sample count ${mixedSamples} differs from expected ${spec._computed.expectedTotalSamples}`

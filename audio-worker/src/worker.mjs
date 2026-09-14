@@ -11,7 +11,7 @@ import {
   BIT_DEPTH,
   FORMAT,
 } from './render.mjs';
-import { probeAudio } from './process.mjs';
+import { probeAudio, runStartupSelfTest } from './process.mjs';
 import { startHealthServer } from './health.mjs';
 import {
   computeSourceIdentity,
@@ -92,12 +92,22 @@ const TERMINAL_CODES = new Set([
   'output_verification_failed',
   'silent_output',
   'output_conflict',
+  'worker_config_invalid',
 ]);
 
 function classifyRenderError(err) {
   if (err instanceof TerminalError) return err;
   if (err instanceof TransientError) return err;
   const msg = String(err?.message ?? '');
+  // ffmpeg/ffprobe rejects an invalid option/argument the same way every time,
+  // so retrying is guaranteed to fail. Classify as terminal worker config error.
+  if (
+    /Option not found|Unrecognized option|Unknown option|Invalid argument for option|Failed to set value .* for option/i.test(
+      msg,
+    )
+  ) {
+    return new TerminalError('worker_config_invalid', msg);
+  }
   if (
     /Unsupported renderMode|is not supported by the worker|Unsupported exportOptions|Unsupported output/i.test(msg)
   ) {
@@ -435,10 +445,10 @@ async function claimOne(supabase, cfg) {
 
 async function checkFfmpeg() {
   try {
-    await probeAudio('/dev/null').catch(() => null);
-    return true;
-  } catch {
-    return true; // probeAudio spawns ffprobe; if the binary is missing the render step will surface the error
+    await runStartupSelfTest();
+    return { ok: true, error: null };
+  } catch (err) {
+    return { ok: false, error: redactError(err) };
   }
 }
 
@@ -449,12 +459,14 @@ async function main() {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  const selfTest = await checkFfmpeg();
   const state = {
     lastPollAt: null,
     pollIntervalMs: cfg.POLL_INTERVAL_MS,
     inFlight: 0,
     shuttingDown: false,
-    ffmpegAvailable: await checkFfmpeg(),
+    ffmpegAvailable: selfTest.ok,
+    ffmpegError: selfTest.error,
   };
 
   const server = startHealthServer({
@@ -462,6 +474,21 @@ async function main() {
     engineVersion: cfg.ENGINE_VERSION,
     state,
   });
+
+  if (!selfTest.ok) {
+    log('error', 'startup self-test failed; refusing to claim jobs', {
+      code: 'worker_config_invalid',
+      error: selfTest.error,
+    });
+    const stayAlive = () => new Promise((resolve) => {
+      const done = () => resolve();
+      process.on('SIGTERM', done);
+      process.on('SIGINT', done);
+    });
+    await stayAlive();
+    server.close();
+    process.exit(1);
+  }
 
   log('info', 'worker started', {
     concurrency: cfg.WORKER_CONCURRENCY,
