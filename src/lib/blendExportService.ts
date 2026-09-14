@@ -38,6 +38,11 @@ export interface CreateBlendInput {
   normalize?: boolean;
   fadeIn?: number;
   fadeOut?: number;
+  // Opt-in real backend path used by the mash-up wizard. Legacy callers
+  // (BlendExportDialog, blender/BlenderProcessingScreen) omit these and keep
+  // the existing simulated flow.
+  useRenderBlend?: boolean;
+  renderRequestId?: string;
 }
 
 export interface ExportProgress {
@@ -46,14 +51,36 @@ export interface ExportProgress {
   message: string;
 }
 
+// Documented stage milestones for the real render pipeline. Percentages are
+// stage checkpoints, not time estimates. 100 is only emitted after the blend
+// row is confirmed completed with a filename.
+const STAGE_PROGRESS: Record<string, { pct: number; message: string }> = {
+  queued: { pct: 5, message: 'Queued for rendering...' },
+  claimed: { pct: 10, message: 'Worker picked up the job...' },
+  downloading: { pct: 20, message: 'Downloading source audio...' },
+  validating: { pct: 35, message: 'Validating audio...' },
+  rendering: { pct: 55, message: 'Rendering mash up...' },
+  uploading: { pct: 85, message: 'Uploading final file...' },
+  verifying: { pct: 95, message: 'Verifying result...' },
+  completed: { pct: 100, message: 'Mash up ready!' },
+};
+
+const POLL_INTERVAL_MS = 2000;
+const MAX_TRANSIENT_ERRORS = 6;
+const RENDER_TIMEOUT_MS = 10 * 60 * 1000;
+
 class BlendExportService {
   private readonly BUCKET_NAME = 'blends';
 
   async createBlend(
     userId: string,
     input: CreateBlendInput,
-    onProgress?: (progress: ExportProgress) => void
+    onProgress?: (progress: ExportProgress) => void,
+    signal?: AbortSignal,
   ): Promise<BlendData> {
+    if (input.useRenderBlend) {
+      return this.createBlendViaRenderService(userId, input, onProgress, signal);
+    }
     try {
       onProgress?.({
         stage: 'initializing',
@@ -163,6 +190,210 @@ class BlendExportService {
       console.error('Failed to create blend:', error);
       throw error;
     }
+  }
+
+  private async createBlendViaRenderService(
+    userId: string,
+    input: CreateBlendInput,
+    onProgress?: (progress: ExportProgress) => void,
+    signal?: AbortSignal,
+  ): Promise<BlendData> {
+    if (!input.renderRequestId) {
+      throw new Error('renderRequestId is required when useRenderBlend is true');
+    }
+
+    const throwIfAborted = () => {
+      if (signal?.aborted) throw new Error('aborted');
+    };
+
+    const emit = (stage: string, override?: Partial<ExportProgress>) => {
+      const preset = STAGE_PROGRESS[stage] ?? { pct: 15, message: `Working (${stage})...` };
+      onProgress?.({
+        stage,
+        progress: override?.progress ?? preset.pct,
+        message: override?.message ?? preset.message,
+      });
+    };
+
+    emit('queued');
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      const err = new Error('Your session expired. Please sign in again.');
+      (err as any).code = 'auth_expired';
+      throw err;
+    }
+
+    const { data: enqData, error: enqErr } = await supabase.functions.invoke('render-blend', {
+      body: {
+        transitionId: input.transitionId,
+        renderRequestId: input.renderRequestId,
+        exportSettings: {
+          format: input.format ?? 'wav',
+          quality: input.quality === 'draft' ? 'standard' : (input.quality ?? 'standard'),
+          sampleRate: input.sampleRate ?? 44100,
+          bitDepth: input.bitDepth ?? 16,
+          blendName: input.name,
+        },
+      },
+    });
+
+    if (enqErr) {
+      const context = (enqErr as any).context;
+      let body: any = null;
+      if (context && typeof context.json === 'function') {
+        try { body = await context.json(); } catch { body = null; }
+      }
+      const status = context?.status ?? (enqErr as any).status;
+      const code = body?.error?.code ?? body?.code ?? 'render_failed';
+      const message = body?.error?.message ?? body?.message ?? enqErr.message ?? 'Failed to start render.';
+      if (status === 401 || code === 'unauthorized') {
+        const err = new Error('Your session expired. Please sign in again.');
+        (err as any).code = 'auth_expired';
+        throw err;
+      }
+      if (status === 409 || code === 'conflicting_settings') {
+        const err = new Error(message);
+        (err as any).code = 'conflicting_settings';
+        (err as any).terminal = true;
+        throw err;
+      }
+      if (status === 429 || code === 'active_job_limit' || code === 'submission_limit') {
+        const err = new Error(message);
+        (err as any).code = code;
+        (err as any).terminal = true;
+        throw err;
+      }
+      const err = new Error(message);
+      (err as any).code = code;
+      throw err;
+    }
+
+    const blendId: string | undefined = enqData?.blendId;
+    const jobId: string | undefined = enqData?.jobId;
+    if (!blendId || !jobId) {
+      throw new Error('Render service did not return a blend id.');
+    }
+
+    throwIfAborted();
+    return this.waitForBlendCompletion({ blendId, jobId, userId, emit, signal });
+  }
+
+  private async waitForBlendCompletion(args: {
+    blendId: string;
+    jobId: string;
+    userId: string;
+    emit: (stage: string, override?: Partial<ExportProgress>) => void;
+    signal?: AbortSignal;
+  }): Promise<BlendData> {
+    const { blendId, jobId, emit, signal } = args;
+    let lastStage = 'queued';
+    let transientErrors = 0;
+    const startedAt = Date.now();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    const cleanup = () => {
+      if (channel) {
+        try { supabase.removeChannel(channel); } catch { /* noop */ }
+        channel = null;
+      }
+    };
+
+    try {
+      channel = supabase
+        .channel(`blend-progress-${blendId}`)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'blend_render_jobs', filter: `id=eq.${jobId}` },
+          () => { /* handled by next poll */ },
+        )
+        .subscribe();
+
+      while (true) {
+        if (signal?.aborted) throw new Error('aborted');
+        if (Date.now() - startedAt > RENDER_TIMEOUT_MS) {
+          throw new Error('Render timed out. The job may still finish in the background.');
+        }
+
+        let job: any = null;
+        let blend: any = null;
+        try {
+          const [jobRes, blendRes] = await Promise.all([
+            supabase
+              .from('blend_render_jobs')
+              .select('status, stage, error_code, error_message')
+              .eq('id', jobId)
+              .maybeSingle(),
+            supabase
+              .from('blends')
+              .select('*')
+              .eq('id', blendId)
+              .maybeSingle(),
+          ]);
+          if (jobRes.error) throw jobRes.error;
+          if (blendRes.error) throw blendRes.error;
+          job = jobRes.data;
+          blend = blendRes.data;
+          transientErrors = 0;
+        } catch (pollErr) {
+          transientErrors += 1;
+          if (transientErrors >= MAX_TRANSIENT_ERRORS) {
+            const err = new Error('Lost connection to the render service. Please retry.');
+            (err as any).code = 'network_error';
+            throw err;
+          }
+          emit(lastStage, {
+            progress: STAGE_PROGRESS[lastStage]?.pct ?? 20,
+            message: 'Reconnecting...',
+          });
+          await this.sleep(POLL_INTERVAL_MS);
+          continue;
+        }
+
+        if (!job) {
+          await this.sleep(POLL_INTERVAL_MS);
+          continue;
+        }
+
+        const stage = (job.stage as string) || job.status || lastStage;
+        if (stage !== lastStage && STAGE_PROGRESS[stage]) {
+          lastStage = stage;
+          emit(stage);
+        }
+
+        if (job.status === 'failed') {
+          const err = new Error(job.error_message || 'Render failed.');
+          (err as any).code = job.error_code || 'render_failed';
+          (err as any).terminal = true;
+          throw err;
+        }
+
+        if (job.status === 'completed' && blend?.status === 'completed' && blend?.filename) {
+          emit('completed');
+          return this.mapRowToBlend(blend);
+        }
+
+        await this.sleep(POLL_INTERVAL_MS);
+      }
+    } finally {
+      cleanup();
+    }
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async getBlendsByIds(ids: string[]): Promise<BlendData[]> {
+    if (ids.length === 0) return [];
+    const { data, error } = await supabase
+      .from('blends')
+      .select('*')
+      .in('id', ids);
+    if (error) throw new Error(`Failed to fetch blends: ${error.message}`);
+    return (data ?? [])
+      .filter((row: any) => row.status === 'completed')
+      .map((row: any) => this.mapRowToBlend(row));
   }
 
   async getUserBlends(userId: string): Promise<BlendData[]> {

@@ -4,9 +4,9 @@ import * as Tone from 'tone';
 import { useAuth } from '../contexts/AuthContext';
 import { storageService, UploadResult } from '../lib/storage';
 import { transitionsService } from '../lib/transitionsService';
-import { BlendData } from '../lib/blendExportService';
+import { BlendData, blendExportService } from '../lib/blendExportService';
 import { buildRenderSpec } from '../lib/renderSpec';
-import { getUserMashupCounter, incrementMashupCounter } from '../lib/supabase';
+import { getUserMashupCounter, incrementMashupCounter, supabase } from '../lib/supabase';
 import { AudioScrubber } from './AudioScrubber';
 import DJCrowdCanvas from './DJCrowdCanvas';
 import MashUpSongSelector from './mashup/MashUpSongSelector';
@@ -111,6 +111,11 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
   const [pairConfigs, setPairConfigs] = useState<TransitionPairConfig[]>(initialPairConfigs || []);
   const [completedBlends, setCompletedBlends] = useState<BlendData[]>([]);
   const [mashupNumber, setMashupNumber] = useState<number>(1);
+  const [batch, setBatch] = useState<{
+    batchId: string;
+    renderRequestId: string;
+    completedBlendIds: string[];
+  } | null>(null);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -134,6 +139,44 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
       });
     }
   }, [user?.id]);
+
+  // Resume an active render batch scoped to (user, mash_up_group, pair set).
+  useEffect(() => {
+    if (!user?.id || pairConfigs.length === 0 || batch) return;
+    let cancelled = false;
+    (async () => {
+      const transitionIds = pairConfigs.map(p => p.transitionId).sort();
+      const { data, error } = await supabase
+        .from('mash_up_render_batches')
+        .select('id, render_request_id, transition_ids, completed_blend_ids')
+        .eq('user_id', user.id)
+        .eq('mash_up_group', mashUpName)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+      if (cancelled || error || !data) return;
+      const match = data.find(row => {
+        const rowIds = [...(row.transition_ids || [])].sort();
+        return rowIds.length === transitionIds.length &&
+          rowIds.every((v, i) => v === transitionIds[i]);
+      });
+      if (!match) return;
+      const completedIds = (match.completed_blend_ids || []) as string[];
+      setBatch({
+        batchId: match.id,
+        renderRequestId: match.render_request_id,
+        completedBlendIds: completedIds,
+      });
+      if (completedIds.length > 0) {
+        try {
+          const mapped = await blendExportService.getBlendsByIds(completedIds);
+          if (!cancelled) setCompletedBlends(mapped);
+        } catch (err) {
+          console.error('[TransitionCreator] Failed to hydrate completed blends:', err);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id, pairConfigs, mashUpName, batch]);
 
   useEffect(() => {
     if (currentStep !== 'set-transition-points' || selectedSongs.length === 0) return;
@@ -396,15 +439,44 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
   };
 
   if (currentStep === 'processing') {
+    if (!batch) {
+      return (
+        <div className="h-full flex items-center justify-center bg-[#050510]">
+          <div className="text-center space-y-4">
+            <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto" />
+            <p className="text-gray-400">Preparing render...</p>
+          </div>
+        </div>
+      );
+    }
     return (
       <MashUpProcessingStep
         pairs={pairConfigs}
         mashUpName={mashUpName}
-        onComplete={(blends) => {
+        renderRequestId={batch.renderRequestId}
+        batchId={batch.batchId}
+        initialCompletedBlends={completedBlends}
+        onComplete={async (blends) => {
           setCompletedBlends(blends);
+          if (user?.id) {
+            await supabase
+              .from('mash_up_render_batches')
+              .update({ status: 'complete' })
+              .eq('id', batch.batchId)
+              .eq('user_id', user.id);
+          }
           setCurrentStep('complete');
         }}
-        onBack={() => setCurrentStep('confirm')}
+        onLeave={async () => {
+          if (user?.id) {
+            await supabase
+              .from('mash_up_render_batches')
+              .update({ status: 'abandoned' })
+              .eq('id', batch.batchId)
+              .eq('user_id', user.id);
+          }
+          setCurrentStep('confirm');
+        }}
       />
     );
   }
@@ -420,6 +492,7 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
           setCompletedBlends([]);
           setSelectedSongs([]);
           setCustomName('');
+          setBatch(null);
           setCurrentStep('select-songs');
         }}
       />
@@ -532,9 +605,55 @@ const TransitionCreator: React.FC<TransitionCreatorProps> = ({
             customName={customName}
             onCustomNameChange={setCustomName}
             onConfirm={async () => {
-              if (user?.id) {
-                await incrementMashupCounter(user.id);
+              if (!user?.id) return;
+              const transitionIds = pairConfigs.map(p => p.transitionId).sort();
+              let activeBatch = batch;
+              if (!activeBatch) {
+                const existing = await supabase
+                  .from('mash_up_render_batches')
+                  .select('id, render_request_id, transition_ids, completed_blend_ids')
+                  .eq('user_id', user.id)
+                  .eq('mash_up_group', mashUpName)
+                  .eq('status', 'active')
+                  .order('created_at', { ascending: false });
+                const match = (existing.data || []).find(row => {
+                  const ids = [...(row.transition_ids || [])].sort();
+                  return ids.length === transitionIds.length &&
+                    ids.every((v, i) => v === transitionIds[i]);
+                });
+                if (match) {
+                  activeBatch = {
+                    batchId: match.id,
+                    renderRequestId: match.render_request_id,
+                    completedBlendIds: (match.completed_blend_ids || []) as string[],
+                  };
+                } else {
+                  const renderRequestId = crypto.randomUUID();
+                  const { data: inserted, error: insErr } = await supabase
+                    .from('mash_up_render_batches')
+                    .insert({
+                      user_id: user.id,
+                      mash_up_group: mashUpName,
+                      render_request_id: renderRequestId,
+                      transition_ids: transitionIds,
+                      completed_blend_ids: [],
+                      status: 'active',
+                    })
+                    .select('id')
+                    .single();
+                  if (insErr || !inserted) {
+                    alert('Could not start render. Please try again.');
+                    return;
+                  }
+                  activeBatch = {
+                    batchId: inserted.id,
+                    renderRequestId,
+                    completedBlendIds: [],
+                  };
+                  await incrementMashupCounter(user.id);
+                }
               }
+              setBatch(activeBatch);
               setCurrentStep('processing');
             }}
             onBack={() => setCurrentStep('set-templates')}

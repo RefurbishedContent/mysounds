@@ -2,32 +2,40 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Loader, CheckCircle, X, Scissors, Sparkles, ArrowRight } from 'lucide-react';
 import { BlendData, blendExportService, ExportProgress } from '../../lib/blendExportService';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 import { SONG_LETTERS, SONG_COLORS } from './constants';
 import { TransitionPairConfig } from './types';
 
 interface MashUpProcessingStepProps {
   pairs: TransitionPairConfig[];
   mashUpName: string;
+  renderRequestId: string;
+  batchId: string;
+  initialCompletedBlends?: BlendData[];
   onComplete: (blends: BlendData[]) => void;
-  onBack: () => void;
+  onLeave: () => void;
 }
 
 const MashUpProcessingStep: React.FC<MashUpProcessingStepProps> = ({
   pairs,
   mashUpName,
+  renderRequestId,
+  batchId,
+  initialCompletedBlends,
   onComplete,
-  onBack,
+  onLeave,
 }) => {
   const { user } = useAuth();
   const [currentPairIndex, setCurrentPairIndex] = useState(0);
   const [currentPairProgress, setCurrentPairProgress] = useState(0);
   const [currentMessage, setCurrentMessage] = useState('Initializing...');
-  const [completedBlends, setCompletedBlends] = useState<BlendData[]>([]);
+  const [completedBlends, setCompletedBlends] = useState<BlendData[]>(initialCompletedBlends ?? []);
   const [error, setError] = useState<string | null>(null);
+  const [errorTerminal, setErrorTerminal] = useState(false);
   const [failedPairIndex, setFailedPairIndex] = useState<number | null>(null);
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const hasStartedRef = useRef(false);
-  const cancelledRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   const totalProgress = pairs.length > 0
     ? Math.min(100, ((completedBlends.length * 100) + currentPairProgress) / pairs.length)
@@ -38,17 +46,38 @@ const MashUpProcessingStep: React.FC<MashUpProcessingStepProps> = ({
       hasStartedRef.current = true;
       processAllPairs();
     }
+    return () => {
+      if (abortRef.current) {
+        abortRef.current.abort();
+        abortRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  const persistCompleted = async (ids: string[]) => {
+    if (!user) return;
+    try {
+      await supabase
+        .from('mash_up_render_batches')
+        .update({ completed_blend_ids: ids })
+        .eq('id', batchId)
+        .eq('user_id', user.id);
+    } catch (err) {
+      console.error('[MashUpProcessing] Failed to persist batch progress:', err);
+    }
+  };
 
   const processAllPairs = async () => {
     if (!user) return;
 
     const blends: BlendData[] = [...completedBlends];
+    const completedTransitionIds = new Set(blends.map(b => b.transitionId));
 
-    for (let i = completedBlends.length; i < pairs.length; i++) {
-      if (cancelledRef.current) return;
-
+    for (let i = 0; i < pairs.length; i++) {
       const pair = pairs[i];
+      if (completedTransitionIds.has(pair.transitionId)) continue;
+
       setCurrentPairIndex(i);
       setCurrentPairProgress(0);
       setCurrentMessage(
@@ -57,6 +86,9 @@ const MashUpProcessingStep: React.FC<MashUpProcessingStepProps> = ({
           : `Processing transition ${SONG_LETTERS[pair.songAIndex]} to ${SONG_LETTERS[pair.songBIndex]}...`
       );
 
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       try {
         const blend = await blendExportService.createBlend(
           user.id,
@@ -64,48 +96,51 @@ const MashUpProcessingStep: React.FC<MashUpProcessingStepProps> = ({
             transitionId: pair.transitionId,
             format: 'wav',
             quality: 'standard',
+            useRenderBlend: true,
+            renderRequestId,
           },
           (progressUpdate: ExportProgress) => {
             setCurrentPairProgress(progressUpdate.progress);
             setCurrentMessage(progressUpdate.message);
-          }
+          },
+          controller.signal,
         );
 
         blends.push(blend);
+        completedTransitionIds.add(pair.transitionId);
         setCompletedBlends([...blends]);
-      } catch (err) {
+        await persistCompleted(blends.map(b => b.id));
+      } catch (err: any) {
+        if (err?.message === 'aborted') return;
         console.error(`Failed to process pair ${i}:`, err);
         setError(err instanceof Error ? err.message : 'Failed to create mash up');
+        setErrorTerminal(!!err?.terminal);
         setFailedPairIndex(i);
         return;
+      } finally {
+        abortRef.current = null;
       }
     }
 
-    if (!cancelledRef.current) {
+    if (blends.length === pairs.length) {
       setCurrentPairProgress(100);
-      setCurrentMessage('All mash ups created successfully!');
-      setTimeout(() => onComplete(blends), 600);
+      setCurrentMessage('All mash ups ready!');
+      setTimeout(() => onComplete(blends), 400);
     }
   };
 
   const handleRetry = () => {
     setError(null);
+    setErrorTerminal(false);
     setFailedPairIndex(null);
-    hasStartedRef.current = false;
     processAllPairs();
   };
 
-  const handleSkipAndContinue = () => {
+  const handleFinishWithCompleted = () => {
     setError(null);
+    setErrorTerminal(false);
     setFailedPairIndex(null);
-    const remaining = pairs.slice((failedPairIndex ?? 0) + 1);
-    if (remaining.length === 0 || completedBlends.length > 0) {
-      onComplete(completedBlends);
-    } else {
-      setCurrentPairIndex((failedPairIndex ?? 0) + 1);
-      hasStartedRef.current = false;
-      processAllPairs();
-    }
+    onComplete(completedBlends);
   };
 
   if (error) {
@@ -124,25 +159,27 @@ const MashUpProcessingStep: React.FC<MashUpProcessingStepProps> = ({
           )}
           <p className="text-gray-400 text-sm mb-6">{error}</p>
           <div className="space-y-2">
-            <button
-              onClick={handleRetry}
-              className="w-full py-2.5 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg font-semibold hover:from-teal-600 hover:to-cyan-600 transition-all"
-            >
-              Retry This Pair
-            </button>
+            {!errorTerminal && (
+              <button
+                onClick={handleRetry}
+                className="w-full py-2.5 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg font-semibold hover:from-teal-600 hover:to-cyan-600 transition-all"
+              >
+                Retry This Pair
+              </button>
+            )}
             {completedBlends.length > 0 && (
               <button
-                onClick={handleSkipAndContinue}
+                onClick={handleFinishWithCompleted}
                 className="w-full py-2.5 bg-gray-700 text-white rounded-lg font-semibold hover:bg-gray-600 transition-colors"
               >
-                Skip & Continue ({completedBlends.length} completed)
+                Finish with {completedBlends.length} completed
               </button>
             )}
             <button
-              onClick={onBack}
+              onClick={onLeave}
               className="w-full py-2.5 text-gray-400 hover:text-white transition-colors text-sm"
             >
-              Go Back
+              Leave Screen
             </button>
           </div>
         </div>
@@ -243,10 +280,10 @@ const MashUpProcessingStep: React.FC<MashUpProcessingStepProps> = ({
           </div>
 
           <button
-            onClick={() => setShowCancelConfirm(true)}
+            onClick={() => setShowLeaveConfirm(true)}
             className="mt-6 px-6 py-2 text-gray-400 hover:text-white transition-colors text-sm"
           >
-            Cancel
+            Leave Screen
           </button>
         </div>
       </div>
@@ -347,43 +384,40 @@ const MashUpProcessingStep: React.FC<MashUpProcessingStepProps> = ({
 
           <div className="text-center hidden md:block">
             <button
-              onClick={() => setShowCancelConfirm(true)}
+              onClick={() => setShowLeaveConfirm(true)}
               className="px-6 py-2 text-gray-400 hover:text-white transition-colors text-sm"
             >
-              Cancel
+              Leave Screen
             </button>
           </div>
         </div>
       </div>
 
-      {showCancelConfirm && (
+      {showLeaveConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[80] p-4">
           <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 max-w-sm w-full">
-            <h3 className="text-lg font-bold text-white mb-2">Cancel Processing?</h3>
+            <h3 className="text-lg font-bold text-white mb-2">Leave this screen?</h3>
             <p className="text-gray-400 text-sm mb-6">
-              {completedBlends.length > 0
-                ? `${completedBlends.length} mash up${completedBlends.length !== 1 ? 's' : ''} already completed. Cancel remaining?`
-                : 'Are you sure? Your progress will be lost.'}
+              Your mash ups will keep rendering in the background and appear in your library when finished. You can come back to this screen to see the live progress.
             </p>
             <div className="flex gap-3">
               <button
-                onClick={() => setShowCancelConfirm(false)}
+                onClick={() => setShowLeaveConfirm(false)}
                 className="flex-1 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
               >
-                Keep Going
+                Stay Here
               </button>
               <button
                 onClick={() => {
-                  cancelledRef.current = true;
-                  if (completedBlends.length > 0) {
-                    onComplete(completedBlends);
-                  } else {
-                    onBack();
+                  if (abortRef.current) {
+                    abortRef.current.abort();
+                    abortRef.current = null;
                   }
+                  onLeave();
                 }}
                 className="flex-1 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
               >
-                Cancel
+                Leave
               </button>
             </div>
           </div>
